@@ -27,6 +27,8 @@ class OneSectorGE(object):
     def __init__(self,
                  estimation_model: EstimationModel,
                  year: str,
+                 expend_var_name: str = 'expenditure',
+                 output_var_name: str = 'output',
                  sigma: float = 5,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
@@ -47,7 +49,8 @@ class OneSectorGE(object):
         # except:
         #     print('reference_importer OK')
 
-        self.meta_data = estimation_model.estimation_data.meta_data
+        # ToDo: Modify meta_data load when GME update includes it differently
+        self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
         self._year = str(year)
         self.sigma = sigma
@@ -861,3 +864,17 @@ class Country(object):
                     self.output_change,
                     self.expenditure_change,
                     self.terms_of_trade_change)
+
+
+class _GEMetaData(object):
+    '''
+    Modified gme _MetaData object that includes output and expenditure column names
+    '''
+    def __init__(self, gme_meta_data, expend_var_name, output_var_name):
+        self.imp_var_name = gme_meta_data.imp_var_name
+        self.exp_var_name = gme_meta_data.exp_var_name
+        self.year_var_name = gme_meta_data.year_var_name
+        self.trade_var_name = gme_meta_data.trade_var_name
+        self.sector_var_name = gme_meta_data.sector_var_name
+        self.expend_var_name = expend_var_name
+        self.output_var_name = output_var_name
