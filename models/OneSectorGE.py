@@ -32,6 +32,7 @@ class OneSectorGE(object):
                  sigma: float = 5,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
+                 cost_coeffs: pd.Series = None,
                  reference_importer: str = None,
                  omr_rescale: float = 1000,
                  imr_rescale: float = 1,
@@ -39,6 +40,26 @@ class OneSectorGE(object):
                  mr_max_iter: int = 1400,
                  mr_tolerance: float = 1e-8,
                  approach: str = None):
+        '''
+
+        :param estimation_model:
+        :param year:
+        :param expend_var_name:
+        :param output_var_name:
+        :param sigma:
+        :param results_key:
+        :param cost_variables:
+        :param cost_coeffs: (pd.Series) (optional) A pandas series containing coefficient values corresponding to each
+            of the specified cost variables. Should be formatted the same way as GLMResultsWrapper.params or
+            gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
+        :param reference_importer:
+        :param omr_rescale:
+        :param imr_rescale:
+        :param mr_method:
+        :param mr_max_iter:
+        :param mr_tolerance:
+        :param approach:
+        '''
         if not isinstance(year, str):
             raise TypeError('year should be a string')
 
@@ -52,6 +73,7 @@ class OneSectorGE(object):
         # ToDo: Modify meta_data load when GME update includes it differently
         self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
+        self._estimation_results = self._estimation_model.results_dict[results_key]
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
@@ -89,6 +111,13 @@ class OneSectorGE(object):
         else:
             self.cost_variables = cost_variables
 
+        if cost_coeffs is not None:
+            self.cost_coeffs = cost_coeffs
+        else:
+            self.cost_coeffs = self._estimation_results.params[self.cost_variables]
+
+
+
         # prep baseline data
         _baseline_data = estimation_model.estimation_data.data_frame.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
@@ -96,7 +125,6 @@ class OneSectorGE(object):
         if self.baseline_data.shape[0] == 0:
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
-        self._estimation_results = self._estimation_model.results_dict[results_key]
 
         # Build Baseline
 
@@ -113,7 +141,7 @@ class OneSectorGE(object):
         for country in self.country_set:
             self.country_set[country].calculate_baseline_output_expenditure_shares(self._economy)
         # Calculate baseline trade costs
-        self.baseline_trade_costs = self._create_trade_costs(self.baseline_data, self._estimation_results)
+        self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
         # Solve for the baseline multilateral resistance terms
         if self.approach == 'GEPPML':
             self._calculate_GEPPML_multilateral_resistance(version='baseline')
@@ -235,8 +263,7 @@ class OneSectorGE(object):
         return economy
 
     def _create_trade_costs(self,
-                            data_set: object = None,
-                            estimation_results: object = None):
+                            data_set: object = None):
         # generate \hat{t}^{1-\sigma}_{ij}
         obs_id = [self.meta_data.imp_var_name,
                   self.meta_data.exp_var_name,
@@ -244,7 +271,7 @@ class OneSectorGE(object):
         weighted_costs = data_set[obs_id + self.cost_variables].copy()
         weighted_list = []
         for variable in self.cost_variables:
-            weighted_costs[('cost_weighted_' + variable)] = estimation_results.params[variable] * \
+            weighted_costs[('cost_weighted_' + variable)] = self.cost_coeffs[variable] * \
                                                             weighted_costs[[variable]]
             weighted_list = weighted_list + [('cost_weighted_' + variable)]
 
@@ -426,7 +453,7 @@ class OneSectorGE(object):
 
     def define_experiment(self, experiment_data: DataFrame = None):
         self.experiment_data = experiment_data
-        self.experiment_trade_costs = self._create_trade_costs(self.experiment_data, self._estimation_results)
+        self.experiment_trade_costs = self._create_trade_costs(self.experiment_data)
         cost_change = self.baseline_trade_costs.merge(right=self.experiment_trade_costs, how='outer',
                                                       on=[self.meta_data.imp_var_name,
                                                           self.meta_data.exp_var_name,
