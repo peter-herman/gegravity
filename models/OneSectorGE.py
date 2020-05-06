@@ -39,7 +39,8 @@ class OneSectorGE(object):
                  mr_method: str = 'hybr',
                  mr_max_iter: int = 1400,
                  mr_tolerance: float = 1e-8,
-                 approach: str = None):
+                 approach: str = None,
+                 quiet:bool = False):
         '''
 
         :param estimation_model:
@@ -59,6 +60,7 @@ class OneSectorGE(object):
         :param mr_max_iter:
         :param mr_tolerance:
         :param approach:
+        :param quiet: (bool) If True, suppresses all console feedback from model during simulation. Default is False.
         '''
         if not isinstance(year, str):
             raise TypeError('year should be a string')
@@ -99,6 +101,7 @@ class OneSectorGE(object):
         self.country_results = None
         self.country_mr_terms = None
         self.approach = approach
+        self.quiet = quiet
 
         # ---
         # Check inputs
@@ -337,12 +340,14 @@ class OneSectorGE(object):
                 test_diagnostics['function_value'] = _multilateral_resistances(initial_values, mr_params)
                 return test_diagnostics
         else:
-            print('Solving for {} MRs...'.format(version))
+            if not self.quiet:
+                print('Solving for {} MRs...'.format(version))
             solved_mrs = root(_multilateral_resistances, initial_values, args=mr_params, method=self._mr_method,
                               tol=self._mr_tolerance,
                               options={'xtol': self._mr_tolerance, 'maxfev': self._mr_max_iter})
             if solved_mrs.message == 'The solution converged.':
-                print(solved_mrs.message)
+                if not self.quiet:
+                    print(solved_mrs.message)
             else:
                 warn(solved_mrs.message)
             self.solver_diagnostics[version + "_MRs"] = solved_mrs
@@ -458,7 +463,6 @@ class OneSectorGE(object):
                                                       on=[self.meta_data.imp_var_name,
                                                           self.meta_data.exp_var_name,
                                                           self.meta_data.year_var_name])
-        # print(cost_change.head())
         cost_change.rename(columns={'trade_cost_x': 'baseline_trade_cost', 'trade_cost_y': 'experiment_trade_cost'},
                            inplace=True)
         self.cost_shock = cost_change.loc[cost_change['baseline_trade_cost'] != cost_change['experiment_trade_cost']]
@@ -512,11 +516,13 @@ class OneSectorGE(object):
         init_price = [1] * len(country_list)
         initial_values = init_imr[0:len(country_list) - 1] + init_omr + init_price
         initial_values = np.array(initial_values)
-        print('Solving full GE model...')
+        if not self.quiet:
+            print('Solving full GE model...')
         full_ge_results = root(_full_ge, initial_values, args=ge_params, method=self._ge_method, tol=self._ge_tolerance,
                                options={'xtol': self._ge_tolerance, 'maxfev': self._ge_max_iter})
         if full_ge_results.message == 'The solution converged.':
-            print(full_ge_results.message)
+            if not self.quiet:
+                print(full_ge_results.message)
         else:
             warn(full_ge_results.message)
         self.solver_diagnostics['full_GE'] = full_ge_results
