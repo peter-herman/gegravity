@@ -661,8 +661,12 @@ class OneSectorGE(object):
         for country in self.country_set.keys():
             results.append(self.country_set[country].get_results())
             mr_results.append(self.country_set[country].get_mr_results())
-        self.country_results = pd.concat(results, axis=0)
-        self.country_mr_terms = pd.concat(mr_results, axis=0)
+        country_results = pd.concat(results, axis=0)
+        country_results.index = country_results['country']
+        self.country_results = country_results.drop('country', axis = 1)
+        country_mr_results = pd.concat(mr_results, axis=0)
+        country_mr_results.index = country_mr_results['country']
+        self.country_mr_terms = country_mr_results.drop('country', axis=1)
 
 
     def trade_share(self, importers: List[str], exporters: List[str]):
