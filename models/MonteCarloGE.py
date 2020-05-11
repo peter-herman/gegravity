@@ -43,6 +43,14 @@ class MonteCarloGE(object):
         ##
         self.all_country_results = None
         self.country_results = None
+        self.all_country_mr_terms = None
+        self.country_mr_terms = None
+        self.all_outputs_expenditures = None
+        self.outputs_expenditures = None
+        self.all_factory_gate_prices = None
+        self.factory_gate_prices = None
+        self.all_aggregate_trade_results = None
+        self.aggregate_trade_results = None
 
 
         # prep baseline data
@@ -100,7 +108,7 @@ class MonteCarloGE(object):
                     ):
         models = list()
         for trial in range(self.trials):
-            print("\n Simulating trial {}".format(trial))
+            print("\n* Simulating trial {} *".format(trial))
             trial_coeffs = self.coeff_sample[trial]
             try:
                 trial_model = OneSectorGE(self._estimation_model,
@@ -126,13 +134,42 @@ class MonteCarloGE(object):
                 models.append(trial_model)
             except:
                 print("Failed to solve model.\n")
-        self.all_country_results, self.country_results = self.compile_country_results(models)
+        self.all_country_results, self.country_results = self._compile_country_results(models, 'country_results')
+        self.all_country_mr_terms, self.country_mr_terms = self._compile_country_results(models, 'mr_terms')
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_country_results(models, 'output_expenditures')
+        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_country_results(models, 'factory_gate_prices')
+        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_country_results(models, 'aggregate_trade_results')
+        # ToDo: Finsih compilation of results from GE model. Still need bilateral trade results and solver diagnostics
+        # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
 
-    def compile_country_results(self, models):
+    def _compile_country_results(self, models, result_type):
+        '''
+        Compile results across all trials.
+        :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
+        :param result_type: (str) Type of results to compile. Function works with:
+            'country_results' - compiles results from model.country_mr_results
+            'mr_terms' - compiles results from model.country_mr_terms
+            'output_expenditures' - compiles results from model.output_expenditures
+            'factory_gate_prices - compiles results from model.factory_gate_prices
+            'aggregate_trade_results' - compiles results from model.aggregate_trade_results
+        :return:(pd.DataFrame, pd.DataFrame) Two dataframes. The first contains all results for each trial, with
+            multiindex columns labeled (trial, result type). The second provides summary stats from all trials (mean,
+            std, stderr)
+        '''
         # Combine all results
         combined_results_list = list()
         for num, model in enumerate(models):
-            model_results = model.country_results.copy()
+            if result_type == 'country_results':
+                model_results = model.country_results.copy()
+            if result_type == 'mr_terms':
+                model_results = model.country_mr_terms
+            if result_type == 'outputs_expenditures':
+                model_results == model.outputs_expenditures
+            if result_type == 'factory_gate_prices':
+                model_results = model.factory_gate_prices
+            if result_type == 'aggregate_trade_results':
+                model_results = model.aggregate_trade_results
+
             # Label columns via multiindex with (trial, result)
             multi_columns = [(num,col) for col in model_results.columns]
             model_results.columns = pd.MultiIndex.from_tuples(multi_columns)
@@ -157,6 +194,6 @@ class MonteCarloGE(object):
             if col[1] == 'std':
                 summary_results[(col[0], 'stderr')] = summary_results[col] / 3 ** 0.5
         summary_results = summary_results.stack(level=1).reset_index(level=1)
-        summary_results.rename(columns = {'level_1':'statistic'},inplace = 0)
+        summary_results.rename(columns = {'level_1':'statistic'},inplace = True)
         return combined_results, summary_results
 

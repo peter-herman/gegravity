@@ -93,6 +93,10 @@ class OneSectorGE(object):
         self.experiment_trade_costs = None
         self.cost_shock = None
         self.experiment_data = None
+        self.approach = approach
+        self.quiet = quiet
+
+        # Results fields
         self.bilateral_trade_results = None
         self.aggregate_trade_results = None
         self.solver_diagnostics = dict()
@@ -100,8 +104,7 @@ class OneSectorGE(object):
         self.outputs_expenditures = None
         self.country_results = None
         self.country_mr_terms = None
-        self.approach = approach
-        self.quiet = quiet
+
 
         # ---
         # Check inputs
@@ -531,7 +534,8 @@ class OneSectorGE(object):
         imrs = np.append(imrs, 1)
         omrs = full_ge_results.x[len(country_list) - 1:2 * len(country_list) - 1] * ge_params['omr_rescale']
         prices = full_ge_results.x[2 * len(country_list) - 1:]
-        self.factory_gate_prices = pd.DataFrame({'exporter': country_list, 'experiment_factory_price': prices})
+        factory_gate_prices = pd.DataFrame({'exporter': country_list, 'experiment_factory_price': prices})
+        self.factory_gate_prices = factory_gate_prices.set_index('exporter')
         for i, country in enumerate(country_list):
             self.country_set[country].experiment_imr = imrs[i]
             self.country_set[country].experiment_omr = omrs[i]
@@ -572,7 +576,7 @@ class OneSectorGE(object):
         self._economy.experiment_total_output = total_output
         self._economy.output_change = 100 * (total_output - self._economy.baseline_total_output) \
                                       / self._economy.baseline_total_output
-        self.outputs_expenditures = results_table
+        self.outputs_expenditures = results_table.set_index('country')
 
     def _construct_experiment_trade(self):
         importer_col = self.meta_data.imp_var_name
@@ -653,7 +657,7 @@ class OneSectorGE(object):
             country_obj.imports_change = agg_trade.loc[row, 'import_percent_change']
             country_obj.exports_change = agg_trade.loc[row, 'export_percent_change']
 
-        self.aggregate_trade_results = agg_trade
+        self.aggregate_trade_results = agg_trade.set_index('country')
 
     def _compile_results(self):
         results = list()
@@ -662,11 +666,9 @@ class OneSectorGE(object):
             results.append(self.country_set[country].get_results())
             mr_results.append(self.country_set[country].get_mr_results())
         country_results = pd.concat(results, axis=0)
-        country_results.index = country_results['country']
-        self.country_results = country_results.drop('country', axis = 1)
+        self.country_results = country_results.set_index('country')
         country_mr_results = pd.concat(mr_results, axis=0)
-        country_mr_results.index = country_mr_results['country']
-        self.country_mr_terms = country_mr_results.drop('country', axis=1)
+        self.country_mr_terms = country_mr_results.set_index('country')
 
 
     def trade_share(self, importers: List[str], exporters: List[str]):
