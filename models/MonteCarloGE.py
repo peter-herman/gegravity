@@ -7,9 +7,10 @@ the empirical model '''
 import numpy as np
 import pandas as pd
 from gme.estimate.EstimationModel import EstimationModel
-from models.OneSectorGE import OneSectorGE
+from models.OneSectorGE import OneSectorGE, ParameterValues
 from typing import List
 
+# ToDo add support for user supplied parameter estimates (ParameterValues object)
 
 class MonteCarloGE(object):
     def __init__(self,
@@ -19,7 +20,8 @@ class MonteCarloGE(object):
                  cost_variables: list,
                  mc_variables: list = None,
                  results_key: str = 'all',
-                 seed:int = None):
+                 seed:int = None,
+                 parameter_values:ParameterValues = None):
         self._estimation_model = estimation_model
         self.meta_data = self._estimation_model.estimation_data._meta_data
         self._year = str(year)
@@ -33,8 +35,14 @@ class MonteCarloGE(object):
         else:
             self._seed = seed
         self.results_key = results_key
-        self.main_coeffs = self._estimation_model.results_dict[self.results_key].params
-        self.main_stderrs = self._estimation_model.results_dict[self.results_key].bse
+
+        # Define Parameter values
+        if parameter_values is not None:
+            self.main_coeffs = parameter_values.params
+            self.main_stderrs = parameter_values.bse
+        else:
+            self.main_coeffs = self._estimation_model.results_dict[self.results_key].params
+            self.main_stderrs = self._estimation_model.results_dict[self.results_key].bse
         self.trials = trials
         self.coeff_sample = self.get_mc_params()
 
@@ -87,7 +95,7 @@ class MonteCarloGE(object):
         costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
         for var in costs_not_mc:
             mc_sample.loc[var,:] = self.main_coeffs[var]
-        return mc_sample
+        return mc_sample.reset_index()
 
     def OneSectorGE(self,
                     experiment_data:pd.DataFrame,
@@ -109,7 +117,7 @@ class MonteCarloGE(object):
         models = list()
         for trial in range(self.trials):
             print("\n* Simulating trial {} *".format(trial))
-            trial_coeffs = self.coeff_sample[trial]
+            param_values = ParameterValues(self.coeff_sample, coeff_col=trial, identifier_col='index')
             try:
                 trial_model = OneSectorGE(self._estimation_model,
                                           year=self._year,
@@ -118,7 +126,7 @@ class MonteCarloGE(object):
                                           sigma=sigma,
                                           results_key=self.results_key,
                                           cost_variables=self._cost_variables,
-                                          cost_coeffs=trial_coeffs,
+                                          parameter_values=param_values,
                                           reference_importer = reference_importer,
                                           omr_rescale = omr_rescale,
                                           imr_rescale = imr_rescale,

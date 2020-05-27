@@ -32,7 +32,7 @@ class OneSectorGE(object):
                  sigma: float = 5,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
-                 cost_coeffs: pd.Series = None,
+                 parameter_values: pd.Series = None,
                  reference_importer: str = None,
                  omr_rescale: float = 1000,
                  imr_rescale: float = 1,
@@ -50,8 +50,8 @@ class OneSectorGE(object):
         :param sigma:
         :param results_key:
         :param cost_variables:
-        :param cost_coeffs: (pd.Series) (optional) A pandas series containing coefficient values corresponding to each
-            of the specified cost variables. Should be formatted the same way as GLMResultsWrapper.params or
+        :param parameter_values: (pd.Series) (optional) A set of parameter values or estimates to use for constructing
+            trade costs. Should be of type gegravity.ParameterValues, statsmodels.GLMResultsWrapper, or
             gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
         :param reference_importer:
         :param omr_rescale:
@@ -117,8 +117,8 @@ class OneSectorGE(object):
         else:
             self.cost_variables = cost_variables
 
-        if cost_coeffs is not None:
-            self.cost_coeffs = cost_coeffs
+        if parameter_values is not None:
+            self.cost_coeffs = parameter_values.params
         else:
             self.cost_coeffs = self._estimation_results.params[self.cost_variables]
 
@@ -955,3 +955,26 @@ class _GEMetaData(object):
         self.sector_var_name = gme_meta_data.sector_var_name
         self.expend_var_name = expend_var_name
         self.output_var_name = output_var_name
+
+
+class ParameterValues(object):
+    def __init__(self,
+             estimates:DataFrame,
+                 identifier_col: str,
+                 coeff_col:str,
+                 stderr_col:str = None,
+                 imp_fe_prefix:str = None,
+                 exp_fe_prefix:str = None):
+        estimates = estimates.set_index(identifier_col)
+        # Coefficient  Estimates
+        self.params = estimates[coeff_col].copy()
+        # Standard error estimates
+        if stderr_col is not None:
+            self.bse = estimates[stderr_col].copy()
+        else:
+            self.bse = None
+
+        self.imp_fe_prefix = imp_fe_prefix
+        self.exp_fe_prefix = exp_fe_prefix
+
+
