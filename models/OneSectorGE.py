@@ -627,6 +627,7 @@ class OneSectorGE(object):
         self.bilateral_trade_results = trade_data[[exporter_col, importer_col, 'baseline_modeled_trade',
                                                    'experiment_trade', 'percent_change']]
 
+        # Calculate total Imports (international and domestic)
         agg_imports = self.bilateral_trade_results.copy()
         agg_imports = agg_imports[[importer_col, 'baseline_modeled_trade', 'experiment_trade']]
         agg_imports = agg_imports.groupby([importer_col]).agg('sum')
@@ -635,7 +636,19 @@ class OneSectorGE(object):
         agg_imports['import_percent_change'] = 100 \
                                                * (agg_imports['experiment_imports'] - agg_imports['baseline_imports']) \
                                                / agg_imports['baseline_imports']
+        # Calculate foreign imports
+        foreign_imports = self.bilateral_trade_results.copy()
+        foreign_imports = foreign_imports.loc[foreign_imports[importer_col]!=foreign_imports[exporter_col],:]
+        foreign_imports = foreign_imports[[importer_col, 'baseline_modeled_trade', 'experiment_trade']]
+        foreign_imports = foreign_imports.groupby([importer_col]).agg('sum')
+        foreign_imports.rename(columns={'baseline_modeled_trade': 'baseline_foreign_imports',
+                                    'experiment_trade': 'experiment_foreign_imports'}, inplace=True)
+        foreign_imports['foreign_import_percent_change'] = 100 \
+                                               * (foreign_imports['experiment_foreign_imports'] - foreign_imports['baseline_foreign_imports']) \
+                                               / foreign_imports['baseline_foreign_imports']
 
+
+        # Calculate total exports (foreign + domestic)
         agg_exports = self.bilateral_trade_results.copy()
         agg_exports = agg_exports[[exporter_col, 'baseline_modeled_trade', 'experiment_trade']]
         agg_exports = agg_exports.groupby([exporter_col]).agg('sum')
@@ -645,17 +658,36 @@ class OneSectorGE(object):
                                                * (agg_exports['experiment_exports'] - agg_exports['baseline_exports']) \
                                                / agg_exports['baseline_exports']
 
-        agg_trade = pd.concat([agg_exports, agg_imports], axis=1).reset_index()
+        # Calculate foreign exports
+        foreign_exports = self.bilateral_trade_results.copy()
+        foreign_exports = foreign_exports.loc[foreign_exports[importer_col] != foreign_exports[exporter_col], :]
+        foreign_exports = foreign_exports[[exporter_col, 'baseline_modeled_trade', 'experiment_trade']]
+        foreign_exports = foreign_exports.groupby([exporter_col]).agg('sum')
+        foreign_exports.rename(columns={'baseline_modeled_trade': 'baseline_foreign_exports',
+                                        'experiment_trade': 'experiment_foreign_exports'}, inplace=True)
+        foreign_exports['foreign_export_percent_change'] = 100 \
+                                                           * (foreign_exports['experiment_foreign_exports'] -
+                                                              foreign_exports['baseline_foreign_exports']) \
+                                                           / foreign_exports['baseline_foreign_exports']
+
+
+        agg_trade = pd.concat([agg_exports, foreign_exports, agg_imports, foreign_imports], axis=1).reset_index()
         agg_trade.rename(columns={'index': 'country'}, inplace=True)
         for row in agg_trade.index:
             country = agg_trade.loc[row, 'country']
             country_obj = self.country_set[country]
             country_obj.baseline_imports = agg_trade.loc[row, 'baseline_imports']
             country_obj.baseline_exports = agg_trade.loc[row, 'baseline_exports']
+            country_obj.baseline_foreign_imports = agg_trade.loc[row, 'baseline_foreign_imports']
+            country_obj.baseline_foreign_exports = agg_trade.loc[row, 'baseline_foreign_exports']
             country_obj.experiment_imports = agg_trade.loc[row, 'experiment_imports']
             country_obj.experiment_exports = agg_trade.loc[row, 'experiment_exports']
             country_obj.imports_change = agg_trade.loc[row, 'import_percent_change']
             country_obj.exports_change = agg_trade.loc[row, 'export_percent_change']
+            country_obj.experiment_foreign_imports = agg_trade.loc[row, 'experiment_foreign_imports']
+            country_obj.experiment_foreign_exports = agg_trade.loc[row, 'experiment_foreign_exports']
+            country_obj.foreign_imports_change = agg_trade.loc[row, 'foreign_import_percent_change']
+            country_obj.foreign_exports_change = agg_trade.loc[row, 'foreign_export_percent_change']
 
         self.aggregate_trade_results = agg_trade.set_index('country')
 
@@ -838,10 +870,14 @@ class Country(object):
         self.factory_price_change = None
         self.baseline_imports = None
         self.baseline_exports = None
+        self.baseline_foreign_exports = None
+        self.baseline_foreign_imports = None
         self.experiment_imports = None
         self.experiment_exports = None
-        self.imports_change = None
-        self.exports_change = None
+        self.experiment_foreign_imports = None
+        self.experiment_foreign_exports = None
+        self.foreign_imports_change = None
+        self.foreign_exports_change = None
 
 
     def calculate_baseline_output_expenditure_shares(self, economy):
@@ -865,6 +901,8 @@ class Country(object):
                                  'expenditure_change': [self.expenditure_change],
                                  'export_change': [self.exports_change],
                                  'import_change': [self.imports_change],
+                                 'foreign_export_change': [self.foreign_exports_change],
+                                 'foreign_import_change': [self.foreign_imports_change],
                                  'terms_of_trade_change': [self.terms_of_trade_change]})
         return row
 
