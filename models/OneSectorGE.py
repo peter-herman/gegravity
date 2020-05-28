@@ -34,11 +34,6 @@ class OneSectorGE(object):
                  cost_variables: List[str] = None,
                  parameter_values: pd.Series = None,
                  reference_importer: str = None,
-                 omr_rescale: float = 1000,
-                 imr_rescale: float = 1,
-                 mr_method: str = 'hybr',
-                 mr_max_iter: int = 1400,
-                 mr_tolerance: float = 1e-8,
                  approach: str = None,
                  quiet:bool = False):
         '''
@@ -79,11 +74,11 @@ class OneSectorGE(object):
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
-        self._omr_rescale = omr_rescale
-        self._imr_rescale = imr_rescale
-        self._mr_max_iter = mr_max_iter
-        self._mr_tolerance = mr_tolerance
-        self._mr_method = mr_method
+        self._omr_rescale = None
+        self._imr_rescale = None
+        self._mr_max_iter = None
+        self._mr_tolerance = None
+        self._mr_method = None
         self._ge_method = None
         self._ge_tolerance = None
         self._ge_max_iter = None
@@ -104,6 +99,8 @@ class OneSectorGE(object):
         self.outputs_expenditures = None
         self.country_results = None
         self.country_mr_terms = None
+        self._baseline_built = False
+        self._experiment_defined = False
 
 
         # ---
@@ -123,7 +120,6 @@ class OneSectorGE(object):
             self.cost_coeffs = self._estimation_results.params[self.cost_variables]
 
 
-
         # prep baseline data
         _baseline_data = estimation_model.estimation_data.data_frame.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
@@ -132,14 +128,49 @@ class OneSectorGE(object):
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
 
-        # Build Baseline
 
-        self.build_baseline()
 
-    def build_baseline(self):
+    def build_baseline(self,
+                       omr_rescale: float = None,
+                       imr_rescale: float = 1,
+                       mr_method: str = 'hybr',
+                       mr_max_iter: int = 1400,
+                       mr_tolerance: float = 1e-8,
+                       omr_rescale_range = 10):
         """
-        Builds the baseline values for the model
+        Solve the baseline model. This constructs many of the baseline parameters and solvers for the baseline
+        Multilateral Resistance (MR) terms.
+        :param omr_rescale: (int) This value rescales the OMR values to assist in convergence. Often, OMR values are
+            orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a different
+            order of magnitude can help. By default, this value is None and the build_baseline method attempts to
+            identify an appropriate rescale factor itself (see the omr_rescale_range argument). It is reasonable to
+            allow the program to find an appropriate value initially and enter it in this field for subsequent
+            reruns of the model.
+        :param imr_rescale: (int) This value rescales the IMR values to potentially aid in conversion. However, because
+            the IMR for the reference importer is normalized to one, it is unlikely that there will be benefits to
+            changing the default value, which is 1.
+        :param mr_method: (str) This parameter determines the type of non-linear solver used for solving the baseline
+            and experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+            value is 'hybr'.
+        :param mr_max_iter: (int) This parameter sets the maximum limit on the number of iterations conducted by the
+            solver used to solve for MR terms. The default value is 1400.
+        :param mr_tolerance: (float) This parameterset the convergence tolerance level for the solver used to solve for
+            MR terms. The default value is 1e-8.
+        :param omr_rescale_range: (int) If choosing to let OneSectorGE try to determine an appropriate omr_rescale
+            value, this parameter allows you to set the scope of the values it tests. For example, if omr_rescale = 3,
+            the model will check for convergence using omr_rescale values from the set [10^0, 10^1, 10^-1,..., 10^3,
+            10^-3]. The default value is 10, which should be sufficient for most models.
+        :return: None
+            There is no return but many attributes in the model are populated.
         """
+        # Set some attribute values
+
+        self._omr_rescale = omr_rescale
+        self._imr_rescale = imr_rescale
+        self._mr_max_iter = mr_max_iter
+        self._mr_tolerance = mr_tolerance
+        self._mr_method = mr_method
+
         # Initialize a set of countries and the economy
         self.country_set = self._create_baseline_countries()
         self._economy = self._create_baseline_economy()
@@ -152,9 +183,36 @@ class OneSectorGE(object):
         if self.approach == 'GEPPML':
             self._calculate_GEPPML_multilateral_resistance(version='baseline')
         else:
-            self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
+            if omr_rescale is None:
+                # Set up procedure for identifying usable omr_rescale
+                solved = False
+                value_index = 0
+                # Create list of rescale factors to test
+                scale_values = [0]
+                for i in range(1, omr_rescale_range+1):
+                    scale_values.append(i)
+                    scale_values.append(-1 * i)
+
+                while (solved==False) and (value_index < len(scale_values)):
+                    rescale_factor = 10 ** scale_values[value_index]
+                    if not self.quiet:
+                        print("\nTrying OMR rescale factor of {}".format(rescale_factor))
+                    self._omr_rescale = rescale_factor
+                    self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
+                                                            version='baseline')
+                    if self.solver_diagnostics['baseline_MRs']['status'] != 1:
+                        value_index+=1
+                    else:
+                        if not self.quiet:
+                            print('Solved with omr_rescale = {}'.format(rescale_factor))
+                        solved = True
+
+            else:
+                self._omr_rescale = omr_rescale
+                self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
         # Calculate baseline factory gate prices
         self._calculate_baseline_factory_gate_params()
+        self._baseline_built = True
 
         # ToDo: run some checks the ensure the baseline is solved (e.g. the betas solve the factory gat price equations)
 
@@ -460,6 +518,8 @@ class OneSectorGE(object):
                                                                  * self.country_set[country].baseline_omr
 
     def define_experiment(self, experiment_data: DataFrame = None):
+        if not self._baseline_built:
+            raise ValueError("Baseline must be built first (i.e. ge_model.build_baseline() method")
         self.experiment_data = experiment_data
         self.experiment_trade_costs = self._create_trade_costs(self.experiment_data)
         cost_change = self.baseline_trade_costs.merge(right=self.experiment_trade_costs, how='outer',
@@ -469,8 +529,13 @@ class OneSectorGE(object):
         cost_change.rename(columns={'trade_cost_x': 'baseline_trade_cost', 'trade_cost_y': 'experiment_trade_cost'},
                            inplace=True)
         self.cost_shock = cost_change.loc[cost_change['baseline_trade_cost'] != cost_change['experiment_trade_cost']]
+        self._experiment_defined = True
 
     def simulate(self, ge_method: str = 'hybr', ge_tolerance: float = 1e-8, ge_max_iter: int = 1000):
+        if not self._baseline_built:
+            raise ValueError("Baseline must be built first (i.e. OneSectorGE.build_baseline() method")
+        if not self._experiment_defined:
+            raise ValueError("Expiriment must be defined first (i.e. OneSectorGE.define_expiriment() method")
         self._ge_method = ge_method
         self._ge_tolerance = ge_tolerance
         self._ge_max_iter = ge_max_iter
