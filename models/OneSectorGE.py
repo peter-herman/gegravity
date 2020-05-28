@@ -630,11 +630,12 @@ class OneSectorGE(object):
         trade_data['percent_change'] = 100 * (trade_data['experiment_trade'] - trade_data['baseline_modeled_trade']) \
                                        / trade_data['baseline_modeled_trade']
 
-        self.bilateral_trade_results = trade_data[[exporter_col, importer_col, 'baseline_modeled_trade',
+        bilateral_trade_results = trade_data[[exporter_col, importer_col, 'baseline_modeled_trade',
                                                    'experiment_trade', 'percent_change']]
+        self.bilateral_trade_results = bilateral_trade_results.set_index([exporter_col, importer_col])
 
         # Calculate total Imports (international and domestic)
-        agg_imports = self.bilateral_trade_results.copy()
+        agg_imports = bilateral_trade_results.copy()
         agg_imports = agg_imports[[importer_col, 'baseline_modeled_trade', 'experiment_trade']]
         agg_imports = agg_imports.groupby([importer_col]).agg('sum')
         agg_imports.rename(columns={'baseline_modeled_trade': 'baseline_imports',
@@ -643,7 +644,7 @@ class OneSectorGE(object):
                                                * (agg_imports['experiment_imports'] - agg_imports['baseline_imports']) \
                                                / agg_imports['baseline_imports']
         # Calculate foreign imports
-        foreign_imports = self.bilateral_trade_results.copy()
+        foreign_imports = bilateral_trade_results.copy()
         foreign_imports = foreign_imports.loc[foreign_imports[importer_col]!=foreign_imports[exporter_col],:]
         foreign_imports = foreign_imports[[importer_col, 'baseline_modeled_trade', 'experiment_trade']]
         foreign_imports = foreign_imports.groupby([importer_col]).agg('sum')
@@ -655,7 +656,7 @@ class OneSectorGE(object):
 
 
         # Calculate total exports (foreign + domestic)
-        agg_exports = self.bilateral_trade_results.copy()
+        agg_exports = bilateral_trade_results.copy()
         agg_exports = agg_exports[[exporter_col, 'baseline_modeled_trade', 'experiment_trade']]
         agg_exports = agg_exports.groupby([exporter_col]).agg('sum')
         agg_exports.rename(columns={'baseline_modeled_trade': 'baseline_exports',
@@ -665,7 +666,7 @@ class OneSectorGE(object):
                                                / agg_exports['baseline_exports']
 
         # Calculate foreign exports
-        foreign_exports = self.bilateral_trade_results.copy()
+        foreign_exports = bilateral_trade_results.copy()
         foreign_exports = foreign_exports.loc[foreign_exports[importer_col] != foreign_exports[exporter_col], :]
         foreign_exports = foreign_exports[[exporter_col, 'baseline_modeled_trade', 'experiment_trade']]
         foreign_exports = foreign_exports.groupby([exporter_col]).agg('sum')

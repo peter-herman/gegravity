@@ -60,6 +60,12 @@ class MonteCarloGE(object):
         self.all_aggregate_trade_results = None
         self.aggregate_trade_results = None
 
+        # ToDo: Complete these ones
+        self.all_bilateral_trade_results = None
+        self.bilateral_trade_results = None
+
+        self.solver_diagnostics = None
+
 
         # prep baseline data
         _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
@@ -142,15 +148,16 @@ class MonteCarloGE(object):
                 models.append(trial_model)
             except:
                 print("Failed to solve model.\n")
-        self.all_country_results, self.country_results = self._compile_country_results(models, 'country_results')
-        self.all_country_mr_terms, self.country_mr_terms = self._compile_country_results(models, 'mr_terms')
-        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_country_results(models, 'outputs_expenditures')
-        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_country_results(models, 'factory_gate_prices')
-        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_country_results(models, 'aggregate_trade_results')
-        # ToDo: Finish compilation of results from GE model. Still need bilateral trade results and solver diagnostics
+        self.all_country_results, self.country_results = self._compile_results(models, 'country_results')
+        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms')
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures')
+        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices')
+        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results')
+        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade')
+        # ToDo: Finish compilation of results from GE model. Still need solver diagnostics
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
 
-    def _compile_country_results(self, models, result_type):
+    def _compile_results(self, models, result_type):
         '''
         Compile results across all trials.
         :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
@@ -177,6 +184,8 @@ class MonteCarloGE(object):
                 model_results = model.factory_gate_prices
             if result_type == 'aggregate_trade_results':
                 model_results = model.aggregate_trade_results
+            if result_type == 'bilateral_trade':
+                model_results = model.bilateral_trade_results
 
             # Label columns via multiindex with (trial, result)
             multi_columns = [(num,col) for col in model_results.columns]
@@ -186,8 +195,13 @@ class MonteCarloGE(object):
 
         # Reshape trials to long format
         summary_results = combined_results.copy()
-        summary_results = summary_results.stack(0).reset_index(level=1)
-        summary_results.rename(columns={'level_1': 'trial'}, inplace=True)
+        if result_type=='bilateral_trade':
+            # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
+            summary_results = summary_results.stack(0).reset_index(level=2)
+            summary_results.rename(columns={'level_2': 'trial'}, inplace=True)
+        else:
+            summary_results = summary_results.stack(0).reset_index(level=1)
+            summary_results.rename(columns={'level_1': 'trial'}, inplace=True)
 
         # Compute mean and std across trials
         agg_dict = dict()
@@ -195,13 +209,23 @@ class MonteCarloGE(object):
         var_list.remove('trial')
         for var in var_list:
             agg_dict[var] = ['mean', 'std']
-        summary_results = summary_results.groupby(level=0).agg(agg_dict)
+        if result_type == 'bilateral_trade':
+            summary_results = summary_results.groupby(level=[0, 1]).agg(agg_dict)
+        else:
+            summary_results = summary_results.groupby(level=0).agg(agg_dict)
 
         # Compute standard error for each result type
         for col in summary_results.columns:
             if col[1] == 'std':
-                summary_results[(col[0], 'stderr')] = summary_results[col] / 3 ** 0.5
-        summary_results = summary_results.stack(level=1).reset_index(level=1)
-        summary_results.rename(columns = {'level_1':'statistic'},inplace = True)
+                summary_results[(col[0], 'stderr')] = summary_results[col] / (self.trials ** 0.5)
+        if result_type=='bilateral_trade':
+            summary_results = summary_results.stack(level=1).reset_index(level=2)
+            summary_results.rename(columns = {'level_2':'statistic'},inplace = True)
+        else:
+            summary_results = summary_results.stack(level=1).reset_index(level=1)
+            summary_results.rename(columns = {'level_1':'statistic'},inplace = True)
         return combined_results, summary_results
+
+
+
 
