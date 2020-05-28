@@ -144,10 +144,10 @@ class MonteCarloGE(object):
                 print("Failed to solve model.\n")
         self.all_country_results, self.country_results = self._compile_country_results(models, 'country_results')
         self.all_country_mr_terms, self.country_mr_terms = self._compile_country_results(models, 'mr_terms')
-        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_country_results(models, 'output_expenditures')
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_country_results(models, 'outputs_expenditures')
         self.all_factory_gate_prices, self.factory_gate_prices = self._compile_country_results(models, 'factory_gate_prices')
         self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_country_results(models, 'aggregate_trade_results')
-        # ToDo: Finsih compilation of results from GE model. Still need bilateral trade results and solver diagnostics
+        # ToDo: Finish compilation of results from GE model. Still need bilateral trade results and solver diagnostics
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
 
     def _compile_country_results(self, models, result_type):
@@ -172,7 +172,7 @@ class MonteCarloGE(object):
             if result_type == 'mr_terms':
                 model_results = model.country_mr_terms
             if result_type == 'outputs_expenditures':
-                model_results == model.outputs_expenditures
+                model_results = model.outputs_expenditures
             if result_type == 'factory_gate_prices':
                 model_results = model.factory_gate_prices
             if result_type == 'aggregate_trade_results':

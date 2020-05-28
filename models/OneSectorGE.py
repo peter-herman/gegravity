@@ -572,11 +572,17 @@ class OneSectorGE(object):
                                                   'experiment_expenditure': country_obj.experiment_expenditure,
                                                   'expenditure_percent_change': country_obj.expenditure_change},
                                                  ignore_index=True)
-
+        # Store some economy-wide values to economy object
         self._economy.experiment_total_output = total_output
         self._economy.output_change = 100 * (total_output - self._economy.baseline_total_output) \
                                       / self._economy.baseline_total_output
-        self.outputs_expenditures = results_table.set_index('country')
+
+        results_table = results_table.set_index('country')
+        # Ensure all values are numeric
+        for col in results_table.columns:
+            results_table[col] = results_table[col].astype(float)
+        # Save to model
+        self.outputs_expenditures = results_table
 
     def _construct_experiment_trade(self):
         importer_col = self.meta_data.imp_var_name
