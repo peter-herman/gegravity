@@ -32,7 +32,7 @@ class OneSectorGE(object):
                  sigma: float = 5,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
-                 parameter_values: pd.Series = None,
+                 parameter_values = None,
                  reference_importer: str = None,
                  approach: str = None,
                  quiet:bool = False):
@@ -70,7 +70,10 @@ class OneSectorGE(object):
         # ToDo: Modify meta_data load when GME update includes it differently
         self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
-        self._estimation_results = self._estimation_model.results_dict[results_key]
+        if parameter_values is None:
+            self._estimation_results = self._estimation_model.results_dict[results_key]
+        else:
+            self._estimation_results = None
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
@@ -176,6 +179,8 @@ class OneSectorGE(object):
 
         # Solve for the baseline multilateral resistance terms
         if self.approach == 'GEPPML':
+            if self._estimation_results is None:
+                raise ValueError("GEPPML approach requires that the gme.EstimationModel be estimated and use importer and exporter fixed effects.")
             self._calculate_GEPPML_multilateral_resistance(version='baseline')
         else:
             self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
@@ -822,7 +827,7 @@ class OneSectorGE(object):
                 'solved': If True, the MR model solved successfully. If False, it did not solve.
                 'message': Description of the outcome of the solver.
                 '..._func_value': Three columns refelcting the maximum, mean, and median values from the solver
-                    functions. Function values closer to zero imply a better solution to system of equations.
+                    objective functions. Function values closer to zero imply a better solution to system of equations.
                 'reference_importer_omr': The solution value for the reference importer's OMR value.
                 '..._omr': The solution value(s) for the user supplied countries.
         '''
