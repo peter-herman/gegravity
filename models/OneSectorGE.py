@@ -99,6 +99,8 @@ class OneSectorGE(object):
         self.outputs_expenditures = None
         self.country_results = None
         self.country_mr_terms = None
+
+        # Status checks
         self._baseline_built = False
         self._experiment_defined = False
 
@@ -800,6 +802,26 @@ class OneSectorGE(object):
                                    both['baseline_modeled_trade']
 
         return both
+
+    def export_results(self, directory:str = None, name:str = ''):
+        country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results, self.outputs_expenditures,
+                               self.country_mr_terms]
+        country_results = pd.concat(country_result_set, axis = 1)
+        # Drop duplicate columns
+        country_results.drop(['experiment_factory_price', 'export_percent_change', 'foreign_export_percent_change',
+                              'import_percent_change', 'foreign_import_percent_change', 'output_percent_change',
+                              'expenditure_percent_change'], axis =1)
+        bilateral_results = self.bilateral_trade_results
+        diagnostics = pd.DataFrame(self.solver_diagnostics)
+        if directory is not None:
+            country_results.to_csv("{}/{}_country_results.csv".format(directory, name))
+            bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name))
+            diagnostics.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name))
+        else:
+            return country_results, bilateral_results, diagnostics
+
+
+
 
     # ---
     # Diagnostic Tools
