@@ -10,7 +10,7 @@ import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
 from scipy.optimize import root
-from numpy import multiply
+from numpy import multiply, median
 from warnings import warn
 import math as math
 
@@ -130,24 +130,31 @@ class OneSectorGE(object):
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
 
+        # Initialize a set of countries and the economy
+        self.country_set = self._create_baseline_countries()
+        self._economy = self._create_baseline_economy()
+        # Calculate certain country values using info from the whole economy
+        for country in self.country_set:
+            self.country_set[country].calculate_baseline_output_expenditure_shares(self._economy)
+        # Calculate baseline trade costs
+        self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
+
+
 
 
     def build_baseline(self,
-                       omr_rescale: float = None,
+                       omr_rescale: float = 1,
                        imr_rescale: float = 1,
                        mr_method: str = 'hybr',
                        mr_max_iter: int = 1400,
-                       mr_tolerance: float = 1e-8,
-                       omr_rescale_range = 10):
+                       mr_tolerance: float = 1e-8):
         """
-        Solve the baseline model. This constructs many of the baseline parameters and solvers for the baseline
-        Multilateral Resistance (MR) terms.
+        Solve the baseline model. This primarily solvers for the baseline Multilateral Resistance (MR) terms.
         :param omr_rescale: (int) This value rescales the OMR values to assist in convergence. Often, OMR values are
             orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a different
-            order of magnitude can help. By default, this value is None and the build_baseline method attempts to
-            identify an appropriate rescale factor itself (see the omr_rescale_range argument). It is reasonable to
-            allow the program to find an appropriate value initially and enter it in this field for subsequent
-            reruns of the model.
+            order of magnitude can help. Values should be of the form 10^n. By default, this value is 1 (10^0). However,
+            users should be careful with this choice as results, even when convergent, may not be fully robust to any
+            selection. The method OneSectorGE.check_omr_rescale() can help identify and compare feasible values.
         :param imr_rescale: (int) This value rescales the IMR values to potentially aid in conversion. However, because
             the IMR for the reference importer is normalized to one, it is unlikely that there will be benefits to
             changing the default value, which is 1.
@@ -158,60 +165,20 @@ class OneSectorGE(object):
             solver used to solve for MR terms. The default value is 1400.
         :param mr_tolerance: (float) This parameterset the convergence tolerance level for the solver used to solve for
             MR terms. The default value is 1e-8.
-        :param omr_rescale_range: (int) If choosing to let OneSectorGE try to determine an appropriate omr_rescale
-            value, this parameter allows you to set the scope of the values it tests. For example, if omr_rescale = 3,
-            the model will check for convergence using omr_rescale values from the set [10^0, 10^1, 10^-1,..., 10^3,
-            10^-3]. The default value is 10, which should be sufficient for most models.
         :return: None
             There is no return but many attributes in the model are populated.
         """
-        # Set some attribute values
-
         self._omr_rescale = omr_rescale
         self._imr_rescale = imr_rescale
         self._mr_max_iter = mr_max_iter
         self._mr_tolerance = mr_tolerance
         self._mr_method = mr_method
 
-        # Initialize a set of countries and the economy
-        self.country_set = self._create_baseline_countries()
-        self._economy = self._create_baseline_economy()
-        # Calculate certain country values using info from the whole economy
-        for country in self.country_set:
-            self.country_set[country].calculate_baseline_output_expenditure_shares(self._economy)
-        # Calculate baseline trade costs
-        self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
         # Solve for the baseline multilateral resistance terms
         if self.approach == 'GEPPML':
             self._calculate_GEPPML_multilateral_resistance(version='baseline')
         else:
-            if omr_rescale is None:
-                # Set up procedure for identifying usable omr_rescale
-                solved = False
-                value_index = 0
-                # Create list of rescale factors to test
-                scale_values = [0]
-                for i in range(1, omr_rescale_range+1):
-                    scale_values.append(i)
-                    scale_values.append(-1 * i)
-
-                while (solved==False) and (value_index < len(scale_values)):
-                    rescale_factor = 10 ** scale_values[value_index]
-                    if not self.quiet:
-                        print("\nTrying OMR rescale factor of {}".format(rescale_factor))
-                    self._omr_rescale = rescale_factor
-                    self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
-                                                            version='baseline')
-                    if self.solver_diagnostics['baseline_MRs']['status'] != 1:
-                        value_index+=1
-                    else:
-                        if not self.quiet:
-                            print('Solved with omr_rescale = {}'.format(rescale_factor))
-                        solved = True
-
-            else:
-                self._omr_rescale = omr_rescale
-                self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
+            self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
         # Calculate baseline factory gate prices
         self._calculate_baseline_factory_gate_params()
         self._baseline_built = True
@@ -317,7 +284,6 @@ class OneSectorGE(object):
         return country_set
 
     def _create_baseline_economy(self):
-
         # Initialize Economy
         economy = Economy(sigma=self.sigma)
         economy.initialize_baseline_total_output_expend(self.country_set)
@@ -832,8 +798,70 @@ class OneSectorGE(object):
                                                                    inputs_only=inputs_only)
         return test_diagnostics
 
+    def check_omr_rescale(self,
+                         omr_rescale_range:int = 10,
+                         mr_method: str = 'hybr',
+                         mr_max_iter: int = 1400,
+                         mr_tolerance: float = 1e-8,
+                         countries:List[str] = []):
+        '''
+        Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
+            feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
+        :param omr_rescale_range: (int) This parameter allows you to set the scope of the values tested. For example,
+            if omr_rescale = 3, the model will check for convergence using omr_rescale values from the set [10^-3,
+            10^-2, 10^-1, 10^0, ..., 10^3]. The default value is 10.
+        :param mr_method:
+        :param mr_max_iter:
+        :param mr_tolerance:
+        :param countries: (List[str]} This is a list of countries for which to return the estimated OMR values for user
+            evaluation.
+        :return: (DataFrame) A dataframe of diagnostic information for users to compare different omr_rescale factors.
+            The returned dataframe contains the following columns:
+                'omr_rescale': The rescale factor used
+                'omr_rescale (alt format)': A string representation of the rescale factor as an exponential expression.
+                'solved': If True, the MR model solved successfully. If False, it did not solve.
+                'message': Description of the outcome of the solver.
+                '..._func_value': Three columns refelcting the maximum, mean, and median values from the solver
+                    functions. Function values closer to zero imply a better solution to system of equations.
+                'reference_importer_omr': The solution value for the reference importer's OMR value.
+                '..._omr': The solution value(s) for the user supplied countries.
+        '''
 
+        self._mr_max_iter = mr_max_iter
+        self._mr_tolerance = mr_tolerance
+        self._mr_method = mr_method
+        self._imr_rescale = 1
 
+        # Set up procedure for identifying usable omr_rescale
+        findings = list()
+        value_index = 0
+        # Create list of rescale factors to test
+        scale_values = range(-1*omr_rescale_range,omr_rescale_range+1)
+
+        for scale_value in scale_values:
+            value_results = dict()
+            rescale_factor = 10 ** scale_value
+
+            if not self.quiet:
+                print("\nTrying OMR rescale factor of {}".format(rescale_factor))
+            self._omr_rescale = rescale_factor
+            self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
+                                                    version='baseline')
+            value_results['omr_rescale'] = rescale_factor
+            value_results['omr_rescale (alt format)'] = '10^{}'.format(scale_value)
+            value_results['solved'] = self.solver_diagnostics['baseline_MRs']['success']
+            value_results['message'] = self.solver_diagnostics['baseline_MRs']['message']
+            func_vals = self.solver_diagnostics['baseline_MRs']['fun']
+            value_results['max_func_value'] = func_vals.max()
+            value_results['mean_func_value'] = func_vals.mean()
+            value_results['mean_func_value'] = median(func_vals)
+            value_results['reference_importer_omr'] = self.country_set[self._reference_importer].baseline_omr
+            for country in countries:
+                value_results['{}_omr'.format(country)] = self.country_set[country].baseline_omr
+            findings.append(value_results)
+        findings_table = pd.DataFrame(findings)
+
+        return findings_table
 
 
 def _multilateral_resistances(x, mr_params):
