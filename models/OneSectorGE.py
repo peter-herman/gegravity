@@ -313,6 +313,10 @@ class OneSectorGE(object):
             weighted_list = weighted_list + [('cost_weighted_' + variable)]
 
         weighted_costs['trade_cost'] = np.exp(weighted_costs[weighted_list].sum(axis=1))
+        if weighted_costs.isna().any().any():
+            warn("\n Calculated trade costs contain missing (nan) values. Check parameter values and trade cost variables in baseline or experiment data.")
+        if weighted_costs.shape[0] != len(self.country_set.keys())**2:
+            warn("\n Calculated trade costs are not square. Some bilateral costs are absent.")
 
         return weighted_costs[obs_id + ['trade_cost']]
 
@@ -339,10 +343,17 @@ class OneSectorGE(object):
         cost_out_shr = cost_params.pivot(index=self.meta_data.exp_var_name,
                                          columns=self.meta_data.imp_var_name,
                                          values='cost_output_share')
+        if np.isnan(cost_exp_shr.values).any():
+            warn("\n 'cost_exp_share' values contain missing (nan) values. \n 1. Check that expenditure shares exist for all countries in country_set \n 2. Check that trade cost data is square and no bilateral pairs are missing.")
+        if np.isnan(cost_out_shr.values).any():
+            warn("\n 'cost_out_share' values contain missing (nan) values. \n 1. Check that output shares exist for all countries in country_set \n 2. Check that trade cost data is square no bilateral pairs are missing.")
+
         # Convert to numpy array to improve solver speed
         built_params = dict()
         built_params['cost_exp_shr'] = cost_exp_shr.values
         built_params['cost_out_shr'] = cost_out_shr.values
+
+
         return built_params
 
     def _calculate_multilateral_resistance(self,
@@ -371,6 +382,7 @@ class OneSectorGE(object):
             if inputs_only:
                 return test_diagnostics
             else:
+                test_diagnostics['function_value'] = 'unsolved'
                 test_diagnostics['function_value'] = _multilateral_resistances(initial_values, mr_params)
                 return test_diagnostics
         else:
