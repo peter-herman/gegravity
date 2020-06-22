@@ -749,6 +749,7 @@ class OneSectorGE(object):
         self.aggregate_trade_results = agg_trade.set_index('country')
 
     def _compile_results(self):
+        '''Generate and compile results after simulations'''
         results = list()
         mr_results = list()
         for country in self.country_set.keys():
@@ -787,6 +788,15 @@ class OneSectorGE(object):
         return both
 
     def export_results(self, directory:str = None, name:str = ''):
+        '''
+        Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
+            and (3) solver diagnostics.
+        :param directory: (str) (optional) Directory in which to write results files. If not directory is supplied,
+            three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral results,
+            solver diagnostics).
+        :param name:(str) name of the simulation to prefix to the result file names.
+        :return: (None or Tuple[DataFrame, DataFrame, DataFrame])
+        '''
         country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results, self.outputs_expenditures,
                                self.country_mr_terms]
         country_results = pd.concat(country_result_set, axis = 1)
@@ -882,6 +892,12 @@ class OneSectorGE(object):
 
 
 def _multilateral_resistances(x, mr_params):
+    '''
+    System of equartions for the multilateral resistances
+    :param x: (list) Values for the endogenous variables OMR Pi_i^(1-sigma) and IMR P_j^(1-sigma).
+    :param mr_params: (dict) Additional exogeneous parameters
+    :return: (list) the function value evaluated at x given mr_params
+    '''
     # x should be length (n-1) + n (i.e. no IMR for the representative country)
     num_countries = mr_params['number_of_countries']
     cost_exp_shr = mr_params['cost_exp_shr']
@@ -906,6 +922,13 @@ def _multilateral_resistances(x, mr_params):
 
 
 def _full_ge(x, ge_params):
+    '''
+    System of equations for the full-GE model
+    :param x: (list) Values for the endogenous variables
+    :param ge_params: (dict) Exogenous parameters for the equations including: number of countries, sigma, exogenous
+        outpute, cost/expenditure, etc. shares, factory gate price parameter, and rescale factors.
+    :return: (list) The value of the equations evaluated at x given ge_params.
+    '''
     # Unpack Parameters
     num_countries = ge_params['number_of_countries']
     sigma_power = 1 - ge_params['sigma']
@@ -935,6 +958,9 @@ def _full_ge(x, ge_params):
 
 
 class Economy(object):
+    '''
+    Object for storing economy-wide information.
+    '''
     def __init__(self,
                  sigma: float = 4):
         self.sigma = sigma
