@@ -791,11 +791,13 @@ class OneSectorGE(object):
         '''
         Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
             and (3) solver diagnostics.
-        :param directory: (str) (optional) Directory in which to write results files. If not directory is supplied,
+        :param directory: (str) (optional) Directory in which to write results files. If no directory is supplied,
             three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral results,
             solver diagnostics).
         :param name:(str) name of the simulation to prefix to the result file names.
-        :return: (None or Tuple[DataFrame, DataFrame, DataFrame])
+        :return: (None or Tuple[DataFrame, DataFrame, DataFrame]) If a directory argument is supplied, the method
+            returns nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+            DataFrames.
         '''
         country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results, self.outputs_expenditures,
                                self.country_mr_terms]
@@ -805,11 +807,29 @@ class OneSectorGE(object):
                               'import_percent_change', 'foreign_import_percent_change', 'output_percent_change',
                               'expenditure_percent_change'], axis =1)
         bilateral_results = self.bilateral_trade_results
-        diagnostics = pd.DataFrame(self.solver_diagnostics)
+
+        # Create Dataframe with Diagnostic results
+        diagnostics = self.solver_diagnostics
+        column_list = list()
+        # Iterate through the three solver types: baseline_MRs, conditional_MRs, and Full_GE
+        for results_type, results in diagnostics.items():
+            for key, value in results.items():
+                # Single Entry fields must be converted to list before creating DataFrame
+                if key in ['success', 'status', 'nfev', 'message']:
+                    frame = pd.DataFrame({(results_type, key): [value]})
+                    column_list.append(frame)
+                # Vector-like fields Can be used as is. Several available fields are not included: 'fjac','r', and 'qtf'
+                elif key in ['x', 'fun']:
+                    frame = pd.DataFrame({(results_type, key): value})
+                    column_list.append(frame)
+        diag_frame = pd.concat(column_list, axis=1)
+        diag_frame = diag_frame.fillna('')
+
+
         if directory is not None:
             country_results.to_csv("{}/{}_country_results.csv".format(directory, name))
             bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name))
-            diagnostics.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name))
+            diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index = False)
         else:
             return country_results, bilateral_results, diagnostics
 
