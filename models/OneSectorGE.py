@@ -114,7 +114,6 @@ class OneSectorGE(object):
         # except:
         #     print('reference_importer OK')
 
-        # ToDo: Modify meta_data load when GME update includes it differently
         self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
         if parameter_values is None:
@@ -458,12 +457,12 @@ class OneSectorGE(object):
             if version == 'baseline':
                 for country in country_list:
                     self.country_set[country]._baseline_imr_ratio = mrs.loc[country, 'imrs']  # 1 / P^{1-sigma}
-                    self.country_set[country]._baseline_omr_ratio = mrs.loc[country, 'omrs']  # 1 / Pi^{1-sigma}
+                    self.country_set[country]._baseline_omr_ratio = mrs.loc[country, 'omrs']  # 1 / π^{1-sigma}
 
             if version == 'conditional':
                 for country in country_list:
                     self.country_set[country]._conditional_imr_ratio = mrs.loc[country, 'imrs']  # 1 / P^{1-sigma}
-                    self.country_set[country]._conditional_omr_ratio = mrs.loc[country, 'omrs']  # 1 / Pi^{1-sigma}
+                    self.country_set[country]._conditional_omr_ratio = mrs.loc[country, 'omrs']  # 1 / π^{1-sigma}
 
     def _calculate_GEPPML_multilateral_resistance(self, version):
         '''
@@ -477,7 +476,7 @@ class OneSectorGE(object):
 
         def _GEPPML_OMR(Y_i, E_R, exp_fe_i):
             '''
-            Calculate outward multilateral resistance based on equation (2-38): Pi_i^(1-sigma)
+            Calculate outward multilateral resistance based on equation (2-38): π_i^(1-sigma)
                 Y_i: Output for exporter i
                 E_r: Expenditure for the reference country
                 exp_fe_i: Estimated exporter fixed effect for country i
@@ -509,11 +508,11 @@ class OneSectorGE(object):
                         raise ValueError("No exporter fixed effect estimate for {}".format(country))
                     # P_R = 1 by construction
                     imr = 1
-                    # Pi_i^(1-sigma)
+                    # π_i^(1-sigma)
                     omr = _GEPPML_OMR(Y_i=country_obj.baseline_output, E_R=reference_expnd,
                                       exp_fe_i=country_obj.baseline_exporter_fe)
                     self.country_set[country]._baseline_imr_ratio = 1 / imr  # 1 / P^{1-sigma}
-                    self.country_set[country]._baseline_omr_ratio = 1 / omr  # 1 / Pi^{1-sigma}
+                    self.country_set[country]._baseline_omr_ratio = 1 / omr  # 1 / π^{1-sigma}
 
                 # Set values for every other country
                 else:
@@ -522,7 +521,7 @@ class OneSectorGE(object):
                         raise ValueError("No importer fixed effect estimate for {}".format(country))
                     if country_obj.baseline_exporter_fe == 'no estimate':
                         raise ValueError("No exporter fixed effect estimate for {}".format(country))
-                    # Pi_i^(1-sigma)
+                    # π_i^(1-sigma)
                     omr = _GEPPML_OMR(Y_i=country_obj.baseline_output, E_R=reference_expnd,
                                       exp_fe_i=country_obj.baseline_exporter_fe)
                     # P_j^(1-sigma)
@@ -530,7 +529,7 @@ class OneSectorGE(object):
                                       imp_fe_j=country_obj.baseline_exporter_fe)
 
                     self.country_set[country]._baseline_imr_ratio = 1 / imr  # 1 / P^{1-sigma}
-                    self.country_set[country]._baseline_omr_ratio = 1 / omr  # 1 / Pi^{1-sigma}
+                    self.country_set[country]._baseline_omr_ratio = 1 / omr  # 1 / π^{1-sigma}
 
         if version == 'conditional':
             # Step 1: Re-estimate model
@@ -655,7 +654,7 @@ class OneSectorGE(object):
         self.factory_gate_prices = factory_gate_prices.set_index('exporter')
         for i, country in enumerate(country_list):
             self.country_set[country]._experiment_imr_ratio = imrs[i] # 1 / P^{1-sigma}
-            self.country_set[country]._experiment_omr_ratio = omrs[i] # 1 / Pi^{1-sigma}
+            self.country_set[country]._experiment_omr_ratio = omrs[i] # 1 / π^{1-sigma}
             self.country_set[country].experiment_factory_price = prices[i]
             self.country_set[country].factory_price_change = 100 * (prices[i] - 1)
 
@@ -732,7 +731,7 @@ class OneSectorGE(object):
             exp_omr_ratio = self.country_set[exporter]._experiment_omr_ratio
             expend = self.country_set[importer].experiment_expenditure
             output_share = self.country_set[exporter].experiment_output_share
-            # gravity = E_j  *   Y_i/Y      * 1/P_j^{1-sigma} * 1/Pi_i^{1-sigma}
+            # gravity = E_j  *   Y_i/Y      * 1/P_j^{1-sigma} * 1/π_i^{1-sigma}
             gravity = expend * output_share * exp_imr_ratio * exp_omr_ratio
             trade_data.loc[row, 'exper_gravity'] = gravity
 
@@ -741,7 +740,7 @@ class OneSectorGE(object):
             bsln_omr_ratio = self.country_set[exporter]._baseline_omr_ratio
             bsln_expend = self.country_set[importer].baseline_expenditure
             bsln_output_share = self.country_set[exporter].baseline_output_share
-            # gravity = E_j  *   Y_i/Y      * 1/P_j^{1-sigma} * 1/Pi_i^{1-sigma}
+            # gravity = E_j  *   Y_i/Y      * 1/P_j^{1-sigma} * 1/π_i^{1-sigma}
             bsln_gravity = bsln_expend * bsln_output_share * bsln_imr_ratio * bsln_omr_ratio
             trade_data.loc[row, 'bsln_gravity'] = bsln_gravity
 
@@ -1082,7 +1081,7 @@ class OneSectorGE(object):
 def _multilateral_resistances(x, mr_params):
     '''
     System of equartions for the multilateral resistances
-    :param x: (list) Values for the endogenous variables OMR Pi_i^(1-sigma) and IMR P_j^(1-sigma).
+    :param x: (list) Values for the endogenous variables OMR π_i^(1-sigma) and IMR P_j^(1-sigma).
     :param mr_params: (dict) Additional exogeneous parameters
     :return: (list) the function value evaluated at x given mr_params
     '''
@@ -1195,53 +1194,55 @@ class Country(object):
                  reference_expenditure: float = None):
         self.identifier = identifier
         self.year = year
-        self.baseline_output = baseline_output
-        self.baseline_expenditure = baseline_expenditure
+        self.baseline_output = baseline_output # Y_i
+        self.baseline_expenditure = baseline_expenditure # E_j
         self.baseline_importer_fe = baseline_importer_fe
         self.baseline_exporter_fe = baseline_exporter_fe
         self._reference_expenditure = reference_expenditure
-        self.baseline_output_share = None
-        self.baseline_expenditure_share = None
+        self.baseline_output_share = None # Y_i/Y
+        self.baseline_expenditure_share = None # E_j/Y
         self.baseline_export_costs = None
         self.baseline_import_costs = None
         self._baseline_imr_ratio = None  # 1 / P^{1-sigma}
-        self._baseline_omr_ratio = None  # 1 / Pi ^{1-\sigma}
-        self.baseline_imr = None # P
-        self.baseline_omr = None # Pi
+        self._baseline_omr_ratio = None  # 1 / π ^{1-\sigma}
+        self.baseline_imr = None  # P
+        self.baseline_omr = None  # π
         self.factory_gate_price_param = None  # Beta_i
         self.baseline_factory_price = 1
-        self._conditional_imr_ratio = None
-        self._conditional_omr_ratio = None
-        self.conditional_imr = None # P
-        self.conditional_omr = None # Pi
-        self._experiment_imr_ratio = None # 1 / P^{1-sigma}
-        self._experiment_omr_ratio = None # 1 / Pi ^{1-\sigma}
-        self.experiment_imr = None  # P
-        self.experiment_omr = None  # Pi
-        self.imr_change = None
-        self.omr_chnage = None
-        self.experiment_factory_price = None
-        self.experiment_output = None
-        self.experiment_expenditure = None
-        self.baseline_terms_of_trade = None
-        self.experiment_terms_of_trade = None
-        self.output_change = None
-        self.expenditure_change = None
-        self.terms_of_trade_change = None
-        self.factory_price_change = None
-        self.baseline_imports = None
-        self.baseline_exports = None
-        self.baseline_foreign_exports = None
-        self.baseline_foreign_imports = None
-        self.experiment_imports = None
-        self.experiment_exports = None
-        self.experiment_foreign_imports = None
-        self.experiment_foreign_exports = None
-        self.foreign_imports_change = None
-        self.foreign_exports_change = None
-        self.baseline_gdp = None
-        self.experiment_gdp = None
-        self.gdp_change = None
+        self._conditional_imr_ratio = None  # 1 / P'^{1-sigma}
+        self._conditional_omr_ratio = None  # 1 / π'^{1-\sigma}
+        self.conditional_imr = None  # P'
+        self.conditional_omr = None  # π'
+        self._experiment_imr_ratio = None  # 1 / P*^{1-sigma}
+        self._experiment_omr_ratio = None  # 1 / π*^{1-\sigma}
+        self.experiment_imr = None  # P*
+        self.experiment_omr = None  # π*
+        self.imr_change = None # (P*-P)/P
+        self.omr_change = None # (π*-π)/π
+        self.experiment_factory_price = None # p*_i
+        self.experiment_output = None # Y*_i
+        self.experiment_expenditure = None # E*_j
+        self.baseline_terms_of_trade = None  # ToT_i = p_i/P_i
+        self.experiment_terms_of_trade = None  # ToT*_i = p*_i/P*_i
+        self.output_change = None  # (Y* - Y)/Y
+        self.expenditure_change = None  # (E* - E)/E
+        self.terms_of_trade_change = None  # (ToT* - ToT)/ToT
+        self.factory_price_change = None # (p*-p)/p or, in practice, (P*-1)/1
+        self.baseline_imports = None  # sum_i(X_ij)
+        self.baseline_exports = None  # sum_j(X_ij)
+        self.baseline_foreign_imports = None # sum_{i!=j}(X_ij)
+        self.baseline_foreign_exports = None  # sum_{j!=i}(X_ij)
+        self.experiment_imports = None # sum_i(X*_ij)
+        self.experiment_exports = None # sum_j(X*_ij)
+        self.experiment_foreign_imports = None # sum_{i!=j}(X*_ij)
+        self.experiment_foreign_exports = None # sum_{j!=i}(X*_ij)
+        self.foreign_imports_change = None # (sum_{i!=j}(X*_ij) - sum_{i!=j}(X_ij))/sum_{i!=j}(X_ij)
+        self.foreign_exports_change = None # (sum_{j!=i}(X*_ij) - sum_{j!=i}(X_ij))/sum_{j!=i}(X_ij)
+        self.baseline_gdp = None # GDP_j = Y_j/P_j
+        self.experiment_gdp = None # GDP*_j = Y*_j/P*_j
+        self.gdp_change = None # (GDP* - GDP)/GDP
+        self.phi = None  # φ_i = E_i / Y_i (Eqn. (30) from Larch and Yotov, 2016)
+        self.welfare_stat = None  # (E_i/P_i)/(E*_i/P*_i)
 
 
     def calculate_baseline_output_expenditure_shares(self, economy):
@@ -1254,7 +1255,8 @@ class Country(object):
                       self._conditional_imr_ratio, self._conditional_omr_ratio]:
             if value is None:
                 warn("Not all necessary values for terms of trade have been calculated.")
-        # Create actual values for imr and omr
+
+        # Create actual values for imr (P) and omr (π) from ratio representation
         sigma_inverse = 1 / (1 - sigma)
         self.baseline_imr = 1 / (self._baseline_imr_ratio**sigma_inverse)
         self.baseline_omr = 1 / (self._baseline_omr_ratio**sigma_inverse)
@@ -1268,15 +1270,26 @@ class Country(object):
         self.experiment_terms_of_trade = self.experiment_factory_price / self.experiment_imr
         self.terms_of_trade_change = 100 * (self.experiment_terms_of_trade - self.baseline_terms_of_trade) \
                                      / self.baseline_terms_of_trade
-        # ToDo: Fix GDP calculation
-        # Calculate GDP (from Stata code accompanying Yotov et al (2016): Y/ (IMR ^(1 / (1 -sigma))))
-        # i.e. IMR = P^{1-sigma}  =>  GDP = Y/P ^{(1-sigma)/(1-sigma)} = Y/P
-        # self.baseline_gdp = self.baseline_output/(self._baseline_imr_ratio ** sigma_term)
-        # self.experiment_output = self.experiment_factory_price*self.baseline_output
-        # self.experiment_gdp = self.experiment_output/(self._baseline_imr_ratio ** sigma_term)
-        # self.gdp_change = 100 * (self.experiment_gdp - self.baseline_gdp)/ self.baseline_gdp
-        # ToDo: Calculate Welfare Measure
-        # ToDo: Calculate IMR (consumer price) measure
+
+        # Calculate GDP (from Stata code accompanying Yotov et al (2016): GDP_j = Y_j/P_j)
+        self.baseline_gdp = self.baseline_output/self.baseline_imr
+        self.experiment_output = self.experiment_factory_price*self.baseline_output
+        self.experiment_gdp = self.experiment_output/self._baseline_imr_ratio
+        self.gdp_change = 100 * (self.experiment_gdp - self.baseline_gdp)/ self.baseline_gdp
+
+        # Calculate Arkolakis, Costinot and Rodríguez-Clare welfare statistic (Equation (25) from Larch and Yotov, 2016)
+        # WF_i = W_i/W*_i = (E_i/P_i)/(E*_i/P*_i)
+        # E_i = φ_i Y_i (Eqn. (30) from Larch and Yotov, 2016) ->  E*_i = φ_i Y*_i
+        self.phi = self.baseline_expenditure/self.baseline_output
+        self.experiment_expenditure = self.phi * self.experiment_output
+        self.welfare_stat = (self.baseline_expenditure/self.baseline_imr)/\
+                            (self.experiment_expenditure/self.experiment_imr)
+
+        # Calculate change in IMR (consumer price) and OMR (producer incidence) measure
+        self.imr_change = (self.experiment_imr - self.baseline_imr)/self.baseline_imr
+        self.omr_change = (self.experiment_omr - self.baseline_omr)/self.baseline_omr
+
+
 
 
     def get_results(self):
