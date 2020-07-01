@@ -184,7 +184,7 @@ class OneSectorGE(object):
         self._economy = self._create_baseline_economy()
         # Calculate certain country values using info from the whole economy
         for country in self.country_set:
-            self.country_set[country].calculate_baseline_output_expenditure_shares(self._economy)
+            self.country_set[country]._calculate_baseline_output_expenditure_shares(self._economy)
         # Calculate baseline trade costs
         self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
 
@@ -597,7 +597,7 @@ class OneSectorGE(object):
         # Step 2: Simulate full GE
         self._calculate_full_ge()
         # Step 3: Generate post-simulation results
-        [self.country_set[country].construct_country_welfare_measures(sigma=self.sigma) for country in self.country_set.keys()]
+        [self.country_set[country]._construct_country_measures(sigma=self.sigma) for country in self.country_set.keys()]
         self._construct_experiment_output_expend()
         self._construct_experiment_trade()
         self._compile_results()
@@ -665,11 +665,9 @@ class OneSectorGE(object):
         results_table = pd.DataFrame(columns=['country', 'baseline_output', 'experiment_output',
                                               'output_percent_change', 'baseline_expenditure',
                                               'experiment_expenditure', 'expenditure_percent_change'])
-        # The first time looping through gets individual and total output and expenditure
+        # The first time looping through gets calculates total output
         for country in self.country_set.keys():
             country_obj = self.country_set[country]
-            country_obj.experiment_output = country_obj.experiment_factory_price * country_obj.baseline_output
-            country_obj.experiment_expenditure = country_obj.experiment_factory_price * country_obj.baseline_expenditure
             total_output += country_obj.experiment_output
 
         # The second time looping through gets things that are dependent on total output/expenditure
@@ -1245,11 +1243,11 @@ class Country(object):
         self.welfare_stat = None  # (E_i/P_i)/(E*_i/P*_i)
 
 
-    def calculate_baseline_output_expenditure_shares(self, economy):
+    def _calculate_baseline_output_expenditure_shares(self, economy):
         self.baseline_expenditure_share = self.baseline_expenditure / economy.baseline_total_expenditure
         self.baseline_output_share = self.baseline_output / economy.baseline_total_output
 
-    def construct_country_welfare_measures(self, sigma):
+    def _construct_country_measures(self, sigma):
         for value in [self.baseline_factory_price, self._baseline_imr_ratio,
                       self.experiment_factory_price, self._experiment_imr_ratio,
                       self._conditional_imr_ratio, self._conditional_omr_ratio]:
@@ -1265,6 +1263,13 @@ class Country(object):
         self.experiment_imr = 1 / (self._experiment_imr_ratio ** sigma_inverse)
         self.experiment_omr = 1 / (self._experiment_omr_ratio ** sigma_inverse)
 
+        # Calculate Output and Expenditure
+        self.experiment_output = self.experiment_factory_price * self.baseline_output
+        # Experiment Expenditure: E_i = φ_i Y_i (Eqn. (30) from Larch and Yotov, 2016) ->  E*_i = φ_i Y*_i
+        self.phi = self.baseline_expenditure/self.baseline_output
+        self.experiment_expenditure = self.phi * self.experiment_output
+
+
         # Calculate Terms of Trade
         self.baseline_terms_of_trade = self.baseline_factory_price / self.baseline_imr
         self.experiment_terms_of_trade = self.experiment_factory_price / self.experiment_imr
@@ -1273,15 +1278,11 @@ class Country(object):
 
         # Calculate GDP (from Stata code accompanying Yotov et al (2016): GDP_j = Y_j/P_j)
         self.baseline_gdp = self.baseline_output/self.baseline_imr
-        self.experiment_output = self.experiment_factory_price*self.baseline_output
         self.experiment_gdp = self.experiment_output/self._baseline_imr_ratio
         self.gdp_change = 100 * (self.experiment_gdp - self.baseline_gdp)/ self.baseline_gdp
 
         # Calculate Arkolakis, Costinot and Rodríguez-Clare welfare statistic (Equation (25) from Larch and Yotov, 2016)
         # WF_i = W_i/W*_i = (E_i/P_i)/(E*_i/P*_i)
-        # E_i = φ_i Y_i (Eqn. (30) from Larch and Yotov, 2016) ->  E*_i = φ_i Y*_i
-        self.phi = self.baseline_expenditure/self.baseline_output
-        self.experiment_expenditure = self.phi * self.experiment_output
         self.welfare_stat = (self.baseline_expenditure/self.baseline_imr)/\
                             (self.experiment_expenditure/self.experiment_imr)
 
@@ -1398,6 +1399,7 @@ class ParameterValues(object):
 
         self.imp_fe_prefix = imp_fe_prefix
         self.exp_fe_prefix = exp_fe_prefix
+
 #----
 # Column Labels for the DataFrames of Results  (format is attribute:label)
 #----
