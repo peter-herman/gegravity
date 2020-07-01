@@ -662,9 +662,13 @@ class OneSectorGE(object):
     def _construct_experiment_output_expend(self):
         total_output = 0
 
-        results_table = pd.DataFrame(columns=['country', 'baseline_output', 'experiment_output',
-                                              'output_percent_change', 'baseline_expenditure',
-                                              'experiment_expenditure', 'expenditure_percent_change'])
+        results_table = pd.DataFrame(columns=[country_results_labels['self.identifier'],
+                                              country_results_labels['self.baseline_output'],
+                                              country_results_labels['self.experiment_output'],
+                                              country_results_labels['self.output_change'],
+                                              country_results_labels['self.baseline_expenditure'],
+                                              country_results_labels['self.experiment_expenditure'],
+                                              country_results_labels['self.expenditure_change']])
         # The first time looping through gets calculates total output
         for country in self.country_set.keys():
             country_obj = self.country_set[country]
@@ -674,24 +678,21 @@ class OneSectorGE(object):
         for country in self.country_set.keys():
             country_obj = self.country_set[country]
             country_obj.experiment_output_share = country_obj.experiment_output / total_output
-            country_obj.output_change = 100 * (country_obj.experiment_output - country_obj.baseline_output) \
-                                        / country_obj.baseline_output
-            country_obj.expenditure_change = 100 * (country_obj.experiment_expenditure -
-                                                    country_obj.baseline_expenditure) / country_obj.baseline_expenditure
-            results_table = results_table.append({'country': country,
-                                                  'baseline_output': country_obj.baseline_output,
-                                                  'experiment_output': country_obj.experiment_output,
-                                                  'output_percent_change': country_obj.output_change,
-                                                  'baseline_expenditure': country_obj.baseline_expenditure,
-                                                  'experiment_expenditure': country_obj.experiment_expenditure,
-                                                  'expenditure_percent_change': country_obj.expenditure_change},
+            results_table = results_table.append({
+                country_results_labels['self.identifier']: country,
+                country_results_labels['self.baseline_output']: country_obj.baseline_output,
+                country_results_labels['self.experiment_output']: country_obj.experiment_output,
+                country_results_labels['self.output_change']: country_obj.output_change,
+                country_results_labels['self.baseline_expenditure']: country_obj.baseline_expenditure,
+                country_results_labels['self.experiment_expenditure']: country_obj.experiment_expenditure,
+                country_results_labels['self.expenditure_change']: country_obj.expenditure_change},
                                                  ignore_index=True)
         # Store some economy-wide values to economy object
         self._economy.experiment_total_output = total_output
         self._economy.output_change = 100 * (total_output - self._economy.baseline_total_output) \
                                       / self._economy.baseline_total_output
 
-        results_table = results_table.set_index('country')
+        results_table = results_table.set_index(country_results_labels['self.identifier'])
         # Ensure all values are numeric
         for col in results_table.columns:
             results_table[col] = results_table[col].astype(float)
@@ -1265,10 +1266,13 @@ class Country(object):
 
         # Calculate Output and Expenditure
         self.experiment_output = self.experiment_factory_price * self.baseline_output
+        self.output_change = 100 * (self.experiment_output - self.baseline_output) \
+                                    / self.baseline_output
         # Experiment Expenditure: E_i = φ_i Y_i (Eqn. (30) from Larch and Yotov, 2016) ->  E*_i = φ_i Y*_i
         self.phi = self.baseline_expenditure/self.baseline_output
         self.experiment_expenditure = self.phi * self.experiment_output
-
+        self.expenditure_change = 100 * (self.experiment_expenditure -
+                                                self.baseline_expenditure) / self.baseline_expenditure
 
         # Calculate Terms of Trade
         self.baseline_terms_of_trade = self.baseline_factory_price / self.baseline_imr
@@ -1405,7 +1409,11 @@ class ParameterValues(object):
 #----
 country_results_labels = {'self.identifier':'country',
                           'self.factory_price_change':'factory gate price change (%)',
+                          'self.baseline_output':'baseline output',
+                          'self.experiment_output':'experiment output',
                           'self.output_change':'output change (%)',
+                          'self.baseline_expenditure':'baseline expenditure',
+                          'self.experiment_expenditure':'experiment expenditure',
                           'self.expenditure_change':'expenditure change (%)',
                           'self.exports_change':'exports change (%)',
                           'self.imports_change':'imports change (%)',
