@@ -833,9 +833,9 @@ class OneSectorGE(object):
             results.append(self.country_set[country].get_results())
             mr_results.append(self.country_set[country].get_mr_results())
         country_results = pd.concat(results, axis=0)
-        self.country_results = country_results.set_index('country')
+        self.country_results = country_results.set_index(country_results_labels['self.identifier'])
         country_mr_results = pd.concat(mr_results, axis=0)
-        self.country_mr_terms = country_mr_results.set_index('country')
+        self.country_mr_terms = country_mr_results.set_index(country_results_labels['self.identifier'])
 
 
     def trade_share(self, importers: List[str], exporters: List[str]):
@@ -1293,25 +1293,33 @@ class Country(object):
 
 
     def get_results(self):
-        row = pd.DataFrame(data={'country': [self.identifier],
-                                 'factory_price_change': [self.factory_price_change],
-                                 'output_change': [self.output_change],
-                                 'expenditure_change': [self.expenditure_change],
-                                 'export_change': [self.exports_change],
-                                 'import_change': [self.imports_change],
-                                 'foreign_export_change': [self.foreign_exports_change],
-                                 'foreign_import_change': [self.foreign_imports_change],
-                                 'terms_of_trade_change': [self.terms_of_trade_change]})
+        '''
+        Collect and return the country's main results.
+        :return: (DataFrame) A one-row dataFrame containing columns of results.
+        '''
+        row = pd.DataFrame(data={country_results_labels['self.identifier']: [self.identifier],
+                                 country_results_labels['self.factory_price_change']: [self.factory_price_change],
+                                 country_results_labels['self.output_change']: [self.output_change],
+                                 country_results_labels['self.expenditure_change']: [self.expenditure_change],
+                                 country_results_labels['self.exports_change']: [self.exports_change],
+                                 country_results_labels['self.imports_change']: [self.imports_change],
+                                 country_results_labels['self.foreign_exports_change']: [self.foreign_exports_change],
+                                 country_results_labels['self.foreign_imports_change']: [self.foreign_imports_change],
+                                 country_results_labels['self.terms_of_trade_change']: [self.terms_of_trade_change]})
         return row
 
     def get_mr_results(self):
-        row = pd.DataFrame(data={'country': [self.identifier],
-                                 'baseline_imr': [self.baseline_imr],
-                                 'conditional_experiment_imr': [self.conditional_imr],
-                                 'experiment_imr': [self.experiment_imr],
-                                 'baseline_omr': [self.baseline_omr],
-                                 'conditional_experiment_omr': [self.conditional_omr],
-                                 'experiment_omr': [self.experiment_omr]})
+        '''
+        Collect and return the country's MR terms (baseline, conditional, and experiment)
+        :return: (DataFrame) A one-row dataFrame containing column of MR terms.
+        '''
+        row = pd.DataFrame(data={country_results_labels['self.identifier']: [self.identifier],
+                                 country_results_labels['self.baseline_imr']: [self.baseline_imr],
+                                 country_results_labels['self.conditional_imr']: [self.conditional_imr],
+                                 country_results_labels['self.experiment_imr']: [self.experiment_imr],
+                                 country_results_labels['self.baseline_omr']: [self.baseline_omr],
+                                 country_results_labels['self.conditional_omr']: [self.conditional_omr],
+                                 country_results_labels['self.experiment_omr']: [self.experiment_omr]})
         return row
 
     def __repr__(self):
@@ -1390,5 +1398,24 @@ class ParameterValues(object):
 
         self.imp_fe_prefix = imp_fe_prefix
         self.exp_fe_prefix = exp_fe_prefix
+#----
+# Column Labels for the DataFrames of Results  (format is attribute:label)
+#----
+country_results_labels = {'self.identifier':'country',
+                          'self.factory_price_change':'factory gate price change (%)',
+                          'self.output_change':'output change (%)',
+                          'self.expenditure_change':'expenditure change (%)',
+                          'self.exports_change':'exports change (%)',
+                          'self.imports_change':'imports change (%)',
+                          'self.foreign_exports_change':'foreign exports change (%)',
+                          'self.foreign_imports_change':'foreign imports change (%)',
+                          'self.terms_of_trade_change':'terms of trade change (%)',
+                          'self.baseline_imr':'baseline imr',
+                          'self.conditional_imr':'conditional imr',
+                          'self.experiment_imr': 'experiment imr',
+                          'self.baseline_omr':'baseline omr',
+                          'self.conditional_omr':'conditional omr',
+                          'self.experiment_omr':'experiment omr'
 
 
+}
