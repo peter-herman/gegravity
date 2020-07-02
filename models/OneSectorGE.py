@@ -717,7 +717,7 @@ class OneSectorGE(object):
         trade_data.rename(columns={trade_value_col: 'baseline_trade'}, inplace=True)
 
         # Set Placeholder value
-        trade_data['gravity'] = -9999
+        #trade_data['gravity'] = -9999
 
         # Construct Modeled trade for each country-pair
         for row in trade_data.index:
@@ -739,90 +739,123 @@ class OneSectorGE(object):
             bsln_omr_ratio = self.country_set[exporter]._baseline_omr_ratio
             bsln_expend = self.country_set[importer].baseline_expenditure
             bsln_output_share = self.country_set[exporter].baseline_output_share
-            # gravity = E_j  *   Y_i/Y      * 1/P_j^{1-sigma} * 1/π_i^{1-sigma}
+            # 'gravity' term = E_j     *   Y_i/Y           * 1/P_j^{1-sigma} * 1/π_i^{1-sigma}
             bsln_gravity = bsln_expend * bsln_output_share * bsln_imr_ratio * bsln_omr_ratio
             trade_data.loc[row, 'bsln_gravity'] = bsln_gravity
 
         trade_data = trade_data.merge(self.baseline_trade_costs, how='left', on=[importer_col, exporter_col])
         trade_data.rename(columns={'trade_cost': 'baseline_trade_cost'}, inplace=True)
-        trade_data['baseline_modeled_trade'] = trade_data['baseline_trade_cost'] * trade_data['bsln_gravity']
+
+        # Set column labels from label dictionary
+        bsln_modeled_trade_label = trade_results_labels['baseline_modeled_trade']
+        exper_trade_label = trade_results_labels['experiment_trade']
+        trade_change_label = trade_results_labels['trade_change']
+
+        trade_data[bsln_modeled_trade_label] = trade_data['baseline_trade_cost'] \
+                                                                   * trade_data['bsln_gravity']
 
         trade_data = trade_data.merge(self.experiment_trade_costs, how='left', on=[importer_col, exporter_col])
 
-        trade_data['experiment_trade'] = trade_data['trade_cost'] * trade_data['exper_gravity']
+        trade_data[exper_trade_label] = trade_data['trade_cost'] * trade_data['exper_gravity']
 
-        trade_data['percent_change'] = 100 * (trade_data['experiment_trade'] - trade_data['baseline_modeled_trade']) \
-                                       / trade_data['baseline_modeled_trade']
+        trade_data[trade_change_label] = 100 * (trade_data[exper_trade_label] - trade_data[bsln_modeled_trade_label]) \
+                                       / trade_data[bsln_modeled_trade_label]
 
-        bilateral_trade_results = trade_data[[exporter_col, importer_col, 'baseline_modeled_trade',
-                                                   'experiment_trade', 'percent_change']]
+        bilateral_trade_results = trade_data[[exporter_col, importer_col, bsln_modeled_trade_label,
+                                                   exper_trade_label, trade_change_label]]
         self.bilateral_trade_results = bilateral_trade_results.set_index([exporter_col, importer_col])
 
+        ##
         # Calculate total Imports (international and domestic)
+        ##
+        # set more labels from label dictionary
+        bsln_agg_imports_label = country_results_labels['self.baseline_imports']
+        exper_agg_imports_label = country_results_labels['self.experiment_imports']
+        agg_import_change_label =  country_results_labels['self.imports_change']
+
         agg_imports = bilateral_trade_results.copy()
-        agg_imports = agg_imports[[importer_col, 'baseline_modeled_trade', 'experiment_trade']]
+        agg_imports = agg_imports[[importer_col, bsln_modeled_trade_label, exper_trade_label]]
         agg_imports = agg_imports.groupby([importer_col]).agg('sum')
-        agg_imports.rename(columns={'baseline_modeled_trade': 'baseline_imports',
-                                    'experiment_trade': 'experiment_imports'}, inplace=True)
-        agg_imports['import_percent_change'] = 100 \
-                                               * (agg_imports['experiment_imports'] - agg_imports['baseline_imports']) \
-                                               / agg_imports['baseline_imports']
+        agg_imports.rename(columns={bsln_modeled_trade_label: bsln_agg_imports_label,
+                                    exper_trade_label: exper_agg_imports_label}, inplace=True)
+        agg_imports[agg_import_change_label] = 100 \
+                                               * (agg_imports[exper_agg_imports_label] - agg_imports[bsln_agg_imports_label]) \
+                                               / agg_imports[bsln_agg_imports_label]
+        ##
         # Calculate foreign imports
+        ##
+        # set more labels from label dictionary
+        bsln_agg_frgn_imports_label = country_results_labels['self.baseline_foreign_imports']
+        exper_agg_frgn_imports_label = country_results_labels['self.experiment_foreign_imports']
+        agg_frgn_import_change_label = country_results_labels['self.foreign_imports_change']
+
         foreign_imports = bilateral_trade_results.copy()
         foreign_imports = foreign_imports.loc[foreign_imports[importer_col]!=foreign_imports[exporter_col],:]
-        foreign_imports = foreign_imports[[importer_col, 'baseline_modeled_trade', 'experiment_trade']]
+        foreign_imports = foreign_imports[[importer_col, bsln_modeled_trade_label, exper_trade_label]]
         foreign_imports = foreign_imports.groupby([importer_col]).agg('sum')
-        foreign_imports.rename(columns={'baseline_modeled_trade': 'baseline_foreign_imports',
-                                    'experiment_trade': 'experiment_foreign_imports'}, inplace=True)
-        foreign_imports['foreign_import_percent_change'] = 100 \
-                                               * (foreign_imports['experiment_foreign_imports'] - foreign_imports['baseline_foreign_imports']) \
-                                               / foreign_imports['baseline_foreign_imports']
+        foreign_imports.rename(columns={bsln_modeled_trade_label: bsln_agg_frgn_imports_label,
+                                    exper_trade_label: exper_agg_frgn_imports_label}, inplace=True)
+        foreign_imports[agg_frgn_import_change_label] = 100 \
+                                               * (foreign_imports[exper_agg_frgn_imports_label] - foreign_imports[bsln_agg_frgn_imports_label]) \
+                                               / foreign_imports[bsln_agg_frgn_imports_label]
 
-
+        ##
         # Calculate total exports (foreign + domestic)
-        agg_exports = bilateral_trade_results.copy()
-        agg_exports = agg_exports[[exporter_col, 'baseline_modeled_trade', 'experiment_trade']]
-        agg_exports = agg_exports.groupby([exporter_col]).agg('sum')
-        agg_exports.rename(columns={'baseline_modeled_trade': 'baseline_exports',
-                                    'experiment_trade': 'experiment_exports'}, inplace=True)
-        agg_exports['export_percent_change'] = 100 \
-                                               * (agg_exports['experiment_exports'] - agg_exports['baseline_exports']) \
-                                               / agg_exports['baseline_exports']
+        ##
+        # Set labels from label dictionary
+        bsln_agg_exports_label = country_results_labels['self.baseline_exports']
+        exper_agg_exports_label = country_results_labels['self.experiment_exports']
+        agg_exports_change_label = country_results_labels['self.exports_change']
 
+        agg_exports = bilateral_trade_results.copy()
+        agg_exports = agg_exports[[exporter_col, bsln_modeled_trade_label, exper_trade_label]]
+        agg_exports = agg_exports.groupby([exporter_col]).agg('sum')
+        agg_exports.rename(columns={bsln_modeled_trade_label: bsln_agg_exports_label,
+                                    exper_trade_label: exper_agg_exports_label}, inplace=True)
+        agg_exports[agg_exports_change_label] = 100 \
+                                               * (agg_exports[exper_agg_exports_label] - agg_exports[bsln_agg_exports_label]) \
+                                               / agg_exports[bsln_agg_exports_label]
+        ##
         # Calculate foreign exports
+        ##
+        # Set labels from label dictionary
+        bsln_agg_frgn_exports_label = country_results_labels['self.baseline_foreign_exports']
+        exper_agg_frgn_exports_label = country_results_labels['self.experiment_foreign_exports']
+        agg_frgn_exports_change_label = country_results_labels['self.foreign_exports_change']
+
         foreign_exports = bilateral_trade_results.copy()
         foreign_exports = foreign_exports.loc[foreign_exports[importer_col] != foreign_exports[exporter_col], :]
-        foreign_exports = foreign_exports[[exporter_col, 'baseline_modeled_trade', 'experiment_trade']]
+        foreign_exports = foreign_exports[[exporter_col, bsln_modeled_trade_label, exper_trade_label]]
         foreign_exports = foreign_exports.groupby([exporter_col]).agg('sum')
-        foreign_exports.rename(columns={'baseline_modeled_trade': 'baseline_foreign_exports',
-                                        'experiment_trade': 'experiment_foreign_exports'}, inplace=True)
-        foreign_exports['foreign_export_percent_change'] = 100 \
-                                                           * (foreign_exports['experiment_foreign_exports'] -
-                                                              foreign_exports['baseline_foreign_exports']) \
-                                                           / foreign_exports['baseline_foreign_exports']
+        foreign_exports.rename(columns={bsln_modeled_trade_label: bsln_agg_frgn_exports_label,
+                                        exper_trade_label: exper_agg_frgn_exports_label}, inplace=True)
+        foreign_exports[agg_frgn_exports_change_label] = 100 \
+                                                           * (foreign_exports[exper_agg_frgn_exports_label] -
+                                                              foreign_exports[bsln_agg_frgn_exports_label]) \
+                                                           / foreign_exports[bsln_agg_frgn_exports_label]
 
 
         agg_trade = pd.concat([agg_exports, foreign_exports, agg_imports, foreign_imports], axis=1).reset_index()
-        agg_trade.rename(columns={'index': 'country'}, inplace=True)
+        agg_trade.rename(columns={'index': country_results_labels['self.identifier']}, inplace=True)
 
         # Store values in each country object
         for row in agg_trade.index:
-            country = agg_trade.loc[row, 'country']
+            country = agg_trade.loc[row, country_results_labels['self.identifier']]
             country_obj = self.country_set[country]
-            country_obj.baseline_imports = agg_trade.loc[row, 'baseline_imports']
-            country_obj.baseline_exports = agg_trade.loc[row, 'baseline_exports']
-            country_obj.baseline_foreign_imports = agg_trade.loc[row, 'baseline_foreign_imports']
-            country_obj.baseline_foreign_exports = agg_trade.loc[row, 'baseline_foreign_exports']
-            country_obj.experiment_imports = agg_trade.loc[row, 'experiment_imports']
-            country_obj.experiment_exports = agg_trade.loc[row, 'experiment_exports']
-            country_obj.imports_change = agg_trade.loc[row, 'import_percent_change']
-            country_obj.exports_change = agg_trade.loc[row, 'export_percent_change']
-            country_obj.experiment_foreign_imports = agg_trade.loc[row, 'experiment_foreign_imports']
-            country_obj.experiment_foreign_exports = agg_trade.loc[row, 'experiment_foreign_exports']
-            country_obj.foreign_imports_change = agg_trade.loc[row, 'foreign_import_percent_change']
-            country_obj.foreign_exports_change = agg_trade.loc[row, 'foreign_export_percent_change']
+            country_obj.baseline_imports = agg_trade.loc[row, bsln_agg_imports_label]
+            country_obj.baseline_exports = agg_trade.loc[row, bsln_agg_exports_label]
+            country_obj.baseline_foreign_imports = agg_trade.loc[row, bsln_agg_frgn_imports_label]
+            country_obj.baseline_foreign_exports = agg_trade.loc[row, bsln_agg_frgn_exports_label]
+            country_obj.experiment_imports = agg_trade.loc[row, exper_agg_imports_label]
+            country_obj.experiment_exports = agg_trade.loc[row, exper_agg_exports_label]
+            country_obj.imports_change = agg_trade.loc[row, agg_import_change_label]
+            country_obj.exports_change = agg_trade.loc[row, agg_exports_change_label]
+            country_obj.experiment_foreign_imports = agg_trade.loc[row, exper_agg_frgn_imports_label]
+            country_obj.experiment_foreign_exports = agg_trade.loc[row, exper_agg_frgn_exports_label]
+            country_obj.foreign_imports_change = agg_trade.loc[row, agg_frgn_import_change_label]
+            country_obj.foreign_exports_change = agg_trade.loc[row, agg_frgn_exports_change_label]
 
-        self.aggregate_trade_results = agg_trade.set_index('country')
+        self.aggregate_trade_results = agg_trade.set_index(country_results_labels['self.identifier'])
 
     def _compile_results(self):
         '''Generate and compile results after simulations'''
@@ -1227,10 +1260,10 @@ class Country(object):
         self.expenditure_change = None  # (E* - E)/E
         self.terms_of_trade_change = None  # (ToT* - ToT)/ToT
         self.factory_price_change = None # (p*-p)/p or, in practice, (P*-1)/1
-        self.baseline_imports = None  # sum_i(X_ij)
-        self.baseline_exports = None  # sum_j(X_ij)
-        self.baseline_foreign_imports = None # sum_{i!=j}(X_ij)
-        self.baseline_foreign_exports = None  # sum_{j!=i}(X_ij)
+        self.baseline_imports = None  # sum_i(X_ij) [modeled flows, not observed flows]
+        self.baseline_exports = None  # sum_j(X_ij) [modeled flows, not observed flows]
+        self.baseline_foreign_imports = None # sum_{i!=j}(X_ij) [modeled flows, not observed flows]
+        self.baseline_foreign_exports = None  # sum_{j!=i}(X_ij) [modeled flows, not observed flows]
         self.experiment_imports = None # sum_i(X*_ij)
         self.experiment_exports = None # sum_j(X*_ij)
         self.experiment_foreign_imports = None # sum_{i!=j}(X*_ij)
@@ -1415,9 +1448,17 @@ country_results_labels = {'self.identifier':'country',
                           'self.baseline_expenditure':'baseline expenditure',
                           'self.experiment_expenditure':'experiment expenditure',
                           'self.expenditure_change':'expenditure change (%)',
+                          'self.baseline_exports':'baseline modeled exports',
+                          'self.experiment_exports':'experiment exports',
                           'self.exports_change':'exports change (%)',
+                          'self.baseline_imports':'baseline modeled imports',
+                          'self.experiment_imports':'experiment imports',
                           'self.imports_change':'imports change (%)',
+                          'self.baseline_foreign_exports':'baseline modeled foreign exports',
+                          'self.experiment_foreign_exports':'experiment foreign exports',
                           'self.foreign_exports_change':'foreign exports change (%)',
+                          'self.baseline_foreign_imports':'baseline modeled foreign imports',
+                          'self.experiment_foreign_imports':'experiment foreign imports',
                           'self.foreign_imports_change':'foreign imports change (%)',
                           'self.terms_of_trade_change':'terms of trade change (%)',
                           'self.baseline_imr':'baseline imr',
@@ -1426,6 +1467,9 @@ country_results_labels = {'self.identifier':'country',
                           'self.baseline_omr':'baseline omr',
                           'self.conditional_omr':'conditional omr',
                           'self.experiment_omr':'experiment omr'
-
-
+}
+trade_results_labels = {
+'baseline_modeled_trade':'baseline modeled trade',
+'experiment_trade':'experiment trade',
+'trade_change':'trade change (%)'
 }
