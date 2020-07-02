@@ -878,16 +878,21 @@ class OneSectorGE(object):
         :return: (DataFrame) A dataframe expressing baseline, experiment, and changes in trade between each specified
         importer and exporter.
         '''
+        importer_col = self.meta_data.imp_var_name
+        exporter_col = self.meta_data.exp_var_name
+        bsln_modeled_trade_label = trade_results_labels['baseline_modeled_trade']
+        exper_trade_label = trade_results_labels['experiment_trade']
+
         bilat_trade = self.bilateral_trade_results.reset_index()
-        columns = ['baseline_modeled_trade', 'experiment_trade']
-        imports = bilat_trade.loc[bilat_trade['importer'].isin(importers), :].copy()
+        columns = [bsln_modeled_trade_label, exper_trade_label]
+        imports = bilat_trade.loc[bilat_trade[importer_col].isin(importers), :].copy()
         exports = bilat_trade.loc[bilat_trade['exporter'].isin(exporters), :].copy()
 
         total_imports = imports[columns].agg('sum')
         total_exports = exports[columns].agg('sum')
 
         selected_imports = imports.loc[imports['exporter'].isin(exporters), columns].copy().agg('sum')
-        selected_exports = exports.loc[exports['importer'].isin(importers), columns].copy().agg('sum')
+        selected_exports = exports.loc[exports[importer_col].isin(importers), columns].copy().agg('sum')
 
         import_data = 100 * selected_imports / total_imports
         export_data = 100 * selected_exports / total_exports
@@ -897,9 +902,9 @@ class OneSectorGE(object):
 
         both = pd.concat([import_data, export_data], axis=1).T
         both = both[['description'] + columns]
-        both['change (percentage point)'] = (both['experiment_trade'] - both['baseline_modeled_trade'])
-        both['change (percent)'] = 100 * (both['experiment_trade'] - both['baseline_modeled_trade']) / \
-                                   both['baseline_modeled_trade']
+        both['change (percentage point)'] = (both[exper_trade_label] - both[bsln_modeled_trade_label])
+        both['change (%)'] = 100 * (both[exper_trade_label] - both[bsln_modeled_trade_label]) / \
+                                   both[bsln_modeled_trade_label]
 
         return both
 
