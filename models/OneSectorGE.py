@@ -978,9 +978,10 @@ class OneSectorGE(object):
         trade = self.meta_data.trade_var_name
         trade_flows = self.baseline_data.copy()
         trade_flows = trade_flows[[exporter, importer, trade]]
-        bilateral_results = self.bilateral_trade_results[['percent_change']].copy()
+        bilateral_results = self.bilateral_trade_results[[trade_results_labels['trade_change']]].copy()
         bilateral_results.reset_index(inplace=True)
-
+        crl = country_results_labels
+        trl = trade_results_labels
         # Coumpute at the country level (importer, exporter, and intranational)
         if how == 'country':
             intra_national = trade_flows.loc[trade_flows[exporter] == trade_flows[importer], [exporter, trade]]
@@ -992,46 +993,58 @@ class OneSectorGE(object):
             # Combine
             country_trade = foreign_exports.merge(foreign_imports, how='outer', left_index=True, right_index=True)
             country_trade = country_trade.merge(intra_national, how='outer', left_index=True, right_index=True)
-            country_trade.columns = ['baseline_foreign_exports', 'baseline_foreign_imports',
-                                     'baseline_intranational_trade']
+            country_trade.columns = [crl['self.baseline_observed_foreign_exports'],
+                                     crl['self.baseline_observed_foreign_imports'],
+                                     crl['self.baseline_observed_intranational_trade']]
             # Prep and add experiment change info
-            experiment_results = self.country_results[['foreign_export_change', 'foreign_import_change']].reset_index()
+            experiment_results = self.country_results[[crl['self.foreign_exports_change'],
+                                                       crl['self.foreign_imports_change']]].reset_index()
             intra_results = bilateral_results.loc[bilateral_results[exporter] == bilateral_results[importer],
-                                                  [exporter, 'percent_change']].copy()
-            intra_results.rename(columns={exporter: 'country', 'percent_change': 'intranational_change'}, inplace=True)
-            experiment_results = pd.merge(experiment_results, intra_results, on='country')
-            experiment_results.set_index('country', inplace=True)
+                                                  [exporter, trade_results_labels['trade_change']]].copy()
+            intra_results.rename(columns={exporter: 'country',
+                                          trade_results_labels['trade_change']: crl['self.intranational_trade_change']},
+                                          inplace=True)
+            experiment_results = pd.merge(experiment_results, intra_results, on=crl['self.identifier'])
+            experiment_results.set_index(crl['self.identifier'], inplace=True)
             country_trade = country_trade.merge(experiment_results, how='outer', left_index=True, right_index=True)
             # Compute new levels
-            for level, change in [('baseline_foreign_exports', 'foreign_export_change'),
-                                  ('baseline_foreign_imports', 'foreign_import_change'),
-                                  ('baseline_intranational_trade', 'intranational_change')]:
+            for level, change in [(crl['self.baseline_observed_foreign_exports'], crl['self.foreign_exports_change']),
+                                  (crl['self.baseline_observed_foreign_imports'], crl['self.foreign_imports_change']),
+                                  (crl['self.baseline_observed_intranational_trade'], crl['self.intranational_trade_change'])]:
                 new_level_name = level.replace('baseline', 'experiment')
-                level_change_name = change + '_level'
+                level_change_name = change.replace('%','level')
                 country_trade[new_level_name] = country_trade[level] * (1 + (experiment_results[change] / 100))
                 country_trade[level_change_name] = country_trade[new_level_name] - country_trade[level]
-                country_trade.rename(columns={change: change + '_percent'}, inplace=True)
+
+            result_order = list()
+            for result_type in ['exports','imports','intranational']:
+                for sub_type in ['baseline','experiment','level','%']:
+                    for col in country_trade.columns:
+                        if (sub_type in col) and (result_type in col):
+                            result_order.append(col)
             # Reorder columns
-            country_trade = country_trade[['baseline_foreign_exports', 'experiment_foreign_exports',
-                                           'foreign_export_change_level', 'foreign_export_change_percent',
-                                           'baseline_foreign_imports', 'experiment_foreign_imports',
-                                           'foreign_import_change_level', 'foreign_import_change_percent',
-                                           'baseline_intranational_trade', 'experiment_intranational_trade',
-                                           'intranational_change_level', 'intranational_change_percent']]
-            return country_trade
+            # country_trade = country_trade[['baseline_foreign_exports', 'experiment_foreign_exports',
+            #                                'foreign_export_change_level', 'foreign_export_change_percent',
+            #                                'baseline_foreign_imports', 'experiment_foreign_imports',
+            #                                'foreign_import_change_level', 'foreign_import_change_percent',
+            #                                'baseline_intranational_trade', 'experiment_intranational_trade',
+            #                                'intranational_change_level', 'intranational_change_percent']]
+            return country_trade[result_order]
         # Compute at the bilateral level
         if how == 'bilateral':
             # Prep and add experiment change info
             experiment_results = bilateral_results
             bilat_trade = trade_flows.merge(experiment_results, on=[exporter, importer], how='outer')
-            bilat_trade.rename(columns={'trade_value': 'baseline_trade', 'percent_change': 'change_percent'},
+            bilat_trade.rename(columns={trade: trl['baseline_observed_trade']},
                                inplace=True)
             # Create changes in levels
-            bilat_trade['experiment_trade'] = bilat_trade['baseline_trade'] * (
-                        1 + (bilat_trade['change_percent'] / 100))
-            bilat_trade['change_level'] = bilat_trade['experiment_trade'] - bilat_trade['baseline_trade']
-            bilat_trade = bilat_trade[['exporter', 'importer', 'baseline_trade', 'experiment_trade', 'change_percent',
-                                       'change_level']]
+
+            bilat_trade[trl['experiment_observed_trade']] = bilat_trade[trl['baseline_observed_trade']] * (
+                        1 + (bilat_trade[trl['trade_change']] / 100))
+            bilat_level_change_name = trl['trade_change'].replace('%','level')
+            bilat_trade[bilat_level_change_name] = bilat_trade[trl['experiment_observed_trade']] - bilat_trade[trl['baseline_observed_trade']]
+            bilat_trade = bilat_trade[[exporter, importer, trl['baseline_observed_trade'],
+                                       trl['experiment_observed_trade'], bilat_level_change_name, trl['trade_change']]]
             return bilat_trade
 
 
@@ -1454,6 +1467,7 @@ class ParameterValues(object):
 country_results_labels = {'self.identifier':'country',
                           'self.factory_price_change':'factory gate price change (%)',
                           'self.experiemnt_factory_price':'experiment factory gate price',
+                          'self.terms_of_trade_change':'terms of trade change (%)',
                           'self.baseline_output':'baseline output',
                           'self.experiment_output':'experiment output',
                           'self.output_change':'output change (%)',
@@ -1469,10 +1483,14 @@ country_results_labels = {'self.identifier':'country',
                           'self.baseline_foreign_exports':'baseline modeled foreign exports',
                           'self.experiment_foreign_exports':'experiment foreign exports',
                           'self.foreign_exports_change':'foreign exports change (%)',
+                          'self.baseline_observed_foreign_exports':'baseline observed foreign exports',
                           'self.baseline_foreign_imports':'baseline modeled foreign imports',
                           'self.experiment_foreign_imports':'experiment foreign imports',
                           'self.foreign_imports_change':'foreign imports change (%)',
-                          'self.terms_of_trade_change':'terms of trade change (%)',
+                          'self.baseline_observed_foreign_imports':'baseline observed foreign imports',
+                          'self.baseline_intranational_trade':'baseline modeled intranational trade',
+                          'self.intranational_trade_change':'intranational trade change (%)',
+                          'self.baseline_observed_intranational_trade': 'baseline observed intranational trade',
                           'self.baseline_imr':'baseline imr',
                           'self.conditional_imr':'conditional imr',
                           'self.experiment_imr': 'experiment imr',
@@ -1483,5 +1501,8 @@ country_results_labels = {'self.identifier':'country',
 trade_results_labels = {
 'baseline_modeled_trade':'baseline modeled trade',
 'experiment_trade':'experiment trade',
-'trade_change':'trade change (%)'
+'trade_change':'trade change (%)',
+'baseline_observed_trade':'baseline observed trade',
+'experiment_observed_trade':'experiment observed trade'
 }
+
