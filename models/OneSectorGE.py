@@ -1272,17 +1272,17 @@ class Country(object):
         self._experiment_omr_ratio = None  # 1 / π*^{1-\sigma}
         self.experiment_imr = None  # P*
         self.experiment_omr = None  # π*
-        self.imr_change = None # (P*-P)/P
-        self.omr_change = None # (π*-π)/π
+        self.imr_change = None # 100*(P*-P)/P
+        self.omr_change = None # 100*(π*-π)/π
         self.experiment_factory_price = None # p*_i
         self.experiment_output = None # Y*_i
         self.experiment_expenditure = None # E*_j
         self.baseline_terms_of_trade = None  # ToT_i = p_i/P_i
         self.experiment_terms_of_trade = None  # ToT*_i = p*_i/P*_i
-        self.output_change = None  # (Y* - Y)/Y
-        self.expenditure_change = None  # (E* - E)/E
-        self.terms_of_trade_change = None  # (ToT* - ToT)/ToT
-        self.factory_price_change = None # (p*-p)/p or, in practice, (P*-1)/1
+        self.terms_of_trade_change = None  # 100*(ToT* - ToT)/ToT
+        self.output_change = None  # 100*(Y* - Y)/Y
+        self.expenditure_change = None  # 100*(E* - E)/E
+        self.factory_price_change = None # 100*(p*-p)/p or, in practice, 100*(P*-1)/1
         self.baseline_imports = None  # sum_i(X_ij) [modeled flows, not observed flows]
         self.baseline_exports = None  # sum_j(X_ij) [modeled flows, not observed flows]
         self.baseline_foreign_imports = None # sum_{i!=j}(X_ij) [modeled flows, not observed flows]
@@ -1291,11 +1291,11 @@ class Country(object):
         self.experiment_exports = None # sum_j(X*_ij)
         self.experiment_foreign_imports = None # sum_{i!=j}(X*_ij)
         self.experiment_foreign_exports = None # sum_{j!=i}(X*_ij)
-        self.foreign_imports_change = None # (sum_{i!=j}(X*_ij) - sum_{i!=j}(X_ij))/sum_{i!=j}(X_ij)
-        self.foreign_exports_change = None # (sum_{j!=i}(X*_ij) - sum_{j!=i}(X_ij))/sum_{j!=i}(X_ij)
+        self.foreign_imports_change = None # 100*(sum_{i!=j}(X*_ij) - sum_{i!=j}(X_ij))/sum_{i!=j}(X_ij)
+        self.foreign_exports_change = None # 100*(sum_{j!=i}(X*_ij) - sum_{j!=i}(X_ij))/sum_{j!=i}(X_ij)
         self.baseline_gdp = None # GDP_j = Y_j/P_j
         self.experiment_gdp = None # GDP*_j = Y*_j/P*_j
-        self.gdp_change = None # (GDP* - GDP)/GDP
+        self.gdp_change = None # 100*(GDP* - GDP)/GDP
         self.phi = None  # φ_i = E_i / Y_i (Eqn. (30) from Larch and Yotov, 2016)
         self.welfare_stat = None  # (E_i/P_i)/(E*_i/P*_i)
 
@@ -1338,7 +1338,7 @@ class Country(object):
 
         # Calculate GDP (from Stata code accompanying Yotov et al (2016): GDP_j = Y_j/P_j)
         self.baseline_gdp = self.baseline_output/self.baseline_imr
-        self.experiment_gdp = self.experiment_output/self._baseline_imr_ratio
+        self.experiment_gdp = self.experiment_output/self.experiment_imr
         self.gdp_change = 100 * (self.experiment_gdp - self.baseline_gdp)/ self.baseline_gdp
 
         # Calculate Arkolakis, Costinot and Rodríguez-Clare welfare statistic (Equation (25) from Larch and Yotov, 2016)
@@ -1347,8 +1347,8 @@ class Country(object):
                             (self.experiment_expenditure/self.experiment_imr)
 
         # Calculate change in IMR (consumer price) and OMR (producer incidence) measure
-        self.imr_change = (self.experiment_imr - self.baseline_imr)/self.baseline_imr
-        self.omr_change = (self.experiment_omr - self.baseline_omr)/self.baseline_omr
+        self.imr_change = 100*(self.experiment_imr - self.baseline_imr)/self.baseline_imr
+        self.omr_change = 100*(self.experiment_omr - self.baseline_omr)/self.baseline_omr
 
 
 
@@ -1360,13 +1360,17 @@ class Country(object):
         '''
         row = pd.DataFrame(data={country_results_labels['self.identifier']: [self.identifier],
                                  country_results_labels['self.factory_price_change']: [self.factory_price_change],
+                                 country_results_labels['self.omr_change']: [self.omr_change],
+                                 country_results_labels['self.imr_change']: [self.imr_change],
+                                 country_results_labels['self.gdp_change']: [self.gdp_change],
+                                 country_results_labels['self.welfare_stat']: [self.welfare_stat],
+                                 country_results_labels['self.terms_of_trade_change']: [self.terms_of_trade_change],
                                  country_results_labels['self.output_change']: [self.output_change],
                                  country_results_labels['self.expenditure_change']: [self.expenditure_change],
                                  country_results_labels['self.exports_change']: [self.exports_change],
                                  country_results_labels['self.imports_change']: [self.imports_change],
                                  country_results_labels['self.foreign_exports_change']: [self.foreign_exports_change],
-                                 country_results_labels['self.foreign_imports_change']: [self.foreign_imports_change],
-                                 country_results_labels['self.terms_of_trade_change']: [self.terms_of_trade_change]})
+                                 country_results_labels['self.foreign_imports_change']: [self.foreign_imports_change]})
         return row
 
     def get_mr_results(self):
@@ -1467,6 +1471,8 @@ country_results_labels = {'self.identifier':'country',
                           'self.factory_price_change':'factory gate price change (%)',
                           'self.experiemnt_factory_price':'experiment factory gate price',
                           'self.terms_of_trade_change':'terms of trade change (%)',
+                          'self.gdp_change':"GDP change (%)",
+                          'self.welfare_stat':'welfare statistic',
                           'self.baseline_output':'baseline output',
                           'self.experiment_output':'experiment output',
                           'self.output_change':'output change (%)',
@@ -1493,9 +1499,11 @@ country_results_labels = {'self.identifier':'country',
                           'self.baseline_imr':'baseline imr',
                           'self.conditional_imr':'conditional imr',
                           'self.experiment_imr': 'experiment imr',
+                          'self.imr_change': 'imr change (%)',
                           'self.baseline_omr':'baseline omr',
                           'self.conditional_omr':'conditional omr',
-                          'self.experiment_omr':'experiment omr'
+                          'self.experiment_omr':'experiment omr',
+                          'self.omr_change': 'omr change (%)'
 }
 trade_results_labels = {
 'baseline_modeled_trade':'baseline modeled trade',
