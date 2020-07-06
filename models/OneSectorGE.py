@@ -1041,10 +1041,9 @@ class OneSectorGE(object):
 
             bilat_trade[trl['experiment_observed_trade']] = bilat_trade[trl['baseline_observed_trade']] * (
                         1 + (bilat_trade[trl['trade_change']] / 100))
-            bilat_level_change_name = trl['trade_change'].replace('%','level')
-            bilat_trade[bilat_level_change_name] = bilat_trade[trl['experiment_observed_trade']] - bilat_trade[trl['baseline_observed_trade']]
+            bilat_trade[trl['trade_change_level']] = bilat_trade[trl['experiment_observed_trade']] - bilat_trade[trl['baseline_observed_trade']]
             bilat_trade = bilat_trade[[exporter, importer, trl['baseline_observed_trade'],
-                                       trl['experiment_observed_trade'], bilat_level_change_name, trl['trade_change']]]
+                                       trl['experiment_observed_trade'], trl['trade_change_level'], trl['trade_change']]]
             return bilat_trade
 
 
@@ -1502,6 +1501,7 @@ trade_results_labels = {
 'baseline_modeled_trade':'baseline modeled trade',
 'experiment_trade':'experiment trade',
 'trade_change':'trade change (%)',
+'trade_change_level':'trade change (level)',
 'baseline_observed_trade':'baseline observed trade',
 'experiment_observed_trade':'experiment observed trade'
 }
