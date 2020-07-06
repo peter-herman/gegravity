@@ -650,7 +650,8 @@ class OneSectorGE(object):
         imrs = np.append(imrs, 1)
         omrs = full_ge_results.x[len(country_list) - 1:2 * len(country_list) - 1] * ge_params['omr_rescale']
         prices = full_ge_results.x[2 * len(country_list) - 1:]
-        factory_gate_prices = pd.DataFrame({'exporter': country_list, 'experiment_factory_price': prices})
+        factory_gate_prices = pd.DataFrame({'exporter': country_list,
+                                            country_results_labels['self.experiemnt_factory_price']: prices})
         self.factory_gate_prices = factory_gate_prices.set_index('exporter')
         for i, country in enumerate(country_list):
             self.country_set[country]._experiment_imr_ratio = imrs[i] # 1 / P^{1-sigma}
@@ -923,10 +924,15 @@ class OneSectorGE(object):
         country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results, self.outputs_expenditures,
                                self.country_mr_terms]
         country_results = pd.concat(country_result_set, axis = 1)
-        # Drop duplicate columns
-        country_results.drop(['experiment_factory_price', 'export_percent_change', 'foreign_export_percent_change',
-                              'import_percent_change', 'foreign_import_percent_change', 'output_percent_change',
-                              'expenditure_percent_change'], axis =1)
+        # Order and select columns for inclusion, drop duplicates.
+        country_results_cols = country_results.columns
+        crl = country_results_labels
+        results_cols = crl.keys()
+        included_columns = [crl[col] for col in results_cols if crl[col] in country_results_cols]
+        country_results = country_results[included_columns]
+        country_results = country_results.loc[:, ~country_results.columns.duplicated()]
+
+
         bilateral_results = self.bilateral_trade_results
 
         # Create Dataframe with Diagnostic results
@@ -1447,6 +1453,7 @@ class ParameterValues(object):
 #----
 country_results_labels = {'self.identifier':'country',
                           'self.factory_price_change':'factory gate price change (%)',
+                          'self.experiemnt_factory_price':'experiment factory gate price',
                           'self.baseline_output':'baseline output',
                           'self.experiment_output':'experiment output',
                           'self.output_change':'output change (%)',
