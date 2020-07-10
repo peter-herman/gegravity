@@ -909,20 +909,31 @@ class OneSectorGE(object):
 
         return both
 
-    def export_results(self, directory:str = None, name:str = ''):
+    def export_results(self, directory:str = None, name:str = '',
+                       include_levels:bool = False, country_names:DataFrame = None):
         '''
         Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
             and (3) solver diagnostics.
-        :param directory: (str) (optional) Directory in which to write results files. If no directory is supplied,
+        :param directory: (str), optional) Directory in which to write results files. If no directory is supplied,
             three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral results,
             solver diagnostics).
-        :param name:(str) name of the simulation to prefix to the result file names.
+        :param name:(str, default '') name of the simulation to prefix to the result file names.
+        :param include_levels: (bool, default False) If True, includes additional columns reflecting the simulated
+            changes in levels based on observed trade flows (rather than modeled trade flows). Values are those from
+            the method calculate_levels
+        :param country_names: (pandas.DataFrame, optional) Is supplied, adds alternative identifiers such as names to
+            the returned results tables. The supplied DataFrame should include exactly two columns. The first column
+            must be the country identifiers used in the model. The second column must be the alternative identifiers to
+            add.
         :return: (None or Tuple[DataFrame, DataFrame, DataFrame]) If a directory argument is supplied, the method
             returns nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
             DataFrames.
         '''
-        country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results, self.outputs_expenditures,
-                               self.country_mr_terms]
+        importer_col = self.meta_data.imp_var_name
+        exporter_col = self.meta_data.exp_var_name
+
+        country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results,
+                              self.outputs_expenditures, self.country_mr_terms]
         country_results = pd.concat(country_result_set, axis = 1)
         # Order and select columns for inclusion, drop duplicates.
         country_results_cols = country_results.columns
@@ -932,8 +943,38 @@ class OneSectorGE(object):
         country_results = country_results[included_columns]
         country_results = country_results.loc[:, ~country_results.columns.duplicated()]
 
+        bilateral_results = self.bilateral_trade_results.reset_index()
 
-        bilateral_results = self.bilateral_trade_results
+        if include_levels:
+            country_levels = self.calculate_levels(how = 'country')
+            duplicate_columns = [col for col in country_levels.columns if col in country_results.columns]
+            country_levels.drop(duplicate_columns,axis = 1, inplace = True)
+            country_results = country_results.merge(country_levels, how = 'left', left_index = True, right_index = True)
+
+            bilateral_levels = self.calculate_levels(how='bilateral')
+            duplicate_columns = [col for col in bilateral_levels.columns if (col in bilateral_results.columns)
+                                 and col not in [exporter_col, importer_col]]
+            bilateral_levels.drop(duplicate_columns, axis=1, inplace=True)
+            bilateral_results = bilateral_results.merge(bilateral_levels, how='left', on = [exporter_col, importer_col])
+
+        if country_names is not None:
+            if country_names.shape[1]!=2:
+                raise ValueError("country_names should have exactly 2 columns, not {}".format(country_names.shape[1]))
+            code_col = country_names.columns[0]
+            name_col = country_names.columns[1]
+            country_names.set_index(code_col, inplace = True, drop = True)
+            country_results = country_names.merge(country_results, how = 'right', left_index = True, right_index=True)
+
+            # Add names to bilateral data
+            for side in [exporter_col, importer_col]:
+                side_names = country_names.copy()
+                side_names.reset_index(inplace = True)
+                side_names.rename(columns = {code_col:side, name_col:"{} {}".format(side,name_col)}, inplace = True)
+                bilateral_results = bilateral_results.merge(side_names, how = 'left', on = side)
+
+
+
+
 
         # Create Dataframe with Diagnostic results
         diagnostics = self.solver_diagnostics
@@ -955,7 +996,7 @@ class OneSectorGE(object):
 
         if directory is not None:
             country_results.to_csv("{}/{}_country_results.csv".format(directory, name))
-            bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name))
+            bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name), index = False)
             diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index = False)
         else:
             return country_results, bilateral_results, diagnostics
@@ -1012,7 +1053,7 @@ class OneSectorGE(object):
                                   (crl['self.baseline_observed_foreign_imports'], crl['self.foreign_imports_change']),
                                   (crl['self.baseline_observed_intranational_trade'], crl['self.intranational_trade_change'])]:
                 new_level_name = level.replace('baseline', 'experiment')
-                level_change_name = change.replace('%','level')
+                level_change_name = change.replace('%','observed level')
                 country_trade[new_level_name] = country_trade[level] * (1 + (experiment_results[change] / 100))
                 country_trade[level_change_name] = country_trade[new_level_name] - country_trade[level]
 
@@ -1509,7 +1550,7 @@ trade_results_labels = {
 'baseline_modeled_trade':'baseline modeled trade',
 'experiment_trade':'experiment trade',
 'trade_change':'trade change (%)',
-'trade_change_level':'trade change (level)',
+'trade_change_level':'trade change (observed level)',
 'baseline_observed_trade':'baseline observed trade',
 'experiment_observed_trade':'experiment observed trade'
 }
