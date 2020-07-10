@@ -908,17 +908,23 @@ class OneSectorGE(object):
                                    both[bsln_modeled_trade_label]
 
         return both
-    # ToDo: Add country names option
-    # ToDo: add levels option
+
     def export_results(self, directory:str = None, name:str = '',
                        include_levels:bool = False, country_names:DataFrame = None):
         '''
         Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
             and (3) solver diagnostics.
-        :param directory: (str) (optional) Directory in which to write results files. If no directory is supplied,
+        :param directory: (str), optional) Directory in which to write results files. If no directory is supplied,
             three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral results,
             solver diagnostics).
-        :param name:(str) name of the simulation to prefix to the result file names.
+        :param name:(str, default '') name of the simulation to prefix to the result file names.
+        :param include_levels: (bool, default False) If True, includes additional columns reflecting the simulated
+            changes in levels based on observed trade flows (rather than modeled trade flows). Values are those from
+            the method calculate_levels
+        :param country_names: (pandas.DataFrame, optional) Is supplied, adds alternative identifiers such as names to
+            the returned results tables. The supplied DataFrame should include exactly two columns. The first column
+            must be the country identifiers used in the model. The second column must be the alternative identifiers to
+            add.
         :return: (None or Tuple[DataFrame, DataFrame, DataFrame]) If a directory argument is supplied, the method
             returns nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
             DataFrames.
@@ -950,6 +956,24 @@ class OneSectorGE(object):
                                  and col not in [exporter_col, importer_col]]
             bilateral_levels.drop(duplicate_columns, axis=1, inplace=True)
             bilateral_results = bilateral_results.merge(bilateral_levels, how='left', on = [exporter_col, importer_col])
+
+        if country_names is not None:
+            if country_names.shape[1]!=2:
+                raise ValueError("country_names should have exactly 2 columns, not {}".format(country_names.shape[1]))
+            code_col = country_names.columns[0]
+            name_col = country_names.columns[1]
+            country_names.set_index(code_col, inplace = True, drop = True)
+            country_results = country_names.merge(country_results, how = 'right', left_index = True, right_index=True)
+
+            # Add names to bilateral data
+            for side in [exporter_col, importer_col]:
+                side_names = country_names.copy()
+                side_names.reset_index(inplace = True)
+                side_names.rename(columns = {code_col:side, name_col:"{} {}".format(side,name_col)}, inplace = True)
+                bilateral_results = bilateral_results.merge(side_names, how = 'left', on = side)
+
+
+
 
 
         # Create Dataframe with Diagnostic results
