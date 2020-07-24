@@ -1087,6 +1087,54 @@ class OneSectorGE(object):
                                        trl['experiment_observed_trade'], trl['trade_change_level'], trl['trade_change']]]
             return bilat_trade
 
+    def trade_weighted_shock(self, how:str = 'country', aggregations:list=['mean', 'sum', 'max']):
+        '''
+        Create measures of trade weighted policy shocks to better understand which countries are most affected. Results
+        reflect the absolute value of the change in trade costs multiplied by the
+        :param how: (str) Determines the level of the results. If 'country', weighted shocks are returned at the country
+            level for both importer and exporter using specified methods of aggregation. If 'bilateral', it returns the
+            weighted shocks for all bilateral pairs. Default is 'country'.
+        :param aggregations: (list[str]) A list of methods by which to aggregate weighted shocks if how = 'country'.
+            List entries must be selected from those that are functional with the pandas.DataFrame.agg() method. The
+            default value is ['mean', 'sum', 'max'].
+        :return: (pandas.DataFrame) A dataframe of trade-weighted trade cost shocks.
+        '''
+        # Collect needed results
+        bilat_trade = self.bilateral_trade_results.copy()
+        bilat_trade.reset_index(inplace=True)
+        cost_shock = self.cost_shock.copy()
+
+        # Define column names
+        imp_col = self.meta_data.imp_var_name
+        exp_col = self.meta_data.exp_var_name
+        baseline_trade_col = trade_results_labels['baseline_modeled_trade']
+        baseline_cost_col = 'baseline_trade_cost'
+        exper_cost_col = 'experiment_trade_cost'
+        cost_change = 'cost_change'
+        weighted_col = 'weighted_shock'
+
+        # Create change in costs and add to bilateral trade
+        cost_shock[cost_change] = abs(cost_shock[exper_cost_col] - cost_shock[baseline_cost_col])
+        trade_shock = bilat_trade.merge(cost_shock, how='left', on=[imp_col, exp_col])
+        trade_shock = trade_shock[[exp_col, imp_col, baseline_trade_col, cost_change]]
+        # Fill cases with no change in costs with zero
+        trade_shock.fillna(0, inplace=True)
+        # Calculate weighted costs and normalize my largest weighted shock
+        trade_shock[weighted_col] = trade_shock[baseline_trade_col] * trade_shock[cost_change]
+        max_shock = max(trade_shock[weighted_col])
+        trade_shock[weighted_col] = trade_shock[weighted_col] / max_shock
+
+        # Create aggregate measures at importer and exporter level
+        exporter_shocks = trade_shock.groupby(exp_col).agg({weighted_col: aggregations})
+        exporter_shocks.columns = pd.MultiIndex.from_product(exporter_shocks.columns.levels + [[exp_col]])
+        importer_shocks = trade_shock.groupby(imp_col).agg({weighted_col: aggregations})
+        importer_shocks.columns = pd.MultiIndex.from_product(importer_shocks.columns.levels + [[imp_col]])
+        weighted_shocks = pd.concat([exporter_shocks, importer_shocks], axis=1)
+
+        if how == 'country':
+            return weighted_shocks
+        if how == 'bilateral':
+            return trade_shock
 
 
     # ---
