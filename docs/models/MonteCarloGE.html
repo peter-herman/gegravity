@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>models.MonteCarloGE API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>models.MonteCarloGE</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">__Author__ = &#34;Peter Herman&#34;
+__Project__ = &#34;gegravity&#34;
+__Created__ = &#34;May 05, 2020&#34;
+__Description__ = &#39;&#39;&#39;A method for Generating Monte Carlo GE models using the distributions of parameter estimates from 
+the empirical model &#39;&#39;&#39;
+__all__ = [&#39;MonteCarloGE&#39;]
+
+import numpy as np
+import pandas as pd
+from gme.estimate.EstimationModel import EstimationModel
+from models.OneSectorGE import OneSectorGE, ParameterValues
+from typing import List
+
+# ToDo add support for user supplied parameter estimates (ParameterValues object)
+
+class MonteCarloGE(object):
+    def __init__(self,
+                 estimation_model: EstimationModel,
+                 year:str,
+                 trials: int,
+                 cost_variables: list,
+                 mc_variables: list = None,
+                 results_key: str = &#39;all&#39;,
+                 seed:int = None,
+                 parameter_values:ParameterValues = None):
+        self._estimation_model = estimation_model
+        self.meta_data = self._estimation_model.estimation_data._meta_data
+        self._year = str(year)
+        self._cost_variables = cost_variables
+        if mc_variables is None:
+            self._mc_variables = self._cost_variables
+        else:
+            self._mc_variables = mc_variables
+        if seed is None:
+            self._seed = np.random.randint(0,10000)
+        else:
+            self._seed = seed
+        self.results_key = results_key
+
+        # Define Parameter values
+        if parameter_values is not None:
+            self.main_coeffs = parameter_values.params
+            self.main_stderrs = parameter_values.bse
+        else:
+            self.main_coeffs = self._estimation_model.results_dict[self.results_key].params
+            self.main_stderrs = self._estimation_model.results_dict[self.results_key].bse
+        self.trials = trials
+        self.coeff_sample = self.get_mc_params()
+
+        ##
+        # Define Results attributes
+        ##
+        self.all_country_results = None
+        self.country_results = None
+        self.all_country_mr_terms = None
+        self.country_mr_terms = None
+        self.all_outputs_expenditures = None
+        self.outputs_expenditures = None
+        self.all_factory_gate_prices = None
+        self.factory_gate_prices = None
+        self.all_aggregate_trade_results = None
+        self.aggregate_trade_results = None
+
+        # ToDo: Complete these ones
+        self.all_bilateral_trade_results = None
+        self.bilateral_trade_results = None
+
+        self.solver_diagnostics = None
+
+
+        # prep baseline data
+        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
+        self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
+        if self.baseline_data.shape[0] == 0:
+            raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;&#34;)
+
+        # Create sumamry of sample distrbution
+        sample_stats = self.coeff_sample.T.describe().T
+        new_col_names = [&#39;sample_{}&#39;.format(col) for col in sample_stats]
+        sample_stats.columns = new_col_names
+        main_cost_ests = pd.DataFrame({&#39;beta_estimate&#39;: self.main_coeffs[self._mc_variables],
+                                       &#39;stderr_estimate&#39;: self.main_stderrs[self._mc_variables]})
+        self.sample_stats = pd.concat([main_cost_ests, sample_stats], axis=1)
+
+    def get_mc_params(self):
+        var_samples = list()
+        # Define seeds for each variable draw
+        np.random.seed(self._seed)
+        variable_seeds = np.random.randint(0, 10000, len(self._mc_variables))
+        # Create sample for each mc variable
+        for num, var in enumerate(self._mc_variables):
+            beta = self.main_coeffs[var]
+            stderr = self.main_stderrs[var]
+            np.random.seed(variable_seeds[num])
+            var_draw = np.random.normal(beta, stderr, self.trials)
+            var_samples.append(pd.DataFrame({var: var_draw}))
+        # Combine all variable samples
+        mc_sample = pd.concat(var_samples, axis=1).T
+
+        # Add rows without variation for cost variables not a part of mc
+        costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
+        for var in costs_not_mc:
+            mc_sample.loc[var,:] = self.main_coeffs[var]
+        return mc_sample.reset_index()
+
+    def OneSectorGE(self,
+                    experiment_data:pd.DataFrame,
+                    expend_var_name: str = &#39;expenditure&#39;,
+                    output_var_name: str = &#39;output&#39;,
+                    sigma: float = 5,
+                    reference_importer: str = None,
+                    omr_rescale: float = 1000,
+                    imr_rescale: float = 1,
+                    mr_method: str = &#39;hybr&#39;,
+                    mr_max_iter: int = 1400,
+                    mr_tolerance: float = 1e-8,
+                    ge_method:str = &#39;hybr&#39;,
+                    ge_tolerance: float = 1e-8,
+                    ge_max_iter: int = 1000,
+                    approach: str = None,
+                    quiet: bool = True
+                    ):
+        models = list()
+        for trial in range(self.trials):
+            print(&#34;\n* Simulating trial {} *&#34;.format(trial))
+            param_values = ParameterValues(self.coeff_sample, coeff_col=trial, identifier_col=&#39;index&#39;)
+            try:
+                trial_model = OneSectorGE(self._estimation_model,
+                                          year=self._year,
+                                          expend_var_name=expend_var_name,
+                                          output_var_name=output_var_name,
+                                          sigma=sigma,
+                                          results_key=self.results_key,
+                                          cost_variables=self._cost_variables,
+                                          parameter_values=param_values,
+                                          reference_importer = reference_importer,
+                                          omr_rescale = omr_rescale,
+                                          imr_rescale = imr_rescale,
+                                          mr_method = mr_method,
+                                          mr_max_iter = mr_max_iter,
+                                          mr_tolerance = mr_tolerance,
+                                          approach = approach,
+                                          quiet = quiet)
+                trial_model.define_experiment(experiment_data)
+                trial_model.simulate(ge_method=ge_method,
+                                     ge_tolerance=ge_tolerance,
+                                     ge_max_iter=ge_max_iter)
+                models.append(trial_model)
+            except:
+                print(&#34;Failed to solve model.\n&#34;)
+        self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;)
+        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;)
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, &#39;outputs_expenditures&#39;)
+        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, &#39;factory_gate_prices&#39;)
+        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, &#39;aggregate_trade_results&#39;)
+        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, &#39;bilateral_trade&#39;)
+        # ToDo: Finish compilation of results from GE model. Still need solver diagnostics
+        # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
+
+    def _compile_results(self, models, result_type):
+        &#39;&#39;&#39;
+        Compile results across all trials.
+        :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
+        :param result_type: (str) Type of results to compile. Function works with:
+            &#39;country_results&#39; - compiles results from model.country_mr_results
+            &#39;mr_terms&#39; - compiles results from model.country_mr_terms
+            &#39;output_expenditures&#39; - compiles results from model.output_expenditures
+            &#39;factory_gate_prices - compiles results from model.factory_gate_prices
+            &#39;aggregate_trade_results&#39; - compiles results from model.aggregate_trade_results
+        :return:(pd.DataFrame, pd.DataFrame) Two dataframes. The first contains all results for each trial, with
+            multiindex columns labeled (trial, result type). The second provides summary stats from all trials (mean,
+            std, stderr)
+        &#39;&#39;&#39;
+        # Combine all results
+        combined_results_list = list()
+        for num, model in enumerate(models):
+            if result_type == &#39;country_results&#39;:
+                model_results = model.country_results.copy()
+            if result_type == &#39;mr_terms&#39;:
+                model_results = model.country_mr_terms
+            if result_type == &#39;outputs_expenditures&#39;:
+                model_results = model.outputs_expenditures
+            if result_type == &#39;factory_gate_prices&#39;:
+                model_results = model.factory_gate_prices
+            if result_type == &#39;aggregate_trade_results&#39;:
+                model_results = model.aggregate_trade_results
+            if result_type == &#39;bilateral_trade&#39;:
+                model_results = model.bilateral_trade_results
+
+            # Label columns via multiindex with (trial, result)
+            multi_columns = [(num,col) for col in model_results.columns]
+            model_results.columns = pd.MultiIndex.from_tuples(multi_columns)
+            combined_results_list.append(model_results)
+        combined_results = pd.concat(combined_results_list, axis = 1)
+
+        # Reshape trials to long format
+        summary_results = combined_results.copy()
+        if result_type==&#39;bilateral_trade&#39;:
+            # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
+            summary_results = summary_results.stack(0).reset_index(level=2)
+            summary_results.rename(columns={&#39;level_2&#39;: &#39;trial&#39;}, inplace=True)
+        else:
+            summary_results = summary_results.stack(0).reset_index(level=1)
+            summary_results.rename(columns={&#39;level_1&#39;: &#39;trial&#39;}, inplace=True)
+
+        # Compute mean and std across trials
+        agg_dict = dict()
+        var_list = list(summary_results.columns)
+        var_list.remove(&#39;trial&#39;)
+        for var in var_list:
+            agg_dict[var] = [&#39;mean&#39;, &#39;std&#39;]
+        if result_type == &#39;bilateral_trade&#39;:
+            summary_results = summary_results.groupby(level=[0, 1]).agg(agg_dict)
+        else:
+            summary_results = summary_results.groupby(level=0).agg(agg_dict)
+
+        # Compute standard error for each result type
+        for col in summary_results.columns:
+            if col[1] == &#39;std&#39;:
+                summary_results[(col[0], &#39;stderr&#39;)] = summary_results[col] / (self.trials ** 0.5)
+        if result_type==&#39;bilateral_trade&#39;:
+            summary_results = summary_results.stack(level=1).reset_index(level=2)
+            summary_results.rename(columns = {&#39;level_2&#39;:&#39;statistic&#39;},inplace = True)
+        else:
+            summary_results = summary_results.stack(level=1).reset_index(level=1)
+            summary_results.rename(columns = {&#39;level_1&#39;:&#39;statistic&#39;},inplace = True)
+        return combined_results, summary_results</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="models.MonteCarloGE.MonteCarloGE"><code class="flex name class">
+<span>class <span class="ident">MonteCarloGE</span></span>
+<span>(</span><span>estimation_model: gme.estimate.EstimationModel.EstimationModel, year: str, trials: int, cost_variables: list, mc_variables: list = None, results_key: str = 'all', seed: int = None, parameter_values: <a title="models.OneSectorGE.ParameterValues" href="OneSectorGE.html#models.OneSectorGE.ParameterValues">ParameterValues</a> = None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class MonteCarloGE(object):
+    def __init__(self,
+                 estimation_model: EstimationModel,
+                 year:str,
+                 trials: int,
+                 cost_variables: list,
+                 mc_variables: list = None,
+                 results_key: str = &#39;all&#39;,
+                 seed:int = None,
+                 parameter_values:ParameterValues = None):
+        self._estimation_model = estimation_model
+        self.meta_data = self._estimation_model.estimation_data._meta_data
+        self._year = str(year)
+        self._cost_variables = cost_variables
+        if mc_variables is None:
+            self._mc_variables = self._cost_variables
+        else:
+            self._mc_variables = mc_variables
+        if seed is None:
+            self._seed = np.random.randint(0,10000)
+        else:
+            self._seed = seed
+        self.results_key = results_key
+
+        # Define Parameter values
+        if parameter_values is not None:
+            self.main_coeffs = parameter_values.params
+            self.main_stderrs = parameter_values.bse
+        else:
+            self.main_coeffs = self._estimation_model.results_dict[self.results_key].params
+            self.main_stderrs = self._estimation_model.results_dict[self.results_key].bse
+        self.trials = trials
+        self.coeff_sample = self.get_mc_params()
+
+        ##
+        # Define Results attributes
+        ##
+        self.all_country_results = None
+        self.country_results = None
+        self.all_country_mr_terms = None
+        self.country_mr_terms = None
+        self.all_outputs_expenditures = None
+        self.outputs_expenditures = None
+        self.all_factory_gate_prices = None
+        self.factory_gate_prices = None
+        self.all_aggregate_trade_results = None
+        self.aggregate_trade_results = None
+
+        # ToDo: Complete these ones
+        self.all_bilateral_trade_results = None
+        self.bilateral_trade_results = None
+
+        self.solver_diagnostics = None
+
+
+        # prep baseline data
+        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
+        self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
+        if self.baseline_data.shape[0] == 0:
+            raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;&#34;)
+
+        # Create sumamry of sample distrbution
+        sample_stats = self.coeff_sample.T.describe().T
+        new_col_names = [&#39;sample_{}&#39;.format(col) for col in sample_stats]
+        sample_stats.columns = new_col_names
+        main_cost_ests = pd.DataFrame({&#39;beta_estimate&#39;: self.main_coeffs[self._mc_variables],
+                                       &#39;stderr_estimate&#39;: self.main_stderrs[self._mc_variables]})
+        self.sample_stats = pd.concat([main_cost_ests, sample_stats], axis=1)
+
+    def get_mc_params(self):
+        var_samples = list()
+        # Define seeds for each variable draw
+        np.random.seed(self._seed)
+        variable_seeds = np.random.randint(0, 10000, len(self._mc_variables))
+        # Create sample for each mc variable
+        for num, var in enumerate(self._mc_variables):
+            beta = self.main_coeffs[var]
+            stderr = self.main_stderrs[var]
+            np.random.seed(variable_seeds[num])
+            var_draw = np.random.normal(beta, stderr, self.trials)
+            var_samples.append(pd.DataFrame({var: var_draw}))
+        # Combine all variable samples
+        mc_sample = pd.concat(var_samples, axis=1).T
+
+        # Add rows without variation for cost variables not a part of mc
+        costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
+        for var in costs_not_mc:
+            mc_sample.loc[var,:] = self.main_coeffs[var]
+        return mc_sample.reset_index()
+
+    def OneSectorGE(self,
+                    experiment_data:pd.DataFrame,
+                    expend_var_name: str = &#39;expenditure&#39;,
+                    output_var_name: str = &#39;output&#39;,
+                    sigma: float = 5,
+                    reference_importer: str = None,
+                    omr_rescale: float = 1000,
+                    imr_rescale: float = 1,
+                    mr_method: str = &#39;hybr&#39;,
+                    mr_max_iter: int = 1400,
+                    mr_tolerance: float = 1e-8,
+                    ge_method:str = &#39;hybr&#39;,
+                    ge_tolerance: float = 1e-8,
+                    ge_max_iter: int = 1000,
+                    approach: str = None,
+                    quiet: bool = True
+                    ):
+        models = list()
+        for trial in range(self.trials):
+            print(&#34;\n* Simulating trial {} *&#34;.format(trial))
+            param_values = ParameterValues(self.coeff_sample, coeff_col=trial, identifier_col=&#39;index&#39;)
+            try:
+                trial_model = OneSectorGE(self._estimation_model,
+                                          year=self._year,
+                                          expend_var_name=expend_var_name,
+                                          output_var_name=output_var_name,
+                                          sigma=sigma,
+                                          results_key=self.results_key,
+                                          cost_variables=self._cost_variables,
+                                          parameter_values=param_values,
+                                          reference_importer = reference_importer,
+                                          omr_rescale = omr_rescale,
+                                          imr_rescale = imr_rescale,
+                                          mr_method = mr_method,
+                                          mr_max_iter = mr_max_iter,
+                                          mr_tolerance = mr_tolerance,
+                                          approach = approach,
+                                          quiet = quiet)
+                trial_model.define_experiment(experiment_data)
+                trial_model.simulate(ge_method=ge_method,
+                                     ge_tolerance=ge_tolerance,
+                                     ge_max_iter=ge_max_iter)
+                models.append(trial_model)
+            except:
+                print(&#34;Failed to solve model.\n&#34;)
+        self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;)
+        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;)
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, &#39;outputs_expenditures&#39;)
+        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, &#39;factory_gate_prices&#39;)
+        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, &#39;aggregate_trade_results&#39;)
+        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, &#39;bilateral_trade&#39;)
+        # ToDo: Finish compilation of results from GE model. Still need solver diagnostics
+        # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
+
+    def _compile_results(self, models, result_type):
+        &#39;&#39;&#39;
+        Compile results across all trials.
+        :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
+        :param result_type: (str) Type of results to compile. Function works with:
+            &#39;country_results&#39; - compiles results from model.country_mr_results
+            &#39;mr_terms&#39; - compiles results from model.country_mr_terms
+            &#39;output_expenditures&#39; - compiles results from model.output_expenditures
+            &#39;factory_gate_prices - compiles results from model.factory_gate_prices
+            &#39;aggregate_trade_results&#39; - compiles results from model.aggregate_trade_results
+        :return:(pd.DataFrame, pd.DataFrame) Two dataframes. The first contains all results for each trial, with
+            multiindex columns labeled (trial, result type). The second provides summary stats from all trials (mean,
+            std, stderr)
+        &#39;&#39;&#39;
+        # Combine all results
+        combined_results_list = list()
+        for num, model in enumerate(models):
+            if result_type == &#39;country_results&#39;:
+                model_results = model.country_results.copy()
+            if result_type == &#39;mr_terms&#39;:
+                model_results = model.country_mr_terms
+            if result_type == &#39;outputs_expenditures&#39;:
+                model_results = model.outputs_expenditures
+            if result_type == &#39;factory_gate_prices&#39;:
+                model_results = model.factory_gate_prices
+            if result_type == &#39;aggregate_trade_results&#39;:
+                model_results = model.aggregate_trade_results
+            if result_type == &#39;bilateral_trade&#39;:
+                model_results = model.bilateral_trade_results
+
+            # Label columns via multiindex with (trial, result)
+            multi_columns = [(num,col) for col in model_results.columns]
+            model_results.columns = pd.MultiIndex.from_tuples(multi_columns)
+            combined_results_list.append(model_results)
+        combined_results = pd.concat(combined_results_list, axis = 1)
+
+        # Reshape trials to long format
+        summary_results = combined_results.copy()
+        if result_type==&#39;bilateral_trade&#39;:
+            # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
+            summary_results = summary_results.stack(0).reset_index(level=2)
+            summary_results.rename(columns={&#39;level_2&#39;: &#39;trial&#39;}, inplace=True)
+        else:
+            summary_results = summary_results.stack(0).reset_index(level=1)
+            summary_results.rename(columns={&#39;level_1&#39;: &#39;trial&#39;}, inplace=True)
+
+        # Compute mean and std across trials
+        agg_dict = dict()
+        var_list = list(summary_results.columns)
+        var_list.remove(&#39;trial&#39;)
+        for var in var_list:
+            agg_dict[var] = [&#39;mean&#39;, &#39;std&#39;]
+        if result_type == &#39;bilateral_trade&#39;:
+            summary_results = summary_results.groupby(level=[0, 1]).agg(agg_dict)
+        else:
+            summary_results = summary_results.groupby(level=0).agg(agg_dict)
+
+        # Compute standard error for each result type
+        for col in summary_results.columns:
+            if col[1] == &#39;std&#39;:
+                summary_results[(col[0], &#39;stderr&#39;)] = summary_results[col] / (self.trials ** 0.5)
+        if result_type==&#39;bilateral_trade&#39;:
+            summary_results = summary_results.stack(level=1).reset_index(level=2)
+            summary_results.rename(columns = {&#39;level_2&#39;:&#39;statistic&#39;},inplace = True)
+        else:
+            summary_results = summary_results.stack(level=1).reset_index(level=1)
+            summary_results.rename(columns = {&#39;level_1&#39;:&#39;statistic&#39;},inplace = True)
+        return combined_results, summary_results</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="models.MonteCarloGE.MonteCarloGE.OneSectorGE"><code class="name flex">
+<span>def <span class="ident">OneSectorGE</span></span>(<span>self, experiment_data: pandas.core.frame.DataFrame, expend_var_name: str = 'expenditure', output_var_name: str = 'output', sigma: float = 5, reference_importer: str = None, omr_rescale: float = 1000, imr_rescale: float = 1, mr_method: str = 'hybr', mr_max_iter: int = 1400, mr_tolerance: float = 1e-08, ge_method: str = 'hybr', ge_tolerance: float = 1e-08, ge_max_iter: int = 1000, approach: str = None, quiet: bool = True)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def OneSectorGE(self,
+                experiment_data:pd.DataFrame,
+                expend_var_name: str = &#39;expenditure&#39;,
+                output_var_name: str = &#39;output&#39;,
+                sigma: float = 5,
+                reference_importer: str = None,
+                omr_rescale: float = 1000,
+                imr_rescale: float = 1,
+                mr_method: str = &#39;hybr&#39;,
+                mr_max_iter: int = 1400,
+                mr_tolerance: float = 1e-8,
+                ge_method:str = &#39;hybr&#39;,
+                ge_tolerance: float = 1e-8,
+                ge_max_iter: int = 1000,
+                approach: str = None,
+                quiet: bool = True
+                ):
+    models = list()
+    for trial in range(self.trials):
+        print(&#34;\n* Simulating trial {} *&#34;.format(trial))
+        param_values = ParameterValues(self.coeff_sample, coeff_col=trial, identifier_col=&#39;index&#39;)
+        try:
+            trial_model = OneSectorGE(self._estimation_model,
+                                      year=self._year,
+                                      expend_var_name=expend_var_name,
+                                      output_var_name=output_var_name,
+                                      sigma=sigma,
+                                      results_key=self.results_key,
+                                      cost_variables=self._cost_variables,
+                                      parameter_values=param_values,
+                                      reference_importer = reference_importer,
+                                      omr_rescale = omr_rescale,
+                                      imr_rescale = imr_rescale,
+                                      mr_method = mr_method,
+                                      mr_max_iter = mr_max_iter,
+                                      mr_tolerance = mr_tolerance,
+                                      approach = approach,
+                                      quiet = quiet)
+            trial_model.define_experiment(experiment_data)
+            trial_model.simulate(ge_method=ge_method,
+                                 ge_tolerance=ge_tolerance,
+                                 ge_max_iter=ge_max_iter)
+            models.append(trial_model)
+        except:
+            print(&#34;Failed to solve model.\n&#34;)
+    self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;)
+    self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;)
+    self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, &#39;outputs_expenditures&#39;)
+    self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, &#39;factory_gate_prices&#39;)
+    self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, &#39;aggregate_trade_results&#39;)
+    self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, &#39;bilateral_trade&#39;)</code></pre>
+</details>
+</dd>
+<dt id="models.MonteCarloGE.MonteCarloGE.get_mc_params"><code class="name flex">
+<span>def <span class="ident">get_mc_params</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_mc_params(self):
+    var_samples = list()
+    # Define seeds for each variable draw
+    np.random.seed(self._seed)
+    variable_seeds = np.random.randint(0, 10000, len(self._mc_variables))
+    # Create sample for each mc variable
+    for num, var in enumerate(self._mc_variables):
+        beta = self.main_coeffs[var]
+        stderr = self.main_stderrs[var]
+        np.random.seed(variable_seeds[num])
+        var_draw = np.random.normal(beta, stderr, self.trials)
+        var_samples.append(pd.DataFrame({var: var_draw}))
+    # Combine all variable samples
+    mc_sample = pd.concat(var_samples, axis=1).T
+
+    # Add rows without variation for cost variables not a part of mc
+    costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
+    for var in costs_not_mc:
+        mc_sample.loc[var,:] = self.main_coeffs[var]
+    return mc_sample.reset_index()</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="models" href="index.html">models</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="models.MonteCarloGE.MonteCarloGE" href="#models.MonteCarloGE.MonteCarloGE">MonteCarloGE</a></code></h4>
+<ul class="">
+<li><code><a title="models.MonteCarloGE.MonteCarloGE.OneSectorGE" href="#models.MonteCarloGE.MonteCarloGE.OneSectorGE">OneSectorGE</a></code></li>
+<li><code><a title="models.MonteCarloGE.MonteCarloGE.get_mc_params" href="#models.MonteCarloGE.MonteCarloGE.get_mc_params">get_mc_params</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>

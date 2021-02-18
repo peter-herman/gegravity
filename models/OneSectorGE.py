@@ -1,6 +1,7 @@
 __Author__ = "Peter Herman"
 __Project__ = "Gravity Code"
 __Created__ = "08/15/2018"
+__all__ = ['OneSectorGE', 'ParameterValues', 'Country', 'Economy']
 __Description__ = """A single sector or aggregate full GE model based on Larch and Yotov, 'General Equilibrium Trade
                   Policy Analysis with Structural Gravity," 2016. (WTO Working Paper ERSD-2016-08)"""
 
@@ -27,83 +28,104 @@ class OneSectorGE(object):
     def __init__(self,
                  estimation_model: EstimationModel,
                  year: str,
+                 reference_importer: str,
                  expend_var_name: str = 'expenditure',
                  output_var_name: str = 'output',
                  sigma: float = 5,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
                  parameter_values = None,
-                 reference_importer: str = None,
-                 approach: str = None,
+                 #approach: str = None,
                  quiet:bool = False):
         '''
+        Define a general equilibrium (GE) gravity model.
+        Args:
+            estimation_model (gme.EstimationModel): A GME Estimation model
+            year (str): The year to be used for the model. Works best if estimation_model year column has been cast as
+                string too.
+            reference_importer (str): Identifier for the country to be used as the reference importer (inward
+                multilateral resistance normalized to 1 and other multilateral resistances solved relative to it).
+            expend_var_name (str): Column name of variable containing expenditure data in estimation_model.
+            output_var_name (str): Column name of variable containing output data in estimation_model.
+            sigma (float): Elasticity of substitution.
+            results_key (str): (optional) If using parameter estimates from estimation_model, this is the key (i.e.
+                sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
+                False in GME model), this key is 'all', which is the default.
+            cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
+                default, all included non-fixed effect variables are used.
+            parameter_values (ParameterValues): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.ParameterValues, statsmodels.GLMResultsWrapper, or
+                gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
+            quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
-        :param estimation_model:
-        :param year:
-        :param expend_var_name:
-        :param output_var_name:
-        :param sigma:
-        :param results_key:
-        :param cost_variables:
-        :param parameter_values: (pd.Series) (optional) A set of parameter values or estimates to use for constructing
-            trade costs. Should be of type gegravity.ParameterValues, statsmodels.GLMResultsWrapper, or
-            gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
-        :param reference_importer:
-        :param omr_rescale:
-        :param imr_rescale:
-        :param mr_method:
-        :param mr_max_iter:
-        :param mr_tolerance:
-        :param approach:
-        :param quiet: (bool) If True, suppresses all console feedback from model during simulation. Default is False.
-
-        # ---
-        # Methods
-        # ---
-
-        ##
-        # Model Construction and Simulation
-        ##
-
-        build_baseline(omr_rescale: float = 1, imr_rescale: float = 1,  mr_method: str = 'hybr',
-                       mr_max_iter: int = 1400, mr_tolerance: float = 1e-8)
-            Solve the baseline model. This primarily solves for the baseline Multilateral Resistance (MR) terms.
-
-        define_experiment(experiment_data: DataFrame = None)
-            Specify the counterfactual data to use for experiment.
-
-        simulate(ge_method: str = 'hybr', ge_tolerance: float = 1e-8, ge_max_iter: int = 1000)
-            Simulate the counterfactual scenario.
-
-        ##
-        # Post-simulation Analysis
-        ##
-
-        trade_share(importers: List[str], exporters: List[str])
-            Calculate baseline and experiment import and export shares (in percentages) between user-supplied countries.
-
-        export_results(directory:str = None, name:str = '')
-            Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral
-            results, and (3) solver diagnostics.
-
-        calculate_levels(how: str = 'country'):
-            Calculate changes in the level (value) of trade using baseline trade values and simulation outcomes. Results
-            can be calculated at either the country level or bilateral level.
-
-        ##
-        # Trouble-shooting
-        ##
-
-        test_baseline_mr_function(inputs_only:bool=False)
-            Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
-            debugging initial data problems. Note that the returned function values reflect those generated by the
-            initial values and do not reflect a solution to the system.
-
-        check_omr_rescale(omr_rescale_range:int = 10, mr_method: str = 'hybr', mr_max_iter: int = 1400,
-                         mr_tolerance: float = 1e-8, countries:List[str] = [])
-            Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
-            feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
+        Attributes:
+            sigma (int): The elasticity of substitution parameter value
+            country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
+                by their respective identifiers.
+            economy (Economy): The model's Economy object.
+            baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
+                (t_{ij}^{1-sigma}).
+            experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
+                (t_{ij}^{1-sigma}).
+            cost_shock (pandas.DataFrame): The baseline and experiment trade costs combined.
+            experiment_data (pandas.DataFrame): The counterfactual experiment data.
+            bilateral_trade_results (pandas.DataFrame):
+            aggregate_trade_results (pandas.DataFrame):
+            solver_diagnostics (dict): 
+            factory_gate_prices = None
+            outputs_expenditures = None
+            country_results = None
+            country_mr_terms = None
         '''
+        # '''
+        #
+        # # ---
+        # # Methods
+        # # ---
+        #
+        # ##
+        # # Model Construction and Simulation
+        # ##
+        #
+        # build_baseline(omr_rescale: float = 1, imr_rescale: float = 1,  mr_method: str = 'hybr',
+        #                mr_max_iter: int = 1400, mr_tolerance: float = 1e-8)
+        #     Solve the baseline model. This primarily solves for the baseline Multilateral Resistance (MR) terms.
+        #
+        # define_experiment(experiment_data: DataFrame = None)
+        #     Specify the counterfactual data to use for experiment.
+        #
+        # simulate(ge_method: str = 'hybr', ge_tolerance: float = 1e-8, ge_max_iter: int = 1000)
+        #     Simulate the counterfactual scenario.
+        #
+        # ##
+        # # Post-simulation Analysis
+        # ##
+        #
+        # trade_share(importers: List[str], exporters: List[str])
+        #     Calculate baseline and experiment import and export shares (in percentages) between user-supplied countries.
+        #
+        # export_results(directory:str = None, name:str = '')
+        #     Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral
+        #     results, and (3) solver diagnostics.
+        #
+        # calculate_levels(how: str = 'country'):
+        #     Calculate changes in the level (value) of trade using baseline trade values and simulation outcomes. Results
+        #     can be calculated at either the country level or bilateral level.
+        #
+        # ##
+        # # Trouble-shooting
+        # ##
+        #
+        # test_baseline_mr_function(inputs_only:bool=False)
+        #     Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
+        #     debugging initial data problems. Note that the returned function values reflect those generated by the
+        #     initial values and do not reflect a solution to the system.
+        #
+        # check_omr_rescale(omr_rescale_range:int = 10, mr_method: str = 'hybr', mr_max_iter: int = 1400,
+        #                  mr_tolerance: float = 1e-8, countries:List[str] = [])
+        #     Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
+        #     feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
+        # '''
         if not isinstance(year, str):
             raise TypeError('year should be a string')
 
@@ -132,12 +154,12 @@ class OneSectorGE(object):
         self._ge_tolerance = None
         self._ge_max_iter = None
         self.country_set = None
-        self._economy = None
+        self.economy = None
         self.baseline_trade_costs = None # t_{ij}^{1-sigma}
         self.experiment_trade_costs = None # t_{ij}^{1-sigma}
         self.cost_shock = None
         self.experiment_data = None
-        self.approach = approach
+        self.approach = None # Disabled until GEPPML is completed
         self.quiet = quiet
 
         # Results fields
@@ -181,10 +203,10 @@ class OneSectorGE(object):
 
         # Initialize a set of countries and the economy
         self.country_set = self._create_baseline_countries()
-        self._economy = self._create_baseline_economy()
+        self.economy = self._create_baseline_economy()
         # Calculate certain country values using info from the whole economy
         for country in self.country_set:
-            self.country_set[country]._calculate_baseline_output_expenditure_shares(self._economy)
+            self.country_set[country]._calculate_baseline_output_expenditure_shares(self.economy)
         # Calculate baseline trade costs
         self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
 
@@ -197,26 +219,29 @@ class OneSectorGE(object):
                        mr_method: str = 'hybr',
                        mr_max_iter: int = 1400,
                        mr_tolerance: float = 1e-8):
-        """
+        '''
         Solve the baseline model. This primarily solves for the baseline Multilateral Resistance (MR) terms.
-        :param omr_rescale: (int) This value rescales the OMR values to assist in convergence. Often, OMR values are
-            orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a different
-            order of magnitude can help. Values should be of the form 10^n. By default, this value is 1 (10^0). However,
-            users should be careful with this choice as results, even when convergent, may not be fully robust to any
-            selection. The method OneSectorGE.check_omr_rescale() can help identify and compare feasible values.
-        :param imr_rescale: (int) This value rescales the IMR values to potentially aid in conversion. However, because
-            the IMR for the reference importer is normalized to one, it is unlikely that there will be benefits to
-            changing the default value, which is 1.
-        :param mr_method: (str) This parameter determines the type of non-linear solver used for solving the baseline
-            and experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
-            value is 'hybr'.
-        :param mr_max_iter: (int) This parameter sets the maximum limit on the number of iterations conducted by the
-            solver used to solve for MR terms. The default value is 1400.
-        :param mr_tolerance: (float) This parameterset the convergence tolerance level for the solver used to solve for
-            MR terms. The default value is 1e-8.
-        :return: None
-            There is no return but many attributes in the model are populated.
-        """
+        Args:
+            omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
+                are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
+                different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
+                (10^0). However, users should be careful with this choice as results, even when convergent, may not be
+                fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
+                feasible values.
+            imr_rescale (int): (optional) This value rescales the IMR values to potentially aid in conversion. However,
+                because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
+                because changing the default value, which is 1.
+            mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
+                experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+                value is 'hybr'.
+            mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
+                by the solver used to solve for MR terms. The default value is 1400.
+            mr_tolerance (float): (optional) This parameterset the convergence tolerance level for the solver used to
+                solve for MR terms. The default value is 1e-8.
+
+        Returns:
+            None: Populates Attributes of model object.
+        '''
         self._omr_rescale = omr_rescale
         self._imr_rescale = imr_rescale
         self._mr_max_iter = mr_max_iter
@@ -336,7 +361,7 @@ class OneSectorGE(object):
     def _create_baseline_economy(self):
         # Initialize Economy
         economy = Economy(sigma=self.sigma)
-        economy.initialize_baseline_total_output_expend(self.country_set)
+        economy._initialize_baseline_total_output_expend(self.country_set)
         return economy
 
     def _create_trade_costs(self,
@@ -551,13 +576,17 @@ class OneSectorGE(object):
             self.country_set[country].factory_gate_price_param = self.country_set[country].baseline_output_share \
                                                                  * self.country_set[country]._baseline_omr_ratio
 
-    def define_experiment(self, experiment_data: DataFrame = None):
+    def define_experiment(self, experiment_data: DataFrame):
         '''
         Specify the counterfactual data to use for experiment.
-        :param experiment_data: (DataFrame) A dataframe contianing the counterfactual trade-cost data to use for the
-            experiment. The best approach for creating this data is to copy the baseline data
-            (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
-        :return: (None) There is no return but the new information is added to model.
+        Args:
+            experiment_data(Pandas.DataFrame): A dataframe contianing the counterfactual trade-cost data to use for the
+                experiment. The best approach for creating this data is to copy the baseline data
+                (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
+
+        Returns:
+            None:
+                There is no return but the new information is added to model.
         '''
         if not self._baseline_built:
             raise ValueError("Baseline must be built first (i.e. ge_model.build_baseline() method")
@@ -574,14 +603,27 @@ class OneSectorGE(object):
 
     def simulate(self, ge_method: str = 'hybr', ge_tolerance: float = 1e-8, ge_max_iter: int = 1000):
         '''
-        Simulate the counterfactual scenario.
-        :param ge_method: (str) The solver method to use for the full GE non-linear solver. See scipy.root()
-            documentation for option. Default is 'hybr'.
-        :param ge_tolerance: (float) The tolerance for determining if the GE system of equations is solved. Default is
-            1e-8.
-        :param ge_max_iter: (int) The maximum number of iterations allowed for the full GE nonlinear solver.
-        :return: (None) No return but many fields in the model containing results are populated.
+        Simulate the counterfactual scenario
+        Args:
+            ge_method (str): (optional) The solver method to use for the full GE non-linear solver. See scipy.root()
+                documentation for option. Default is 'hybr'.
+            ge_tolerance (float): (optional) The tolerance for determining if the GE system of equations is solved.
+                Default is 1e-8.
+            ge_max_iter (int): (optional) The maximum number of iterations allowed for the full GE nonlinear solver.
+                Default is 1000.
+
+        Returns:
+            None
+                No return but populates new attributes of model.
         '''
+        # '''
+        # Simulate the counterfactual scenario.
+        # :param ge_method: (str)
+        # :param ge_tolerance: (float)
+        #
+        # :param ge_max_iter: (int)
+        # :return: (None) No return but many fields in the model containing results are populated.
+        # '''
         if not self._baseline_built:
             raise ValueError("Baseline must be built first (i.e. OneSectorGE.build_baseline() method")
         if not self._experiment_defined:
@@ -689,9 +731,9 @@ class OneSectorGE(object):
                 country_results_labels['self.expenditure_change']: country_obj.expenditure_change},
                                                  ignore_index=True)
         # Store some economy-wide values to economy object
-        self._economy.experiment_total_output = total_output
-        self._economy.output_change = 100 * (total_output - self._economy.baseline_total_output) \
-                                      / self._economy.baseline_total_output
+        self.economy.experiment_total_output = total_output
+        self.economy.output_change = 100 * (total_output - self.economy.baseline_total_output) \
+                                     / self.economy.baseline_total_output
 
         results_table = results_table.set_index(country_results_labels['self.identifier'])
         # Ensure all values are numeric
@@ -874,11 +916,19 @@ class OneSectorGE(object):
     def trade_share(self, importers: List[str], exporters: List[str]):
         '''
         Calculate baseline and experiment import and export shares (in percentages) between user-supplied countries.
-        :param importers: (list[str]) A list of country codes to include as import partners.
-        :param exporters: (list[str]) A list of country codes to include as export partners.
-        :return: (DataFrame) A dataframe expressing baseline, experiment, and changes in trade between each specified
-        importer and exporter.
+        Args:
+            importers (list[str]): A list of country codes to include as import partners.
+            exporters (list[str]): A list of country codes to include as export partners.
+
+        Returns:
+            pandas.DataFrame: A dataframe expressing baseline, experiment, and changes in trade between each specified importer and exporter.
         '''
+        # '''
+        #
+        # :param importers:  A list of country codes to include as import partners.
+        # :param exporters: (list[str]) A list of country codes to include as export partners.
+        # :return: (DataFrame)
+        # '''
         importer_col = self.meta_data.imp_var_name
         exporter_col = self.meta_data.exp_var_name
         bsln_modeled_trade_label = trade_results_labels['baseline_modeled_trade']
@@ -913,22 +963,25 @@ class OneSectorGE(object):
                        include_levels:bool = False, country_names:DataFrame = None):
         '''
         Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
-            and (3) solver diagnostics.
-        :param directory: (str), optional) Directory in which to write results files. If no directory is supplied,
-            three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral results,
-            solver diagnostics).
-        :param name:(str, default '') name of the simulation to prefix to the result file names.
-        :param include_levels: (bool, default False) If True, includes additional columns reflecting the simulated
-            changes in levels based on observed trade flows (rather than modeled trade flows). Values are those from
-            the method calculate_levels
-        :param country_names: (pandas.DataFrame, optional) Is supplied, adds alternative identifiers such as names to
-            the returned results tables. The supplied DataFrame should include exactly two columns. The first column
-            must be the country identifiers used in the model. The second column must be the alternative identifiers to
-            add.
-        :return: (None or Tuple[DataFrame, DataFrame, DataFrame]) If a directory argument is supplied, the method
-            returns nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
-            DataFrames.
+        and (3) solver diagnostics.
+        Args:
+            directory (str): (optional) Directory in which to write results files. If no directory is supplied,
+                three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral
+                results, solver diagnostics).
+            name (str): (optional) Name of the simulation to prefix to the result file names.
+            include_levels (bool): (optional) If True, includes additional columns reflecting the simulated changes in
+                levels based on observed trade flows (rather than modeled trade flows). Values are those from the
+                method calculate_levels.
+            country_names (pandas.DataFrame): (optional) Adds alternative identifiers such as names to the returned
+                results tables. The supplied DataFrame should include exactly two columns. The first column must be
+                the country identifiers used in the model. The second column must be the alternative identifiers to
+                add.
+
+        Returns:
+            None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
+                nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of DataFrames.
         '''
+
         importer_col = self.meta_data.imp_var_name
         exporter_col = self.meta_data.exp_var_name
 
@@ -1005,12 +1058,15 @@ class OneSectorGE(object):
         '''
         Calculate changes in the level (value) of trade using baseline trade values and simulation outcomes. Results
             can be calculated at either the country level or bilateral level.
-        :param how: (str) If 'country', returned values are calculated at the country level (total exports, imports,
-            and intranational). If 'bilateral', returned results are at the bilateral level. Default is 'country'.
-        :return: (DataFrame) A DataFrame containing baseline and experiment trade levels as well as the change expressed
-            in levels and percentages. If calculated at the country level, these four measures are each returned for
-            total imports, exports, and intranational trade. If calculated at the bilateral level, only one set of the
-            measures is returned.
+        Args:
+            how (str):  If 'country', returned values are calculated at the country level (total exports, imports,
+                and intranational). If 'bilateral', returned results are at the bilateral level. Default is 'country'.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing baseline and experiment trade levels as well as the change expressed
+                in levels and percentages. If calculated at the country level, these four measures are each returned for
+                total imports, exports, and intranational trade. If calculated at the bilateral level, only one set of the
+                measures is returned.
         '''
         if not self._baseline_built and self._experiment_defined:
             raise ValueError('Model must be fully solved before calculating levels.')
@@ -1091,13 +1147,15 @@ class OneSectorGE(object):
         '''
         Create measures of trade weighted policy shocks to better understand which countries are most affected. Results
         reflect the absolute value of the change in trade costs multiplied by the
-        :param how: (str) Determines the level of the results. If 'country', weighted shocks are returned at the country
-            level for both importer and exporter using specified methods of aggregation. If 'bilateral', it returns the
-            weighted shocks for all bilateral pairs. Default is 'country'.
-        :param aggregations: (list[str]) A list of methods by which to aggregate weighted shocks if how = 'country'.
-            List entries must be selected from those that are functional with the pandas.DataFrame.agg() method. The
-            default value is ['mean', 'sum', 'max'].
-        :return: (pandas.DataFrame) A dataframe of trade-weighted trade cost shocks.
+        Args:
+            how (str): Determines the level of the results. If 'country', weighted shocks are returned at the country
+                level for both importer and exporter using specified methods of aggregation. If 'bilateral', it returns the
+                weighted shocks for all bilateral pairs. Default is 'country'.
+            aggregations (list[str]):  A list of methods by which to aggregate weighted shocks if how = 'country'.
+                List entries must be selected from those that are functional with the pandas.DataFrame.agg() method. The
+                default value is ['mean', 'sum', 'max'].
+        Returns:
+            pandas.DataFrame: A dataframe of trade-weighted trade cost shocks.
         '''
         # Collect needed results
         bilat_trade = self.bilateral_trade_results.copy()
@@ -1145,11 +1203,13 @@ class OneSectorGE(object):
         Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
             debugging initial data problems. Note that the returned function values reflect those generated by the
             initial values and do not reflect a solution to the system.
-        :param inputs_only: (bool) If False (default), the method tests the computability of the MR system of equations
-            and returns both the inputs to the system and the output. If True, only the system inputs are return and the
-            equations are not computed and can help diagnose input issues that raise errors.
-        :return: (dict) A dictionary containing a collection of parameter and value inputs as well as the function
-            values at the initial values.
+        Args:
+            inputs_only (bool): If False (default), the method tests the computability of the MR system of equations
+                and returns both the inputs to the system and the output. If True, only the system inputs are return and
+                the equations are not computed and can help diagnose input issues that raise errors.
+        Returns:
+            dict: A dictionary containing a collection of parameter and value inputs as well as the function
+                values at the initial values.
         '''
         test_diagnostics = self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
                                                                    version='baseline', test=True,
@@ -1165,23 +1225,29 @@ class OneSectorGE(object):
         '''
         Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
             feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
-        :param omr_rescale_range: (int) This parameter allows you to set the scope of the values tested. For example,
-            if omr_rescale = 3, the model will check for convergence using omr_rescale values from the set [10^-3,
-            10^-2, 10^-1, 10^0, ..., 10^3]. The default value is 10.
-        :param mr_method:
-        :param mr_max_iter:
-        :param mr_tolerance:
-        :param countries: (List[str]} This is a list of countries for which to return the estimated OMR values for user
-            evaluation.
-        :return: (DataFrame) A dataframe of diagnostic information for users to compare different omr_rescale factors.
-            The returned dataframe contains the following columns:
-                'omr_rescale': The rescale factor used
-                'omr_rescale (alt format)': A string representation of the rescale factor as an exponential expression.
-                'solved': If True, the MR model solved successfully. If False, it did not solve.
-                'message': Description of the outcome of the solver.
-                '..._func_value': Three columns refelcting the maximum, mean, and median values from the solver
+        Args:
+            omr_rescale_range (int): This parameter allows you to set the scope of the values tested. For example,
+                if omr_rescale_range = 3, the model will check for convergence using omr_rescale values from the set
+                [10^-3, 10^-2, 10^-1, 10^0, ..., 10^3]. The default value is 10.
+            mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
+                experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+                value is 'hybr'.
+            mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
+                by the solver used to solve for MR terms. The default value is 1400.
+            mr_tolerance (float): (optional) This parameterset the convergence tolerance level for the solver used to
+                solve for MR terms. The default value is 1e-8.
+            countries (List[str]):  A list of countries for which to return the estimated OMR values for user
+                evaluation.
+        Returns:
+            pandas.DataFrame: A dataframe of diagnostic information for users to compare different omr_rescale factors.
+                The returned dataframe contains the following columns:\n
+                'omr_rescale': The rescale factor used\n
+                'omr_rescale (alt format)': A string representation of the rescale factor as an exponential expression.\n
+                'solved': If True, the MR model solved successfully. If False, it did not solve.\n
+                'message': Description of the outcome of the solver.\n
+                '..._func_value': Three columns reflelcting the maximum, mean, and median values from the solver
                     objective functions. Function values closer to zero imply a better solution to system of equations.
-                'reference_importer_omr': The solution value for the reference importer's OMR value.
+                'reference_importer_omr': The solution value for the reference importer's OMR value.\n
                 '..._omr': The solution value(s) for the user supplied countries.
         '''
 
@@ -1301,7 +1367,7 @@ class Economy(object):
         self.baseline_total_expenditure = None
         self.output_change = None
 
-    def initialize_baseline_total_output_expend(self, country_set):
+    def _initialize_baseline_total_output_expend(self, country_set):
         # Create baseline values for total output and expenditure
         total_output = 0
         total_expenditure = 0
@@ -1445,7 +1511,8 @@ class Country(object):
     def get_results(self):
         '''
         Collect and return the country's main results.
-        :return: (DataFrame) A one-row dataFrame containing columns of results.
+        Returns:
+            pandas.DataFrame: A one-row dataFrame containing columns of typical results.
         '''
         row = pd.DataFrame(data={country_results_labels['self.identifier']: [self.identifier],
                                  country_results_labels['self.factory_price_change']: [self.factory_price_change],
@@ -1465,7 +1532,8 @@ class Country(object):
     def get_mr_results(self):
         '''
         Collect and return the country's MR terms (baseline, conditional, and experiment)
-        :return: (DataFrame) A one-row dataFrame containing column of MR terms.
+        Returns:
+             pandas.DataFrame: A one-row dataFrame containing column of MR terms.
         '''
         row = pd.DataFrame(data={country_results_labels['self.identifier']: [self.identifier],
                                  country_results_labels['self.baseline_imr']: [self.baseline_imr],
@@ -1522,25 +1590,33 @@ class ParameterValues(object):
              estimates:DataFrame,
                  identifier_col: str,
                  coeff_col:str,
-                 stderr_col:str = None,
-                 imp_fe_prefix:str = None,
-                 exp_fe_prefix:str = None):
+                 stderr_col:str = None):
+                 #imp_fe_prefix: str = None, # Removed until completeion of GEPPML
+                 #exp_fe_prefix: str = None # Removed until completeion of GEPPML
+
         '''
         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
         source of gravity estimates.
-        :param estimates:  (DataFrame) A dataframe containing gravity model estimates, which ought to include the
-        following non-optional columns.
-        :param identifier_col: (str) The name of the column containing the identifiers for each estimate. These should
-        correspond to the cost variables that you will use for trade costs in the simulation. This column is required.
-        :param coeff_col: (str) The name of the column containing the coefficient estimates for each variable. They
-        should be numeric and are required.
-        :param stderr_col: (str) The column name for the standard error estimates for each variable. This column is only
-        required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
-        :param imp_fe_prefix: (str) The prefix used to identify the importer fixed effects. These fixed effects and
-        prefix are only required for the GEPPML approach in OneSectorGE.
-        :param exp_fe_prefix: (str) The prefix used to identify the exporter fixed effects. These fixed effects and
-        prefix are only required for the GEPPML approach in OneSectorGE.
+        Args:
+            estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+                following non-optional columns.
+            identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+                correspond to the cost variables that you will use for trade costs in the simulation. This column is
+                required.
+            coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+                should be numeric and are required.
+            stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+                required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+
+        Returns:
+            ParameterValues: An instance of a ParameterValues object.
         '''
+        # '''
+        # imp_fe_prefix (str):  The prefix used to identify the importer fixed effects. These fixed effects and
+        #         prefix are only required for the GEPPML approach in OneSectorGE.
+        #     exp_fe_prefix (str):  The prefix used to identify the exporter fixed effects. These fixed effects and
+        #         prefix are only required for the GEPPML approach in OneSectorGE.
+        # '''
         estimates = estimates.set_index(identifier_col)
         # Coefficient  Estimates
         self.params = estimates[coeff_col].copy()
@@ -1550,8 +1626,8 @@ class ParameterValues(object):
         else:
             self.bse = None
 
-        self.imp_fe_prefix = imp_fe_prefix
-        self.exp_fe_prefix = exp_fe_prefix
+        # self.imp_fe_prefix = imp_fe_prefix
+        # self.exp_fe_prefix = exp_fe_prefix
 
 #----
 # Column Labels for the DataFrames of Results  (format is attribute:label)
@@ -1568,12 +1644,12 @@ country_results_labels = {'self.identifier':'country',
                           'self.baseline_expenditure':'baseline expenditure',
                           'self.experiment_expenditure':'experiment expenditure',
                           'self.expenditure_change':'expenditure change (%)',
-                          'self.baseline_exports':'baseline modeled exports',
-                          'self.experiment_exports':'experiment exports',
-                          'self.exports_change':'exports change (%)',
-                          'self.baseline_imports':'baseline modeled imports',
-                          'self.experiment_imports':'experiment imports',
-                          'self.imports_change':'imports change (%)',
+                          'self.baseline_exports':'baseline modeled shipments',
+                          'self.experiment_exports':'experiment shipments',
+                          'self.exports_change':'shipments change (%)',
+                          'self.baseline_imports':'baseline modeled consumption',
+                          'self.experiment_imports':'experiment consumption',
+                          'self.imports_change':'consumption change (%)',
                           'self.baseline_foreign_exports':'baseline modeled foreign exports',
                           'self.experiment_foreign_exports':'experiment foreign exports',
                           'self.foreign_exports_change':'foreign exports change (%)',
