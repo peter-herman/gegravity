@@ -5,6 +5,8 @@ __all__ = ['OneSectorGE', 'ParameterValues', 'Country', 'Economy']
 __Description__ = """A single sector or aggregate full GE model based on Larch and Yotov, 'General Equilibrium Trade
                   Policy Analysis with Structural Gravity," 2016. (WTO Working Paper ERSD-2016-08)"""
 
+# ToDo: Finish OneSectorGE attributes list, add attributes for Country and Economy classes.
+
 from typing import List
 import numpy as np
 import pandas as pd
@@ -14,6 +16,7 @@ from scipy.optimize import root
 from numpy import multiply, median
 from warnings import warn
 import math as math
+from models.ResultsLabels import ResultsLabels
 
 
 '''
@@ -59,23 +62,36 @@ class OneSectorGE(object):
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
         Attributes:
-            sigma (int): The elasticity of substitution parameter value
+            aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See models.ResultsLabels for
+                column details.
+            baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
+                (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
+                values B.
+            bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See models.ResultsLabels for
+                column details.
+            country_mr_terms (pandas.DataFrame): Baseline and counterfactual inward and outward multilateral resistance
+                estimates. See models.ResultsLabels for column details.
+            country_results (pandas.DataFrame): A collection of the main country-level simulation results. See
+                models.ResultsLabels for column details.
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
-            economy (Economy): The model's Economy object.
-            baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
-                (t_{ij}^{1-sigma}).
-            experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
-                (t_{ij}^{1-sigma}).
             cost_shock (pandas.DataFrame): The baseline and experiment trade costs combined.
+            economy (Economy): The model's Economy object.
             experiment_data (pandas.DataFrame): The counterfactual experiment data.
-            bilateral_trade_results (pandas.DataFrame):
-            aggregate_trade_results (pandas.DataFrame):
-            solver_diagnostics (dict): 
-            factory_gate_prices = None
-            outputs_expenditures = None
-            country_results = None
-            country_mr_terms = None
+            experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
+                (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
+                values B
+            factory_gate_prices (pandas.DataFrame): Counterfactual prices (baseline prices are all normalized to 1).
+            outputs_expenditures (pandas.DataFrame): Baseline and counterfactual expenditure and output values. See
+                models.ResultsLabels for column details.
+            sigma (int): The elasticity of substitution parameter value
+            solver_diagnostics (dict): A dictionary of solver diagnostics for the three solution routines: baseline
+                multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
+                effects) and the full GE model. Each element contains a dictionary of various diagnostic info from
+                scipy.optimize.root.
+
+        Examples:
+
         '''
         # '''
         #
@@ -1670,12 +1686,15 @@ country_results_labels = {'self.identifier':'country',
                           'self.experiment_omr':'experiment omr',
                           'self.omr_change': 'omr change (%)'
 }
+
 trade_results_labels = {
-'baseline_modeled_trade':'baseline modeled trade',
-'experiment_trade':'experiment trade',
-'trade_change':'trade change (%)',
-'trade_change_level':'trade change (observed level)',
-'baseline_observed_trade':'baseline observed trade',
-'experiment_observed_trade':'experiment observed trade'
+    'baseline_modeled_trade':'baseline modeled trade',
+    'experiment_trade':'experiment trade',
+    'trade_change':'trade change (%)',
+    'trade_change_level':'trade change (observed level)',
+    'baseline_observed_trade':'baseline observed trade',
+    'experiment_observed_trade':'experiment observed trade'
 }
+
+
 
