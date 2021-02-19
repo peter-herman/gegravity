@@ -897,6 +897,23 @@ class OneSectorGE(object):
         agg_trade = pd.concat([agg_exports, foreign_exports, agg_imports, foreign_imports], axis=1).reset_index()
         agg_trade.rename(columns={'index': country_results_labels['self.identifier']}, inplace=True)
 
+
+        # ----
+        # Get Intranational Trade
+        # ----
+        bsln_intra_label = country_results_labels['self.baseline_intranational_trade']
+        exper_intra_label = country_results_labels['self.experiment_intranational_trade']
+        intra_change_label = country_results_labels['self.intranational_trade_change']
+        intranational = bilateral_trade_results.copy()
+        intranational = intranational.loc[intranational[importer_col] == intranational[exporter_col], :]
+        intranational.drop([importer_col], axis = 1, inplace = True)
+        intranational.rename(columns= {exporter_col:country_results_labels['self.identifier'],
+                                       trade_results_labels['baseline_modeled_trade']:bsln_intra_label,
+                                       trade_results_labels['experiment_trade']:exper_intra_label,
+                                       trade_results_labels['trade_change']:intra_change_label}, inplace = True)
+
+        agg_trade = agg_trade.merge(intranational, on = country_results_labels['self.identifier'])
+
         # Store values in each country object
         for row in agg_trade.index:
             country = agg_trade.loc[row, country_results_labels['self.identifier']]
@@ -913,6 +930,9 @@ class OneSectorGE(object):
             country_obj.experiment_foreign_exports = agg_trade.loc[row, exper_agg_frgn_exports_label]
             country_obj.foreign_imports_change = agg_trade.loc[row, agg_frgn_import_change_label]
             country_obj.foreign_exports_change = agg_trade.loc[row, agg_frgn_exports_change_label]
+            country_obj.baseline_intranational_trade = agg_trade.loc[row, bsln_intra_label]
+            country_obj.experiment_intranational_trade = agg_trade.loc[row, exper_intra_label]
+            country_obj.intranational_trade_change = agg_trade.loc[row, intra_change_label]
 
         self.aggregate_trade_results = agg_trade.set_index(country_results_labels['self.identifier'])
 
@@ -1464,6 +1484,9 @@ class Country(object):
         self.experiment_foreign_exports = None # sum_{j!=i}(X*_ij)
         self.foreign_imports_change = None # 100*(sum_{i!=j}(X*_ij) - sum_{i!=j}(X_ij))/sum_{i!=j}(X_ij)
         self.foreign_exports_change = None # 100*(sum_{j!=i}(X*_ij) - sum_{j!=i}(X_ij))/sum_{j!=i}(X_ij)
+        self.baseline_intranational_trade = None # X_ii
+        self.experiment_intranational_trade = None # X*_ii
+        self.intranational_trade_change = None # 100*(X*_ii - X_ii)/X_ii
         self.baseline_gdp = None # GDP_j = Y_j/P_j
         self.experiment_gdp = None # GDP*_j = Y*_j/P*_j
         self.gdp_change = None # 100*(GDP* - GDP)/GDP
@@ -1649,48 +1672,49 @@ class ParameterValues(object):
 # Column Labels for the DataFrames of Results  (format is attribute:label)
 #----
 country_results_labels = {'self.identifier':'country',
-                          'self.factory_price_change':'factory gate price change (%)',
+                          'self.factory_price_change':'factory gate price change ((percent))',
                           'self.experiemnt_factory_price':'experiment factory gate price',
-                          'self.terms_of_trade_change':'terms of trade change (%)',
-                          'self.gdp_change':"GDP change (%)",
+                          'self.terms_of_trade_change':'terms of trade change ((percent))',
+                          'self.gdp_change':"GDP change (percent)",
                           'self.welfare_stat':'welfare statistic',
                           'self.baseline_output':'baseline output',
                           'self.experiment_output':'experiment output',
-                          'self.output_change':'output change (%)',
+                          'self.output_change':'output change (percent)',
                           'self.baseline_expenditure':'baseline expenditure',
                           'self.experiment_expenditure':'experiment expenditure',
-                          'self.expenditure_change':'expenditure change (%)',
+                          'self.expenditure_change':'expenditure change (percent)',
                           'self.baseline_exports':'baseline modeled shipments',
                           'self.experiment_exports':'experiment shipments',
-                          'self.exports_change':'shipments change (%)',
+                          'self.exports_change':'shipments change (percent)',
                           'self.baseline_imports':'baseline modeled consumption',
                           'self.experiment_imports':'experiment consumption',
-                          'self.imports_change':'consumption change (%)',
+                          'self.imports_change':'consumption change (percent)',
                           'self.baseline_foreign_exports':'baseline modeled foreign exports',
                           'self.experiment_foreign_exports':'experiment foreign exports',
-                          'self.foreign_exports_change':'foreign exports change (%)',
+                          'self.foreign_exports_change':'foreign exports change (percent)',
                           'self.baseline_observed_foreign_exports':'baseline observed foreign exports',
                           'self.baseline_foreign_imports':'baseline modeled foreign imports',
                           'self.experiment_foreign_imports':'experiment foreign imports',
-                          'self.foreign_imports_change':'foreign imports change (%)',
+                          'self.foreign_imports_change':'foreign imports change (percent)',
                           'self.baseline_observed_foreign_imports':'baseline observed foreign imports',
                           'self.baseline_intranational_trade':'baseline modeled intranational trade',
-                          'self.intranational_trade_change':'intranational trade change (%)',
+                          'self.experiment_intranational_trade':'experiment modeled intranational trade',
+                          'self.intranational_trade_change':'intranational trade change (percent)',
                           'self.baseline_observed_intranational_trade': 'baseline observed intranational trade',
                           'self.baseline_imr':'baseline imr',
                           'self.conditional_imr':'conditional imr',
                           'self.experiment_imr': 'experiment imr',
-                          'self.imr_change': 'imr change (%)',
+                          'self.imr_change': 'imr change (percent)',
                           'self.baseline_omr':'baseline omr',
                           'self.conditional_omr':'conditional omr',
                           'self.experiment_omr':'experiment omr',
-                          'self.omr_change': 'omr change (%)'
+                          'self.omr_change': 'omr change (percent)'
 }
 
 trade_results_labels = {
     'baseline_modeled_trade':'baseline modeled trade',
     'experiment_trade':'experiment trade',
-    'trade_change':'trade change (%)',
+    'trade_change':'trade change (percent)',
     'trade_change_level':'trade change (observed level)',
     'baseline_observed_trade':'baseline observed trade',
     'experiment_observed_trade':'experiment observed trade'
