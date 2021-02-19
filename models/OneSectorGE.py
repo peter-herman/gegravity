@@ -1562,10 +1562,12 @@ class Country(object):
                                  country_results_labels['self.terms_of_trade_change']: [self.terms_of_trade_change],
                                  country_results_labels['self.output_change']: [self.output_change],
                                  country_results_labels['self.expenditure_change']: [self.expenditure_change],
-                                 country_results_labels['self.exports_change']: [self.exports_change],
-                                 country_results_labels['self.imports_change']: [self.imports_change],
+                                 # country_results_labels['self.exports_change']: [self.exports_change],
+                                 # country_results_labels['self.imports_change']: [self.imports_change],
                                  country_results_labels['self.foreign_exports_change']: [self.foreign_exports_change],
-                                 country_results_labels['self.foreign_imports_change']: [self.foreign_imports_change]})
+                                 country_results_labels['self.foreign_imports_change']: [self.foreign_imports_change],
+                                 country_results_labels['self.intranational_trade_change']:self.intranational_trade_change,
+                                 })
         return row
 
     def get_mr_results(self):
