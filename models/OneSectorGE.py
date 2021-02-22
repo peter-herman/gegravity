@@ -1,7 +1,7 @@
 __Author__ = "Peter Herman"
 __Project__ = "Gravity Code"
 __Created__ = "08/15/2018"
-__all__ = ['OneSectorGE', 'ParameterValues', 'Country', 'Economy']
+__all__ = ['OneSectorGE', 'ParameterValues', 'Country', 'Economy','ResultsLabels']
 __Description__ = """A single sector or aggregate full GE model based on Larch and Yotov, 'General Equilibrium Trade
                   Policy Analysis with Structural Gravity," 2016. (WTO Working Paper ERSD-2016-08)"""
 
@@ -1666,107 +1666,144 @@ class ParameterValues(object):
         # self.imp_fe_prefix = imp_fe_prefix
         # self.exp_fe_prefix = exp_fe_prefix
 
-#----
-# Column Labels for the DataFrames of Results  (format is attribute:label)
-#----
-# country_results_labels = {'self.identifier':'country',
-#                           'self.factory_price_change':'factory gate price change ((percent))',
-#                           'self.experiemnt_factory_price':'experiment factory gate price',
-#                           'self.terms_of_trade_change':'terms of trade change ((percent))',
-#                           'self.gdp_change':"GDP change (percent)",
-#                           'self.welfare_stat':'welfare statistic',
-#                           'self.baseline_output':'baseline output',
-#                           'self.experiment_output':'experiment output',
-#                           'self.output_change':'output change (percent)',
-#                           'self.baseline_expenditure':'baseline expenditure',
-#                           'self.experiment_expenditure':'experiment expenditure',
-#                           'self.expenditure_change':'expenditure change (percent)',
-#                           'self.baseline_exports':'baseline modeled shipments',
-#                           'self.experiment_exports':'experiment shipments',
-#                           'self.exports_change':'shipments change (percent)',
-#                           'self.baseline_imports':'baseline modeled consumption',
-#                           'self.experiment_imports':'experiment consumption',
-#                           'self.imports_change':'consumption change (percent)',
-#                           'self.baseline_foreign_exports':'baseline modeled foreign exports',
-#                           'self.experiment_foreign_exports':'experiment foreign exports',
-#                           'self.foreign_exports_change':'foreign exports change (percent)',
-#                           'self.baseline_observed_foreign_exports':'baseline observed foreign exports',
-#                           'self.baseline_foreign_imports':'baseline modeled foreign imports',
-#                           'self.experiment_foreign_imports':'experiment foreign imports',
-#                           'self.foreign_imports_change':'foreign imports change (percent)',
-#                           'self.baseline_observed_foreign_imports':'baseline observed foreign imports',
-#                           'self.baseline_intranational_trade':'baseline modeled intranational trade',
-#                           'self.experiment_intranational_trade':'experiment modeled intranational trade',
-#                           'self.intranational_trade_change':'intranational trade change (percent)',
-#                           'self.baseline_observed_intranational_trade': 'baseline observed intranational trade',
-#                           'self.baseline_imr':'baseline imr',
-#                           'self.conditional_imr':'conditional imr',
-#                           'self.experiment_imr': 'experiment imr',
-#                           'self.imr_change': 'imr change (percent)',
-#                           'self.baseline_omr':'baseline omr',
-#                           'self.conditional_omr':'conditional omr',
-#                           'self.experiment_omr':'experiment omr',
-#                           'self.omr_change': 'omr change (percent)'
-# }
 
-# trade_results_labels = {
-#     'baseline_modeled_trade':'baseline modeled trade',
-#     'experiment_trade':'experiment trade',
-#     'trade_change':'trade change (percent)',
-#     'trade_change_level':'trade change (observed level)',
-#     'baseline_observed_trade':'baseline observed trade',
-#     'experiment_observed_trade':'experiment observed trade'
-# }
 
 class ResultsLabels(object):
+    """
+    Labels and definitions used in results outputs:
+
+    # Bilateral Trade Results
+
+        \n **baseline modeled trade**: Trade constructed using estimated baseline trade costs and multilateral
+            resistances (X\_{ij}).
+        \n**experiment trade**: Counterfactual experiment trade constructed using experiment trade costs and GE
+        experiment multilateral resistances (X'\_{ij}).
+        \n**trade change (percent)**: Estimated percent change in bilateral trade (100*[X'\_{ij} - X\_{ij}]/X\_{ij})
+        \n**trade change (observed level)**: Estimated change in trade values using observed trade in the source
+        sample. (i.e. estimated trade change times observed values)
+        \n**baseline observed trade**: Observed trade values. (Not necessarily equivalent to modeled values.)
+        \n**experiment observed trade**: Estiamted counterfactual trade values based on predicted change and observed
+        baseline values. (Not necessarily equivalent to modeled values.)
+
+    # Country level Results
+        \n **country**: Country identifier.
+        \n **factory gate price change (percent)**: Estimated percent change in factory gate prices.
+        \n **experiment factory gate price**: Experiment factory gate prices (P_i). Baseline prices are all set to 1.
+        \n **terms of trade change (percent)**: Percent change in the terms of trade. Terms of trade defined as factory
+            gate price (p_i) divided by inward multilateral resistance (P_i). Measures changes in output prices relative
+            to consumption prices. Increases imply greater purchasing power (income growth relative to consumption
+            costs), decreases imply lower purchasing power.
+        \n **GDP change (percent)**: Percent change in GDP, which is calculated as output (Y_i) divided by factory gate
+            prices (p_i)
+        \n **welfare statistic**: Welfare statistic form Arkolakis et al. (2012) and Yotov et al. (2016). Defined as
+            (E_i/P_i)/(E'_i/P'_i) where E_i denotes expenditure, P_i denotes inward multilateral resistance, and ' denotes
+            the experiment estimates.
+        \n **baseline output**: User supplied baseline output (Y_i).
+        \n **experiment output**: Experiment estimated output (Y'_i).
+        \n **output change (percent)**: Estimated percent change in output (100*[Y'_i - Y_i]/Y_i).
+        \n **baseline expenditure**: User supplied baseline expenditure (E_i).
+        \n **experiment expenditure**: Experiment estimated expenditure (E'_i).
+        \n **expenditure change (percent)**: Estimated percent change in expenditure (100*[E'_i - E_i]/E_i).
+        \n **baseline modeled shipments**: Modeled baseline aggregate exports including both domestic and international
+            flows (S_i = sum_j X_{ij} for all j).
+        \n **experiment shipments**: Estimated experiment aggregate exports including both domestic and international
+            flows (S'_i = sum_j X'\_{ij} for all j).
+        \n **shipments change (percent)**: Estimated percent change in total shipments (100*[S'_i -
+            S_i]/S_i)
+        \n **baseline modeled consumption**: Modeled baseline aggregate imports including both intranational and
+            international flows (C_j = sum_i X_{ij} for all i).
+        \n **experiment consumption**: Estimated experiment aggregate imports including both intranational and
+            international flows (C'\_j = sum_i X'_{ij} for all i).
+        \n **consumption change (percent)**: Estimated percent change in total consumption
+            (100*[C'_j - C_j]/C_j)
+        \n **baseline modeled foreign exports**: Modeled baseline aggregate exports, international flows only.
+            (X_i = sum_j X_{ij} for all j!=i)
+        \n **experiment foreign exports**: Estimated experiment aggregate exports, international flows only.
+            (X'_i = sum_j X'\_{ij} for all j!=i)
+        \n **foreign exports change (percent)**: Estimated percent change in aggregate foreign exports (100*[X'_i - X_i]
+            /X_i).
+        \n **baseline observed foreign exports**: Total foreign exports based on observed rather than modeled baseline
+            values.
+        \n **baseline modeled foreign imports**: Modeled baseline aggregate imports, international flows only.
+            (X_j = sum_i X_{ij} for all i!=j)
+        \n **experiment foreign imports**: Estimated experiment aggregate imports, international flows only.
+            (X_j = sum_i X_{ij} for all i!=j)
+        \n **foreign imports change (percent)**: Estimated percent change in aggregate foreign imports (100*[X'_j - X_j]
+            /X_j).
+        \n **baseline observed foreign imports**: Total foreign imports based on observed rather than modeled baseline
+            values.
+        \n **baseline modeled intranational trade**: Modeled baseline intranational (domestic) trade flows (X_{ii}).
+        \n **experiment modeled intranational trade**: Estimated experiment intranational (domestic) trade flows
+            (X'\_{ii}).
+        \n **intranational trade change (percent)**: Estimated percent change in intranational (domestic) trade flows
+            (100*[X'\_{ii} - X_{ii}]/X_{ii})
+        \n **baseline observed intranational trade**: Intranational trade flows based on observed values rather than
+            modeled baseline values.
+        \n **baseline imr**: Baseline constructed inward multilateral resistance terms (P_j). P_j = 1 for the selected
+            reference importer.
+        \n **conditional imr**: Partial equilibrium ('conditional') estimates of the inward multilateral resistance
+            terms.
+        \n **experiment imr**: Full equilibrium estimates for the counterfactual experiment inward multilateral
+            resistance terms (P'\_j). P'\_j = 1 for the selected reference importer.
+        \n **imr change (percent)**: Estimated percent change in inward multilateral resistances
+            (100*[P'\_j - P_j]/P_j).
+        \n **baseline omr**: Baseline constructed outward multilateral resistance terms (π_i).
+        \n **conditional omr**: Partial equilibrium ('conditional') estimates of the outward multilateral resistance
+            terms.
+        \n **experiment omr**: Full equilibrium estimates for the counterfactual experiment outward multilateral
+            resistance terms (π'\_i).
+        \n **omr change (percent)**: Estimated percent change in outward multilateral resistances
+            (100*[π'\_i - π_i]/π_i).
+
+    """
     def __init__(self):
         # Trade Labels (bilateral)
-        self.baseline_modeled_trade = 'baseline modeled trade (NEW!)'
-        self.experiment_trade = 'experiment trade (NEW!)'
-        self.trade_change = 'trade change (percent) (NEW!)'
-        self.trade_change_level = 'trade change (observed level) (NEW!)'
-        self.baseline_observed_trade = 'baseline observed trade (NEW!)'
-        self.experiment_observed_trade = 'experiment observed trade (NEW!)'
+        self.baseline_modeled_trade = 'baseline modeled trade'
+        self.experiment_trade = 'experiment trade'
+        self.trade_change = 'trade change (percent)'
+        self.trade_change_level = 'trade change (observed level)'
+        self.baseline_observed_trade = 'baseline observed trade'
+        self.experiment_observed_trade = 'experiment observed trade'
 
         # Country level
         self.identifier= 'country'
-        self.factory_price_change= 'factory gate price change (percent) (NEW!)'
-        self.experiment_factory_price= 'experiment factory gate price (NEW!)'
-        self.terms_of_trade_change = 'terms of trade change (percent) (NEW!)'
-        self.gdp_change = "GDP change (percent) (NEW!)"
-        self.welfare_stat = 'welfare statistic (NEW!)'
-        self.baseline_output = 'baseline output (NEW!)'
-        self.experiment_output = 'experiment output (NEW!)'
-        self.output_change = 'output change (percent) (NEW!)'
-        self.baseline_expenditure = 'baseline expenditure (NEW!)'
-        self.experiment_expenditure = 'experiment expenditure (NEW!)'
-        self.expenditure_change = 'expenditure change (percent (NEW!))'
-        self.baseline_exports = 'baseline modeled shipments (NEW!)'
-        self.experiment_exports = 'experiment shipments (NEW!)'
-        self.exports_change = 'shipments change (percent) (NEW!)'
-        self.baseline_imports = 'baseline modeled consumption (NEW!)'
-        self.experiment_imports = 'experiment consumption (NEW!)'
-        self.imports_change = 'consumption change (percent) (NEW!)'
-        self.baseline_foreign_exports = 'baseline modeled foreign exports (NEW!)'
-        self.experiment_foreign_exports = 'experiment foreign exports (NEW!)'
-        self.foreign_exports_change = 'foreign exports change (percent) (NEW!)'
-        self.baseline_observed_foreign_exports = 'baseline observed foreign exports (NEW!)'
-        self.baseline_foreign_imports = 'baseline modeled foreign imports (NEW!)'
-        self.experiment_foreign_imports = 'experiment foreign imports (NEW!)'
-        self.foreign_imports_change = 'foreign imports change (percent) (NEW!)'
-        self.baseline_observed_foreign_imports = 'baseline observed foreign imports (NEW!)'
+        self.factory_price_change= 'factory gate price change (percent)'
+        self.experiment_factory_price= 'experiment factory gate price'
+        self.terms_of_trade_change = 'terms of trade change (percent)'
+        self.gdp_change = "GDP change (percent)"
+        self.welfare_stat = 'welfare statistic'
+        self.baseline_output = 'baseline output'
+        self.experiment_output = 'experiment output'
+        self.output_change = 'output change (percent)'
+        self.baseline_expenditure = 'baseline expenditure'
+        self.experiment_expenditure = 'experiment expenditure'
+        self.expenditure_change = 'expenditure change (percent)'
+        self.baseline_exports = 'baseline modeled shipments'
+        self.experiment_exports = 'experiment shipments'
+        self.exports_change = 'shipments change (percent)'
+        self.baseline_imports = 'baseline modeled consumption'
+        self.experiment_imports = 'experiment consumption'
+        self.imports_change = 'consumption change (percent)'
+        self.baseline_foreign_exports = 'baseline modeled foreign exports'
+        self.experiment_foreign_exports = 'experiment foreign exports'
+        self.foreign_exports_change = 'foreign exports change (percent)'
+        self.baseline_observed_foreign_exports = 'baseline observed foreign exports'
+        self.baseline_foreign_imports = 'baseline modeled foreign imports'
+        self.experiment_foreign_imports = 'experiment foreign imports'
+        self.foreign_imports_change = 'foreign imports change (percent)'
+        self.baseline_observed_foreign_imports = 'baseline observed foreign imports'
         self.baseline_intranational_trade = 'baseline modeled intranational trade'
-        self.experiment_intranational_trade = 'experiment modeled intranational trade (NEW!)'
-        self.intranational_trade_change = 'intranational trade change (percent) (NEW!)'
-        self.baseline_observed_intranational_trade = 'baseline observed intranational trade (NEW!)'
-        self.baseline_imr = 'baseline imr (NEW!)'
-        self.conditional_imr = 'conditional imr (NEW!)'
-        self.experiment_imr = 'experiment imr (NEW!)'
-        self.imr_change = 'imr change (percent) (NEW!)'
+        self.experiment_intranational_trade = 'experiment modeled intranational trade'
+        self.intranational_trade_change = 'intranational trade change (percent)'
+        self.baseline_observed_intranational_trade = 'baseline observed intranational trade'
+        self.baseline_imr = 'baseline imr'
+        self.conditional_imr = 'conditional imr'
+        self.experiment_imr = 'experiment imr'
+        self.imr_change = 'imr change (percent)'
         self.baseline_omr = 'baseline omr'
-        self.conditional_omr = 'conditional omr (NEW!)'
-        self.experiment_omr = 'experiment omr (NEW!)'
-        self.omr_change = 'omr change (percent) (NEW!)'
+        self.conditional_omr = 'conditional omr'
+        self.experiment_omr = 'experiment omr'
+        self.omr_change = 'omr change (percent)'
 
         # Get a set of country-level results by excluding the bilateral ones
         self.bilat_labels = [self.baseline_modeled_trade, self.experiment_trade, self.trade_change,
