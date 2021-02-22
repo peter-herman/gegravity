@@ -16,7 +16,6 @@ from scipy.optimize import root
 from numpy import multiply, median
 from warnings import warn
 import math as math
-from models.ResultsLabels import ResultsLabels
 
 
 '''
@@ -941,8 +940,8 @@ class OneSectorGE(object):
         results = list()
         mr_results = list()
         for country in self.country_set.keys():
-            results.append(self.country_set[country].get_results(self.labels))
-            mr_results.append(self.country_set[country].get_mr_results(self.labels))
+            results.append(self.country_set[country]._get_results(self.labels))
+            mr_results.append(self.country_set[country]._get_mr_results(self.labels))
         country_results = pd.concat(results, axis=0)
         self.country_results = country_results.set_index(self.labels.identifier)
         country_mr_results = pd.concat(mr_results, axis=0)
@@ -1390,7 +1389,17 @@ def _full_ge(x, ge_params):
 
 class Economy(object):
     '''
-    Object for storing economy-wide information.
+    Object for storing economy-wide information. Retrievable from OneSectorGE.economy.
+
+    Attributes:
+        sigma (float): The user supplied elasticity of substitution.
+        experiment_total_output (float): The estimated counterfactual total output across all countries
+            ($Y' = sum_i Y_i$).
+        experiment_total_expenditure (float): The estimated counterfactual total expenditure across all countries
+            ($E' = sum_j E'_j$).
+        baseline_total_output (float): The baseline total output across all countries ($Y = sum_i Y_i$).
+        baseline_total_expenditure (float): The baseline total expenditure across all countries ($E = sum_j E_j$).
+        output_change (float): Estimated percent change in total output value ($100*[Y'-Y]/Y$)
     '''
     def __init__(self,
                  sigma: float = 4):
@@ -1426,6 +1435,77 @@ class Economy(object):
 
 
 class Country(object):
+    '''
+    An object for housing country-level information
+
+    Attributes:
+        identifier (str): Country name or identifier.
+        year (str): The year used for analysis.
+        baseline_output (float): User supplied baseline output ($Y_i$).
+        baseline_output_share (float): Share of country output in total world outpur (Y_i/Y).
+        experiment_output (float): Estimated counterfactual output (Y'_i).
+        output_change (float): Estimated percent change in output (100*[Y' - Y]/Y).
+        baseline_expenditure (float): User supplied baseline expenditure (E_j).
+        baseline_expenditure_share (float): Share of country expenditure in total world expenditure (E_j/E).
+        experiment_expenditure (float): Estimated counterfctual expenditure (E'_j).
+        expenditure_change (float): Estimated percent change in expenditure (100*[E' - E]/E).
+        baseline_importer_fe (float): Estimated importer or importer-year fixed effect, if supplied in estimation model.
+        baseline_exporter_fe (float): Estimated exporter or exporter-year fixed effect, if supplied in estimation model.
+
+        baseline_imr (float): Baseline inward multilateral resistance term (P_j).
+        conditional_imr (float): Conditional (partial) equilibrium counterfactual experiment inward multilateral
+            resistance term.
+        experiment_imr (float): Estimated full GE, counterfactual inward multilateral resistance term (P'\_j).
+        imr_change (float): Estimated percent change in inward multilateral resistance term (100*[P'-P]/P).
+
+        baseline_omr (float): Baseline outward multilateral resistance term (π_i).
+        conditional_omr (float): Conditional (partial) equilibrium counterfactual experiment outward multilateral
+            resistance term.
+        experiment_omr (float): Estimated full GE, counterfactual outward multilateral resistance term (π'\_i).
+        omr_change (float): Estimated percent change in inward multilateral resistance term (100*[π'-π]/π).
+
+        factory_gate_price_param (float): Calibrated factory gate price parameter (ß_i).
+        baseline_factory_price (float): Baseline factory gate price (p_i), normalized to 1 by construction.
+        experiment_factory_price (float): Estimated counterfactual factory gate price (p'_i).
+        factory_price_change (float): Estimated percent change in factory gate prices (100*[p*-p]/p).
+
+        baseline_terms_of_trade (float): Baseline terms of trade (ToT_i = p_i/P_i).
+        experiment_terms_of_trade (float): Estimated counterfactual terms of trade (ToT'_i = p'_i/P'_i).
+        terms_of_trade_change (float): Estimated precent change in terms of trade (100*[ToT' - ToT]/ToT).
+
+        baseline_imports (float): Total modeled baseline imports (consumption) including international and intranational
+            flows (C_j = sum_i X_ij for all i). Based on modeled flows, not observed flows.
+        baseline_exports (float): Total modeled baseline exports (shipments) including international and intranational
+            flows (S_i = sum_i X_ij for all i). Based on modeled flows, not observed flows.
+        experiment_imports (float): Total estimated counterfactual imports (consumption) including international and
+            intranational flows (C'_j = sum_i X'_ij for all i).
+        experiment_exports (float): Total estimated counterfactual imports (shipments) including international and
+            intranational flows (S'_i = sum_j X'_ij for all j).
+
+        baseline_foreign_imports (float): Total modeled baseline foreign imports (excluding intranational flows)
+            (X_j = sum_i X_ij for all i!=j). Based on modeled flows, not observed flows.
+        baseline_foreign_exports (float): Total modeled baseline foreign exports (excluding intranational flows)
+            (X_i = sum_j X_ij for all j!=i). Based on modeled flows, not observed flows.
+        experiment_foreign_imports (float): Total estimated countrefactual foreign imports (excluding intranational
+            flows) (X'_j = sum_i X'\_ij for all i!=j).
+        experiment_foreign_exports (float): Total estimated countrefactual foreign exports (excluding intranational
+            flows) (X'_i = sum_j X'\_ij for all j!=i).
+        foreign_imports_change (float): Estimated percent change in total foreign imports (100*[X'_j - X_j]/X_j).
+        foreign_exports_change (float): Estimated percent change in total foreign exports (100*[X'_i - X_i]/X_i).
+
+        baseline_intranational_trade (float): Baseline modeled intranational trade (X_{ii}).
+        experiment_intranational_trade (float): Estimated counterfactual intranational trade (X'\_{ii}).
+        intranational_trade_change (float): Estimated percent change in intranational trade
+            (100*[X'_{ii} - X_{ii}]/X_{ii}).
+
+        baseline_gdp (float): Baseline real GDP ($GDP_j = Y_j/P_j$).
+        experiment_gdp (float): Estimated counterfactual real GDP (GDP'_j = Y'_j/P'_j).
+        gdp_change (float): Estimated percent chnage in real GDP (100*(GDP' - GDP)/GDP)
+        phi (float): Phi parameter for expenditure-output share (φ_i = E_i / Y_i). Based on Eqn. (30) from Larch and
+            Yotov, (2016).
+        welfare_stat (float): Welfare statistic based on Arkolakis et al (2012) and Yotov et al. (2016)
+            ([E_i/P_i]/[E'_i/P'_i]).
+    '''
     # This may need to be a country/year thing at some point
     def __init__(self,
 
@@ -1436,6 +1516,7 @@ class Country(object):
                  baseline_importer_fe: float = None,
                  baseline_exporter_fe: float = None,
                  reference_expenditure: float = None):
+
         self.identifier = identifier
         self.year = year
         self.baseline_output = baseline_output # Y_i
@@ -1445,8 +1526,8 @@ class Country(object):
         self._reference_expenditure = reference_expenditure
         self.baseline_output_share = None # Y_i/Y
         self.baseline_expenditure_share = None # E_j/Y
-        self.baseline_export_costs = None
-        self.baseline_import_costs = None
+        # self.baseline_export_costs = None
+        # self.baseline_import_costs = None
         self._baseline_imr_ratio = None  # 1 / P^{1-sigma}
         self._baseline_omr_ratio = None  # 1 / π ^{1-\sigma}
         self.baseline_imr = None  # P
@@ -1545,7 +1626,7 @@ class Country(object):
 
 
 
-    def get_results(self, labels):
+    def _get_results(self, labels):
         '''
         Collect and return the country's main results.
         Returns:
@@ -1566,7 +1647,7 @@ class Country(object):
                                  })
         return row
 
-    def get_mr_results(self, labels):
+    def _get_mr_results(self, labels):
         '''
         Collect and return the country's MR terms (baseline, conditional, and experiment)
         Returns:
