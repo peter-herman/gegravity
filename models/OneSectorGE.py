@@ -151,7 +151,7 @@ class OneSectorGE(object):
         #     raise ValueError('reference_importer should be the excluded importer fixed effect')
         # except:
         #     print('reference_importer OK')
-
+        self.labels = ResultsLabels()
         self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
         if parameter_values is None:
@@ -709,7 +709,7 @@ class OneSectorGE(object):
         omrs = full_ge_results.x[len(country_list) - 1:2 * len(country_list) - 1] * ge_params['omr_rescale']
         prices = full_ge_results.x[2 * len(country_list) - 1:]
         factory_gate_prices = pd.DataFrame({'exporter': country_list,
-                                            country_results_labels['self.experiemnt_factory_price']: prices})
+                                            self.labels.experiment_factory_price: prices})
         self.factory_gate_prices = factory_gate_prices.set_index('exporter')
         for i, country in enumerate(country_list):
             self.country_set[country]._experiment_imr_ratio = imrs[i] # 1 / P^{1-sigma}
@@ -721,13 +721,13 @@ class OneSectorGE(object):
     def _construct_experiment_output_expend(self):
         total_output = 0
 
-        results_table = pd.DataFrame(columns=[country_results_labels['self.identifier'],
-                                              country_results_labels['self.baseline_output'],
-                                              country_results_labels['self.experiment_output'],
-                                              country_results_labels['self.output_change'],
-                                              country_results_labels['self.baseline_expenditure'],
-                                              country_results_labels['self.experiment_expenditure'],
-                                              country_results_labels['self.expenditure_change']])
+        results_table = pd.DataFrame(columns=[self.labels.identifier,
+                                              self.labels.baseline_output,
+                                              self.labels.experiment_output,
+                                              self.labels.output_change,
+                                              self.labels.baseline_expenditure,
+                                              self.labels.experiment_expenditure,
+                                              self.labels.expenditure_change])
         # The first time looping through gets calculates total output
         for country in self.country_set.keys():
             country_obj = self.country_set[country]
@@ -738,20 +738,20 @@ class OneSectorGE(object):
             country_obj = self.country_set[country]
             country_obj.experiment_output_share = country_obj.experiment_output / total_output
             results_table = results_table.append({
-                country_results_labels['self.identifier']: country,
-                country_results_labels['self.baseline_output']: country_obj.baseline_output,
-                country_results_labels['self.experiment_output']: country_obj.experiment_output,
-                country_results_labels['self.output_change']: country_obj.output_change,
-                country_results_labels['self.baseline_expenditure']: country_obj.baseline_expenditure,
-                country_results_labels['self.experiment_expenditure']: country_obj.experiment_expenditure,
-                country_results_labels['self.expenditure_change']: country_obj.expenditure_change},
+                self.labels.identifier: country,
+                self.labels.baseline_output: country_obj.baseline_output,
+                self.labels.experiment_output: country_obj.experiment_output,
+                self.labels.output_change: country_obj.output_change,
+                self.labels.baseline_expenditure: country_obj.baseline_expenditure,
+                self.labels.experiment_expenditure: country_obj.experiment_expenditure,
+                self.labels.expenditure_change: country_obj.expenditure_change},
                                                  ignore_index=True)
         # Store some economy-wide values to economy object
         self.economy.experiment_total_output = total_output
         self.economy.output_change = 100 * (total_output - self.economy.baseline_total_output) \
                                      / self.economy.baseline_total_output
 
-        results_table = results_table.set_index(country_results_labels['self.identifier'])
+        results_table = results_table.set_index(self.labels.identifier)
         # Ensure all values are numeric
         for col in results_table.columns:
             results_table[col] = results_table[col].astype(float)
@@ -806,9 +806,9 @@ class OneSectorGE(object):
         trade_data.rename(columns={'trade_cost': 'baseline_trade_cost'}, inplace=True)
 
         # Set column labels from label dictionary
-        bsln_modeled_trade_label = trade_results_labels['baseline_modeled_trade']
-        exper_trade_label = trade_results_labels['experiment_trade']
-        trade_change_label = trade_results_labels['trade_change']
+        bsln_modeled_trade_label = self.labels.baseline_modeled_trade
+        exper_trade_label = self.labels.experiment_trade
+        trade_change_label = self.labels.trade_change
 
         trade_data[bsln_modeled_trade_label] = trade_data['baseline_trade_cost'] \
                                                                    * trade_data['bsln_gravity']
@@ -828,9 +828,9 @@ class OneSectorGE(object):
         # Calculate total Imports (international and domestic)
         ##
         # set more labels from label dictionary
-        bsln_agg_imports_label = country_results_labels['self.baseline_imports']
-        exper_agg_imports_label = country_results_labels['self.experiment_imports']
-        agg_import_change_label =  country_results_labels['self.imports_change']
+        bsln_agg_imports_label = self.labels.baseline_imports
+        exper_agg_imports_label = self.labels.experiment_imports
+        agg_import_change_label = self.labels.imports_change
 
         agg_imports = bilateral_trade_results.copy()
         agg_imports = agg_imports[[importer_col, bsln_modeled_trade_label, exper_trade_label]]
@@ -844,9 +844,9 @@ class OneSectorGE(object):
         # Calculate foreign imports
         ##
         # set more labels from label dictionary
-        bsln_agg_frgn_imports_label = country_results_labels['self.baseline_foreign_imports']
-        exper_agg_frgn_imports_label = country_results_labels['self.experiment_foreign_imports']
-        agg_frgn_import_change_label = country_results_labels['self.foreign_imports_change']
+        bsln_agg_frgn_imports_label = self.labels. baseline_foreign_imports
+        exper_agg_frgn_imports_label = self.labels.experiment_foreign_imports
+        agg_frgn_import_change_label = self.labels.foreign_imports_change
 
         foreign_imports = bilateral_trade_results.copy()
         foreign_imports = foreign_imports.loc[foreign_imports[importer_col]!=foreign_imports[exporter_col],:]
@@ -862,9 +862,9 @@ class OneSectorGE(object):
         # Calculate total exports (foreign + domestic)
         ##
         # Set labels from label dictionary
-        bsln_agg_exports_label = country_results_labels['self.baseline_exports']
-        exper_agg_exports_label = country_results_labels['self.experiment_exports']
-        agg_exports_change_label = country_results_labels['self.exports_change']
+        bsln_agg_exports_label = self.labels.baseline_exports
+        exper_agg_exports_label = self.labels. experiment_exports
+        agg_exports_change_label = self.labels.exports_change
 
         agg_exports = bilateral_trade_results.copy()
         agg_exports = agg_exports[[exporter_col, bsln_modeled_trade_label, exper_trade_label]]
@@ -878,9 +878,9 @@ class OneSectorGE(object):
         # Calculate foreign exports
         ##
         # Set labels from label dictionary
-        bsln_agg_frgn_exports_label = country_results_labels['self.baseline_foreign_exports']
-        exper_agg_frgn_exports_label = country_results_labels['self.experiment_foreign_exports']
-        agg_frgn_exports_change_label = country_results_labels['self.foreign_exports_change']
+        bsln_agg_frgn_exports_label = self.labels.baseline_foreign_exports
+        exper_agg_frgn_exports_label = self.labels.experiment_foreign_exports
+        agg_frgn_exports_change_label = self.labels.foreign_exports_change
 
         foreign_exports = bilateral_trade_results.copy()
         foreign_exports = foreign_exports.loc[foreign_exports[importer_col] != foreign_exports[exporter_col], :]
@@ -895,28 +895,28 @@ class OneSectorGE(object):
 
 
         agg_trade = pd.concat([agg_exports, foreign_exports, agg_imports, foreign_imports], axis=1).reset_index()
-        agg_trade.rename(columns={'index': country_results_labels['self.identifier']}, inplace=True)
+        agg_trade.rename(columns={'index': self.labels.identifier}, inplace=True)
 
 
         # ----
         # Get Intranational Trade
         # ----
-        bsln_intra_label = country_results_labels['self.baseline_intranational_trade']
-        exper_intra_label = country_results_labels['self.experiment_intranational_trade']
-        intra_change_label = country_results_labels['self.intranational_trade_change']
+        bsln_intra_label = self.labels.baseline_intranational_trade
+        exper_intra_label = self.labels.experiment_intranational_trade
+        intra_change_label = self.labels.intranational_trade_change
         intranational = bilateral_trade_results.copy()
         intranational = intranational.loc[intranational[importer_col] == intranational[exporter_col], :]
         intranational.drop([importer_col], axis = 1, inplace = True)
-        intranational.rename(columns= {exporter_col:country_results_labels['self.identifier'],
-                                       trade_results_labels['baseline_modeled_trade']:bsln_intra_label,
-                                       trade_results_labels['experiment_trade']:exper_intra_label,
-                                       trade_results_labels['trade_change']:intra_change_label}, inplace = True)
+        intranational.rename(columns= {exporter_col:self.labels.identifier,
+                                       bsln_modeled_trade_label:bsln_intra_label,
+                                       exper_trade_label:exper_intra_label,
+                                       trade_change_label:intra_change_label}, inplace = True)
 
-        agg_trade = agg_trade.merge(intranational, on = country_results_labels['self.identifier'])
+        agg_trade = agg_trade.merge(intranational, on = self.labels.identifier)
 
         # Store values in each country object
         for row in agg_trade.index:
-            country = agg_trade.loc[row, country_results_labels['self.identifier']]
+            country = agg_trade.loc[row, self.labels.identifier]
             country_obj = self.country_set[country]
             country_obj.baseline_imports = agg_trade.loc[row, bsln_agg_imports_label]
             country_obj.baseline_exports = agg_trade.loc[row, bsln_agg_exports_label]
@@ -934,19 +934,19 @@ class OneSectorGE(object):
             country_obj.experiment_intranational_trade = agg_trade.loc[row, exper_intra_label]
             country_obj.intranational_trade_change = agg_trade.loc[row, intra_change_label]
 
-        self.aggregate_trade_results = agg_trade.set_index(country_results_labels['self.identifier'])
+        self.aggregate_trade_results = agg_trade.set_index(self.labels.identifier)
 
     def _compile_results(self):
         '''Generate and compile results after simulations'''
         results = list()
         mr_results = list()
         for country in self.country_set.keys():
-            results.append(self.country_set[country].get_results())
-            mr_results.append(self.country_set[country].get_mr_results())
+            results.append(self.country_set[country].get_results(self.labels))
+            mr_results.append(self.country_set[country].get_mr_results(self.labels))
         country_results = pd.concat(results, axis=0)
-        self.country_results = country_results.set_index(country_results_labels['self.identifier'])
+        self.country_results = country_results.set_index(self.labels.identifier)
         country_mr_results = pd.concat(mr_results, axis=0)
-        self.country_mr_terms = country_mr_results.set_index(country_results_labels['self.identifier'])
+        self.country_mr_terms = country_mr_results.set_index(self.labels.identifier)
 
 
     def trade_share(self, importers: List[str], exporters: List[str]):
@@ -967,8 +967,8 @@ class OneSectorGE(object):
         # '''
         importer_col = self.meta_data.imp_var_name
         exporter_col = self.meta_data.exp_var_name
-        bsln_modeled_trade_label = trade_results_labels['baseline_modeled_trade']
-        exper_trade_label = trade_results_labels['experiment_trade']
+        bsln_modeled_trade_label = self.labels.baseline_modeled_trade
+        exper_trade_label = self.labels.experiment_trade
 
         bilat_trade = self.bilateral_trade_results.reset_index()
         columns = [bsln_modeled_trade_label, exper_trade_label]
@@ -1026,9 +1026,11 @@ class OneSectorGE(object):
         country_results = pd.concat(country_result_set, axis = 1)
         # Order and select columns for inclusion, drop duplicates.
         country_results_cols = country_results.columns
-        crl = country_results_labels
-        results_cols = crl.keys()
-        included_columns = [crl[col] for col in results_cols if crl[col] in country_results_cols]
+        labs = self.labels
+        # Country results to include
+        results_cols = self.labels.country_level_labels
+
+        included_columns = [col for col in results_cols if col in country_results_cols]
         country_results = country_results[included_columns]
         country_results = country_results.loc[:, ~country_results.columns.duplicated()]
 
@@ -1111,10 +1113,10 @@ class OneSectorGE(object):
         trade = self.meta_data.trade_var_name
         trade_flows = self.baseline_data.copy()
         trade_flows = trade_flows[[exporter, importer, trade]]
-        bilateral_results = self.bilateral_trade_results[[trade_results_labels['trade_change']]].copy()
+        bilateral_results = self.bilateral_trade_results[[self.labels.trade_change]].copy()
         bilateral_results.reset_index(inplace=True)
-        crl = country_results_labels
-        trl = trade_results_labels
+        #crl = country_results_labels
+
         # Coumpute at the country level (importer, exporter, and intranational)
         if how == 'country':
             intra_national = trade_flows.loc[trade_flows[exporter] == trade_flows[importer], [exporter, trade]]
@@ -1126,24 +1128,26 @@ class OneSectorGE(object):
             # Combine
             country_trade = foreign_exports.merge(foreign_imports, how='outer', left_index=True, right_index=True)
             country_trade = country_trade.merge(intra_national, how='outer', left_index=True, right_index=True)
-            country_trade.columns = [crl['self.baseline_observed_foreign_exports'],
-                                     crl['self.baseline_observed_foreign_imports'],
-                                     crl['self.baseline_observed_intranational_trade']]
+            country_trade.columns = [self.labels.baseline_observed_foreign_exports,
+                                     self.labels.baseline_observed_foreign_imports,
+                                     self.labels.baseline_observed_intranational_trade]
+
             # Prep and add experiment change info
-            experiment_results = self.country_results[[crl['self.foreign_exports_change'],
-                                                       crl['self.foreign_imports_change']]].reset_index()
+            experiment_results = self.country_results[[self.labels.foreign_exports_change,
+                                                       self.labels.foreign_imports_change]].reset_index()
             intra_results = bilateral_results.loc[bilateral_results[exporter] == bilateral_results[importer],
-                                                  [exporter, trade_results_labels['trade_change']]].copy()
+                                                  [exporter, self.labels.trade_change]].copy()
             intra_results.rename(columns={exporter: 'country',
-                                          trade_results_labels['trade_change']: crl['self.intranational_trade_change']},
+                                          self.labels.trade_change: self.labels.intranational_trade_change},
                                           inplace=True)
-            experiment_results = pd.merge(experiment_results, intra_results, on=crl['self.identifier'])
-            experiment_results.set_index(crl['self.identifier'], inplace=True)
+            experiment_results = pd.merge(experiment_results, intra_results, on=self.labels.identifier)
+            experiment_results.set_index(self.labels.identifier, inplace=True)
             country_trade = country_trade.merge(experiment_results, how='outer', left_index=True, right_index=True)
             # Compute new levels
-            for level, change in [(crl['self.baseline_observed_foreign_exports'], crl['self.foreign_exports_change']),
-                                  (crl['self.baseline_observed_foreign_imports'], crl['self.foreign_imports_change']),
-                                  (crl['self.baseline_observed_intranational_trade'], crl['self.intranational_trade_change'])]:
+            for level, change in [(self.labels.baseline_observed_foreign_exports, self.labels.foreign_exports_change),
+                                  (self.labels.baseline_observed_foreign_imports, self.labels.foreign_imports_change),
+                                  (self.labels.baseline_observed_intranational_trade, self.labels.intranational_trade_change)]:
+
                 new_level_name = level.replace('baseline', 'experiment')
                 level_change_name = change.replace('%','observed level')
                 country_trade[new_level_name] = country_trade[level] * (1 + (experiment_results[change] / 100))
@@ -1155,28 +1159,22 @@ class OneSectorGE(object):
                     for col in country_trade.columns:
                         if (sub_type in col) and (result_type in col):
                             result_order.append(col)
-            # Reorder columns
-            # country_trade = country_trade[['baseline_foreign_exports', 'experiment_foreign_exports',
-            #                                'foreign_export_change_level', 'foreign_export_change_percent',
-            #                                'baseline_foreign_imports', 'experiment_foreign_imports',
-            #                                'foreign_import_change_level', 'foreign_import_change_percent',
-            #                                'baseline_intranational_trade', 'experiment_intranational_trade',
-            #                                'intranational_change_level', 'intranational_change_percent']]
+
             return country_trade[result_order]
         # Compute at the bilateral level
         if how == 'bilateral':
             # Prep and add experiment change info
             experiment_results = bilateral_results
             bilat_trade = trade_flows.merge(experiment_results, on=[exporter, importer], how='outer')
-            bilat_trade.rename(columns={trade: trl['baseline_observed_trade']},
+            bilat_trade.rename(columns={trade: self.labels.baseline_observed_trade},
                                inplace=True)
             # Create changes in levels
 
-            bilat_trade[trl['experiment_observed_trade']] = bilat_trade[trl['baseline_observed_trade']] * (
-                        1 + (bilat_trade[trl['trade_change']] / 100))
-            bilat_trade[trl['trade_change_level']] = bilat_trade[trl['experiment_observed_trade']] - bilat_trade[trl['baseline_observed_trade']]
-            bilat_trade = bilat_trade[[exporter, importer, trl['baseline_observed_trade'],
-                                       trl['experiment_observed_trade'], trl['trade_change_level'], trl['trade_change']]]
+            bilat_trade[self.labels.experiment_observed_trade] = bilat_trade[self.labels.baseline_observed_trade] * (
+                        1 + (bilat_trade[self.labels.trade_change] / 100))
+            bilat_trade[self.labels.trade_change_level] = bilat_trade[self.labels.experiment_observed_trade] - bilat_trade[self.labels.baseline_observed_trade]
+            bilat_trade = bilat_trade[[exporter, importer, self.labels.baseline_observed_trade,
+                                       self.labels.experiment_observed_trade, self.labels.trade_change_level, self.labels.trade_change]]
             return bilat_trade
 
     def trade_weighted_shock(self, how:str = 'country', aggregations:list=['mean', 'sum', 'max']):
@@ -1201,7 +1199,7 @@ class OneSectorGE(object):
         # Define column names
         imp_col = self.meta_data.imp_var_name
         exp_col = self.meta_data.exp_var_name
-        baseline_trade_col = trade_results_labels['baseline_modeled_trade']
+        baseline_trade_col = self.labels.baseline_modeled_trade
         baseline_cost_col = 'baseline_trade_cost'
         exper_cost_col = 'experiment_trade_cost'
         cost_change = 'cost_change'
@@ -1547,42 +1545,40 @@ class Country(object):
 
 
 
-    def get_results(self):
+    def get_results(self, labels):
         '''
         Collect and return the country's main results.
         Returns:
             pandas.DataFrame: A one-row dataFrame containing columns of typical results.
         '''
-        row = pd.DataFrame(data={country_results_labels['self.identifier']: [self.identifier],
-                                 country_results_labels['self.factory_price_change']: [self.factory_price_change],
-                                 country_results_labels['self.omr_change']: [self.omr_change],
-                                 country_results_labels['self.imr_change']: [self.imr_change],
-                                 country_results_labels['self.gdp_change']: [self.gdp_change],
-                                 country_results_labels['self.welfare_stat']: [self.welfare_stat],
-                                 country_results_labels['self.terms_of_trade_change']: [self.terms_of_trade_change],
-                                 country_results_labels['self.output_change']: [self.output_change],
-                                 country_results_labels['self.expenditure_change']: [self.expenditure_change],
-                                 # country_results_labels['self.exports_change']: [self.exports_change],
-                                 # country_results_labels['self.imports_change']: [self.imports_change],
-                                 country_results_labels['self.foreign_exports_change']: [self.foreign_exports_change],
-                                 country_results_labels['self.foreign_imports_change']: [self.foreign_imports_change],
-                                 country_results_labels['self.intranational_trade_change']:self.intranational_trade_change,
+        row = pd.DataFrame(data={labels.identifier: [self.identifier],
+                                 labels.factory_price_change: [self.factory_price_change],
+                                 labels.omr_change: [self.omr_change],
+                                 labels.imr_change: [self.imr_change],
+                                 labels.gdp_change: [self.gdp_change],
+                                 labels.welfare_stat: [self.welfare_stat],
+                                 labels.terms_of_trade_change: [self.terms_of_trade_change],
+                                 labels.output_change: [self.output_change],
+                                 labels.expenditure_change: [self.expenditure_change],
+                                 labels.foreign_exports_change: [self.foreign_exports_change],
+                                 labels.foreign_imports_change: [self.foreign_imports_change],
+                                 labels.intranational_trade_change:self.intranational_trade_change,
                                  })
         return row
 
-    def get_mr_results(self):
+    def get_mr_results(self, labels):
         '''
         Collect and return the country's MR terms (baseline, conditional, and experiment)
         Returns:
              pandas.DataFrame: A one-row dataFrame containing column of MR terms.
         '''
-        row = pd.DataFrame(data={country_results_labels['self.identifier']: [self.identifier],
-                                 country_results_labels['self.baseline_imr']: [self.baseline_imr],
-                                 country_results_labels['self.conditional_imr']: [self.conditional_imr],
-                                 country_results_labels['self.experiment_imr']: [self.experiment_imr],
-                                 country_results_labels['self.baseline_omr']: [self.baseline_omr],
-                                 country_results_labels['self.conditional_omr']: [self.conditional_omr],
-                                 country_results_labels['self.experiment_omr']: [self.experiment_omr]})
+        row = pd.DataFrame(data={labels.identifier: [self.identifier],
+                                 labels.baseline_imr: [self.baseline_imr],
+                                 labels.conditional_imr: [self.conditional_imr],
+                                 labels.experiment_imr: [self.experiment_imr],
+                                 labels.baseline_omr: [self.baseline_omr],
+                                 labels.conditional_omr: [self.conditional_omr],
+                                 labels.experiment_omr: [self.experiment_omr]})
         return row
 
     def __repr__(self):
@@ -1673,54 +1669,121 @@ class ParameterValues(object):
 #----
 # Column Labels for the DataFrames of Results  (format is attribute:label)
 #----
-country_results_labels = {'self.identifier':'country',
-                          'self.factory_price_change':'factory gate price change ((percent))',
-                          'self.experiemnt_factory_price':'experiment factory gate price',
-                          'self.terms_of_trade_change':'terms of trade change ((percent))',
-                          'self.gdp_change':"GDP change (percent)",
-                          'self.welfare_stat':'welfare statistic',
-                          'self.baseline_output':'baseline output',
-                          'self.experiment_output':'experiment output',
-                          'self.output_change':'output change (percent)',
-                          'self.baseline_expenditure':'baseline expenditure',
-                          'self.experiment_expenditure':'experiment expenditure',
-                          'self.expenditure_change':'expenditure change (percent)',
-                          'self.baseline_exports':'baseline modeled shipments',
-                          'self.experiment_exports':'experiment shipments',
-                          'self.exports_change':'shipments change (percent)',
-                          'self.baseline_imports':'baseline modeled consumption',
-                          'self.experiment_imports':'experiment consumption',
-                          'self.imports_change':'consumption change (percent)',
-                          'self.baseline_foreign_exports':'baseline modeled foreign exports',
-                          'self.experiment_foreign_exports':'experiment foreign exports',
-                          'self.foreign_exports_change':'foreign exports change (percent)',
-                          'self.baseline_observed_foreign_exports':'baseline observed foreign exports',
-                          'self.baseline_foreign_imports':'baseline modeled foreign imports',
-                          'self.experiment_foreign_imports':'experiment foreign imports',
-                          'self.foreign_imports_change':'foreign imports change (percent)',
-                          'self.baseline_observed_foreign_imports':'baseline observed foreign imports',
-                          'self.baseline_intranational_trade':'baseline modeled intranational trade',
-                          'self.experiment_intranational_trade':'experiment modeled intranational trade',
-                          'self.intranational_trade_change':'intranational trade change (percent)',
-                          'self.baseline_observed_intranational_trade': 'baseline observed intranational trade',
-                          'self.baseline_imr':'baseline imr',
-                          'self.conditional_imr':'conditional imr',
-                          'self.experiment_imr': 'experiment imr',
-                          'self.imr_change': 'imr change (percent)',
-                          'self.baseline_omr':'baseline omr',
-                          'self.conditional_omr':'conditional omr',
-                          'self.experiment_omr':'experiment omr',
-                          'self.omr_change': 'omr change (percent)'
-}
+# country_results_labels = {'self.identifier':'country',
+#                           'self.factory_price_change':'factory gate price change ((percent))',
+#                           'self.experiemnt_factory_price':'experiment factory gate price',
+#                           'self.terms_of_trade_change':'terms of trade change ((percent))',
+#                           'self.gdp_change':"GDP change (percent)",
+#                           'self.welfare_stat':'welfare statistic',
+#                           'self.baseline_output':'baseline output',
+#                           'self.experiment_output':'experiment output',
+#                           'self.output_change':'output change (percent)',
+#                           'self.baseline_expenditure':'baseline expenditure',
+#                           'self.experiment_expenditure':'experiment expenditure',
+#                           'self.expenditure_change':'expenditure change (percent)',
+#                           'self.baseline_exports':'baseline modeled shipments',
+#                           'self.experiment_exports':'experiment shipments',
+#                           'self.exports_change':'shipments change (percent)',
+#                           'self.baseline_imports':'baseline modeled consumption',
+#                           'self.experiment_imports':'experiment consumption',
+#                           'self.imports_change':'consumption change (percent)',
+#                           'self.baseline_foreign_exports':'baseline modeled foreign exports',
+#                           'self.experiment_foreign_exports':'experiment foreign exports',
+#                           'self.foreign_exports_change':'foreign exports change (percent)',
+#                           'self.baseline_observed_foreign_exports':'baseline observed foreign exports',
+#                           'self.baseline_foreign_imports':'baseline modeled foreign imports',
+#                           'self.experiment_foreign_imports':'experiment foreign imports',
+#                           'self.foreign_imports_change':'foreign imports change (percent)',
+#                           'self.baseline_observed_foreign_imports':'baseline observed foreign imports',
+#                           'self.baseline_intranational_trade':'baseline modeled intranational trade',
+#                           'self.experiment_intranational_trade':'experiment modeled intranational trade',
+#                           'self.intranational_trade_change':'intranational trade change (percent)',
+#                           'self.baseline_observed_intranational_trade': 'baseline observed intranational trade',
+#                           'self.baseline_imr':'baseline imr',
+#                           'self.conditional_imr':'conditional imr',
+#                           'self.experiment_imr': 'experiment imr',
+#                           'self.imr_change': 'imr change (percent)',
+#                           'self.baseline_omr':'baseline omr',
+#                           'self.conditional_omr':'conditional omr',
+#                           'self.experiment_omr':'experiment omr',
+#                           'self.omr_change': 'omr change (percent)'
+# }
 
-trade_results_labels = {
-    'baseline_modeled_trade':'baseline modeled trade',
-    'experiment_trade':'experiment trade',
-    'trade_change':'trade change (percent)',
-    'trade_change_level':'trade change (observed level)',
-    'baseline_observed_trade':'baseline observed trade',
-    'experiment_observed_trade':'experiment observed trade'
-}
+# trade_results_labels = {
+#     'baseline_modeled_trade':'baseline modeled trade',
+#     'experiment_trade':'experiment trade',
+#     'trade_change':'trade change (percent)',
+#     'trade_change_level':'trade change (observed level)',
+#     'baseline_observed_trade':'baseline observed trade',
+#     'experiment_observed_trade':'experiment observed trade'
+# }
 
+class ResultsLabels(object):
+    def __init__(self):
+        # Trade Labels (bilateral)
+        self.baseline_modeled_trade = 'baseline modeled trade (NEW!)'
+        self.experiment_trade = 'experiment trade (NEW!)'
+        self.trade_change = 'trade change (percent) (NEW!)'
+        self.trade_change_level = 'trade change (observed level) (NEW!)'
+        self.baseline_observed_trade = 'baseline observed trade (NEW!)'
+        self.experiment_observed_trade = 'experiment observed trade (NEW!)'
 
+        # Country level
+        self.identifier= 'country'
+        self.factory_price_change= 'factory gate price change (percent) (NEW!)'
+        self.experiment_factory_price= 'experiment factory gate price (NEW!)'
+        self.terms_of_trade_change = 'terms of trade change (percent) (NEW!)'
+        self.gdp_change = "GDP change (percent) (NEW!)"
+        self.welfare_stat = 'welfare statistic (NEW!)'
+        self.baseline_output = 'baseline output (NEW!)'
+        self.experiment_output = 'experiment output (NEW!)'
+        self.output_change = 'output change (percent) (NEW!)'
+        self.baseline_expenditure = 'baseline expenditure (NEW!)'
+        self.experiment_expenditure = 'experiment expenditure (NEW!)'
+        self.expenditure_change = 'expenditure change (percent (NEW!))'
+        self.baseline_exports = 'baseline modeled shipments (NEW!)'
+        self.experiment_exports = 'experiment shipments (NEW!)'
+        self.exports_change = 'shipments change (percent) (NEW!)'
+        self.baseline_imports = 'baseline modeled consumption (NEW!)'
+        self.experiment_imports = 'experiment consumption (NEW!)'
+        self.imports_change = 'consumption change (percent) (NEW!)'
+        self.baseline_foreign_exports = 'baseline modeled foreign exports (NEW!)'
+        self.experiment_foreign_exports = 'experiment foreign exports (NEW!)'
+        self.foreign_exports_change = 'foreign exports change (percent) (NEW!)'
+        self.baseline_observed_foreign_exports = 'baseline observed foreign exports (NEW!)'
+        self.baseline_foreign_imports = 'baseline modeled foreign imports (NEW!)'
+        self.experiment_foreign_imports = 'experiment foreign imports (NEW!)'
+        self.foreign_imports_change = 'foreign imports change (percent) (NEW!)'
+        self.baseline_observed_foreign_imports = 'baseline observed foreign imports (NEW!)'
+        self.baseline_intranational_trade = 'baseline modeled intranational trade'
+        self.experiment_intranational_trade = 'experiment modeled intranational trade (NEW!)'
+        self.intranational_trade_change = 'intranational trade change (percent) (NEW!)'
+        self.baseline_observed_intranational_trade = 'baseline observed intranational trade (NEW!)'
+        self.baseline_imr = 'baseline imr (NEW!)'
+        self.conditional_imr = 'conditional imr (NEW!)'
+        self.experiment_imr = 'experiment imr (NEW!)'
+        self.imr_change = 'imr change (percent) (NEW!)'
+        self.baseline_omr = 'baseline omr'
+        self.conditional_omr = 'conditional omr (NEW!)'
+        self.experiment_omr = 'experiment omr (NEW!)'
+        self.omr_change = 'omr change (percent) (NEW!)'
+
+        # Get a set of country-level results by excluding the bilateral ones
+        self.bilat_labels = [self.baseline_modeled_trade, self.experiment_trade, self.trade_change,
+                             self.trade_change_level, self.baseline_observed_trade, self.experiment_observed_trade]
+
+        # Create a list of Country-level labels to include in results
+        self.country_level_labels = [self.identifier,
+                        self.factory_price_change,
+                        self.baseline_imr, self.experiment_imr, self.imr_change,
+                        self.baseline_omr, self.experiment_omr, self.omr_change,
+                        self.terms_of_trade_change, self.gdp_change, self.welfare_stat,
+                        self.baseline_output, self.experiment_output, self.output_change,
+                        self.baseline_expenditure, self.experiment_expenditure, self.expenditure_change,
+                        self.baseline_foreign_exports, self.experiment_foreign_exports,
+                        self.foreign_exports_change, self.baseline_observed_foreign_exports,
+                        self.baseline_foreign_imports, self.experiment_foreign_imports,
+                        self.foreign_imports_change, self.baseline_observed_foreign_imports,
+                        self.baseline_intranational_trade, self.experiment_intranational_trade,
+                        self.intranational_trade_change, self.baseline_observed_intranational_trade]
 
