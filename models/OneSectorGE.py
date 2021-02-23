@@ -1736,6 +1736,7 @@ class ParameterValues(object):
         #         prefix are only required for the GEPPML approach in OneSectorGE.
         # '''
         estimates = estimates.set_index(identifier_col)
+        self._table = estimates
         # Coefficient  Estimates
         self.params = estimates[coeff_col].copy()
         # Standard error estimates
@@ -1746,6 +1747,9 @@ class ParameterValues(object):
 
         # self.imp_fe_prefix = imp_fe_prefix
         # self.exp_fe_prefix = exp_fe_prefix
+
+    def __repr__(self):
+        return repr(self._table)
 
 
 
