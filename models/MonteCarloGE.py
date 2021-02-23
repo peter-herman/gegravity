@@ -3,6 +3,7 @@ __Project__ = "gegravity"
 __Created__ = "May 05, 2020"
 __Description__ = '''A method for Generating Monte Carlo GE models using the distributions of parameter estimates from 
 the empirical model '''
+__all__ = ['MonteCarloGE']
 
 import numpy as np
 import pandas as pd
