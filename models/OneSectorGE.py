@@ -160,6 +160,7 @@ class OneSectorGE(object):
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
+        self._reference_importer_recode = 'ZZZ_'+reference_importer
         self._omr_rescale = None
         self._imr_rescale = None
         self._mr_max_iter = None
@@ -173,7 +174,7 @@ class OneSectorGE(object):
         self.baseline_trade_costs = None # t_{ij}^{1-sigma}
         self.experiment_trade_costs = None # t_{ij}^{1-sigma}
         self.cost_shock = None
-        self.experiment_data = None
+        self._experiment_data_recode = None
         self.approach = None # Disabled until GEPPML is completed
         self.quiet = quiet
 
@@ -215,6 +216,12 @@ class OneSectorGE(object):
         if self.baseline_data.shape[0] == 0:
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
+        # Recode the reference importer
+        recode = self.baseline_data.copy()
+        recode.loc[recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
+        recode.loc[recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
+        self._recoded_baseline_data = recode
+
 
         # Initialize a set of countries and the economy
         self.country_set = self._create_baseline_countries()
@@ -223,7 +230,7 @@ class OneSectorGE(object):
         for country in self.country_set:
             self.country_set[country]._calculate_baseline_output_expenditure_shares(self.economy)
         # Calculate baseline trade costs
-        self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
+        self.baseline_trade_costs = self._create_trade_costs(self._recoded_baseline_data)
 
 
 
@@ -283,11 +290,11 @@ class OneSectorGE(object):
         # Requires that the baseline data has output and expenditure data
 
         # Make sure the year data is in string form
-        self.baseline_data[self.meta_data.year_var_name] = self.baseline_data.loc[:,
+        self._recoded_baseline_data[self.meta_data.year_var_name] = self._recoded_baseline_data.loc[:,
                                                            self.meta_data.year_var_name].astype(str)
 
         # Create Country-level observations
-        year_data = self.baseline_data.loc[self.baseline_data[self.meta_data.year_var_name] == self._year, :]
+        year_data = self._recoded_baseline_data.loc[self._recoded_baseline_data[self.meta_data.year_var_name] == self._year, :]
 
         importer_info = year_data[[self.meta_data.imp_var_name, self.meta_data.expend_var_name]].copy()
 
@@ -305,7 +312,7 @@ class OneSectorGE(object):
                                 right_on=[self.meta_data.exp_var_name])
 
         reference_expenditure = float(
-            country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer,
+            country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer_recode,
                              self.meta_data.expend_var_name])
 
         # Convert DataFrame to a dictionary of country objects
@@ -533,12 +540,12 @@ class OneSectorGE(object):
             return E_j / (math.exp(imp_fe_j) * E_R)
 
         if version == 'baseline':
-            reference_expnd = self.country_set[self._reference_importer].baseline_expenditure
+            reference_expnd = self.country_set[self._reference_importer_recode].baseline_expenditure
             for country in country_list:
                 country_obj = self.country_set[country]
 
                 # Set values for reference importer
-                if country == self._reference_importer:
+                if country == self._reference_importer_recode:
 
                     # Check that the estimation produced appropriate fixed effect estimates
                     if country_obj.baseline_importer_fe != 'no estimate':
@@ -574,7 +581,7 @@ class OneSectorGE(object):
         if version == 'conditional':
             # Step 1: Re-estimate model
             baseline_specification = self._estimation_model.specification
-            counter_factual_data = self.experiment_data.copy()
+            counter_factual_data = self._experiment_data_recode.copy()
             counter_factual_data = counter_factual_data.merge(self.experiment_trade_costs, how='inner',
                                                               on=[self.meta_data.exp_var_name,
                                                                   self.meta_data.imp_var_name,
@@ -606,7 +613,14 @@ class OneSectorGE(object):
         if not self._baseline_built:
             raise ValueError("Baseline must be built first (i.e. ge_model.build_baseline() method")
         self.experiment_data = experiment_data
-        self.experiment_trade_costs = self._create_trade_costs(self.experiment_data)
+
+        # Recode reference importer
+        exper_recode = experiment_data.copy()
+        exper_recode.loc[exper_recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
+        exper_recode.loc[exper_recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
+        self._experiment_data_recode = exper_recode
+
+        self.experiment_trade_costs = self._create_trade_costs(self._experiment_data_recode)
         cost_change = self.baseline_trade_costs.merge(right=self.experiment_trade_costs, how='outer',
                                                       on=[self.meta_data.imp_var_name,
                                                           self.meta_data.exp_var_name,
@@ -769,7 +783,7 @@ class OneSectorGE(object):
         trade_value_col = self.meta_data.trade_var_name
 
         countries = self.country_set.keys()
-        trade_data = self.baseline_data[[exporter_col, importer_col, year_col, trade_value_col]].copy()
+        trade_data = self._recoded_baseline_data[[exporter_col, importer_col, year_col, trade_value_col]].copy()
         trade_data = trade_data.loc[trade_data[year_col] == self._year, [exporter_col, importer_col, trade_value_col]]
 
         trade_data.rename(columns={trade_value_col: 'baseline_trade'}, inplace=True)
@@ -1110,7 +1124,7 @@ class OneSectorGE(object):
         exporter = self.meta_data.exp_var_name
         importer = self.meta_data.imp_var_name
         trade = self.meta_data.trade_var_name
-        trade_flows = self.baseline_data.copy()
+        trade_flows = self._recoded_baseline_data.copy()
         trade_flows = trade_flows[[exporter, importer, trade]]
         bilateral_results = self.bilateral_trade_results[[self.labels.trade_change]].copy()
         bilateral_results.reset_index(inplace=True)
@@ -1312,7 +1326,7 @@ class OneSectorGE(object):
             value_results['max_func_value'] = func_vals.max()
             value_results['mean_func_value'] = func_vals.mean()
             value_results['mean_func_value'] = median(func_vals)
-            value_results['reference_importer_omr'] = self.country_set[self._reference_importer]._baseline_omr_ratio
+            value_results['reference_importer_omr'] = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
             for country in countries:
                 value_results['{}_omr'.format(country)] = self.country_set[country]._baseline_omr_ratio
             findings.append(value_results)
