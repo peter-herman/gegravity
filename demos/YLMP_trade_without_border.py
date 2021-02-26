@@ -60,7 +60,7 @@ ge_model = OneSectorGE(estimation_model=gme_model,
 # omr_check = ge_model.check_omr_rescale(mr_max_iter=5000)
 ge_model.build_baseline(mr_max_iter=5000, omr_rescale=1000)
 
-experiment_data = ge_model._recoded_baseline_data.copy()
+experiment_data = ge_model.baseline_data.copy()
 experiment_data['INTL_BRDR'] = 0
 ge_model.define_experiment(experiment_data)
 
