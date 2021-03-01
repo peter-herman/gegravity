@@ -1308,7 +1308,6 @@ class OneSectorGE(object):
                 and returns both the inputs to the system and the output. If True, only the system inputs are return and
                 the equations are not computed and, which help diagnose input issues like missing dtata that raise
                 errors.
-        # cost_expend_share:
         Returns:
             dict: A dictionary containing a collection of parameter and value inputs as well as the function
                 values at the initial values. The dictionary contains a matrix of 'cost_exp_share' and 'cost_out_share'
