@@ -8,10 +8,10 @@ __all__ = ['MonteCarloGE']
 import numpy as np
 import pandas as pd
 from gme.estimate.EstimationModel import EstimationModel
-from models.OneSectorGE import OneSectorGE, ParameterValues
+from models.OneSectorGE import OneSectorGE, CostCoeffs
 from typing import List
 
-# ToDo add support for user supplied parameter estimates (ParameterValues object)
+# ToDo add support for user supplied parameter estimates (CostCoeffs object)
 
 class MonteCarloGE(object):
     def __init__(self,
@@ -22,7 +22,7 @@ class MonteCarloGE(object):
                  mc_variables: list = None,
                  results_key: str = 'all',
                  seed:int = None,
-                 parameter_values:ParameterValues = None):
+                 parameter_values:CostCoeffs = None):
         self._estimation_model = estimation_model
         self.meta_data = self._estimation_model.estimation_data._meta_data
         self._year = str(year)
@@ -124,7 +124,7 @@ class MonteCarloGE(object):
         models = list()
         for trial in range(self.trials):
             print("\n* Simulating trial {} *".format(trial))
-            param_values = ParameterValues(self.coeff_sample, coeff_col=trial, identifier_col='index')
+            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col='index')
             try:
                 trial_model = OneSectorGE(self._estimation_model,
                                           year=self._year,
@@ -133,7 +133,7 @@ class MonteCarloGE(object):
                                           sigma=sigma,
                                           results_key=self.results_key,
                                           cost_variables=self._cost_variables,
-                                          parameter_values=param_values,
+                                          cost_coeff_values=param_values,
                                           reference_importer = reference_importer,
                                           omr_rescale = omr_rescale,
                                           imr_rescale = imr_rescale,

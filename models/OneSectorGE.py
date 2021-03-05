@@ -1,7 +1,7 @@
 __Author__ = "Peter Herman"
 __Project__ = "Gravity Code"
 __Created__ = "08/15/2018"
-__all__ = ['OneSectorGE', 'ParameterValues', 'Country', 'Economy','ResultsLabels']
+__all__ = ['OneSectorGE', 'CostCoeffs', 'Country', 'Economy', 'ResultsLabels']
 __Description__ = """A single sector or aggregate full GE model based on Larch and Yotov, 'General Equilibrium Trade
                   Policy Analysis with Structural Gravity," 2016. (WTO Working Paper ERSD-2016-08)"""
 
@@ -36,7 +36,7 @@ class OneSectorGE(object):
                  sigma: float = 5,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
-                 parameter_values = None,
+                 cost_coeff_values = None,
                  #approach: str = None,
                  quiet:bool = False):
         '''
@@ -55,8 +55,8 @@ class OneSectorGE(object):
                 False in GME model), this key is 'all', which is the default.
             cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
                 default, all included non-fixed effect variables are used.
-            parameter_values (ParameterValues): (optional) A set of parameter values or estimates to use for constructing
-                trade costs. Should be of type gegravity.ParameterValues, statsmodels.GLMResultsWrapper, or
+            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
                 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
@@ -154,7 +154,7 @@ class OneSectorGE(object):
         self.labels = ResultsLabels()
         self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
-        if parameter_values is None:
+        if cost_coeff_values is None:
             self._estimation_results = self._estimation_model.results_dict[results_key]
         else:
             self._estimation_results = None
@@ -180,6 +180,7 @@ class OneSectorGE(object):
         self.quiet = quiet
 
         # Results fields
+        self.baseline_mr = None
         self.bilateral_trade_results = None
         self.aggregate_trade_results = None
         self.solver_diagnostics = dict()
@@ -205,8 +206,8 @@ class OneSectorGE(object):
         else:
             self.cost_variables = cost_variables
 
-        if parameter_values is not None:
-            self.cost_coeffs = parameter_values.params
+        if cost_coeff_values is not None:
+            self.cost_coeffs = cost_coeff_values.params
         else:
             self.cost_coeffs = self._estimation_results.params[self.cost_variables]
 
@@ -216,7 +217,7 @@ class OneSectorGE(object):
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         if self.baseline_data.shape[0] == 0:
-            raise ValueError("There are no observations corresponding to the supplied 'year'")
+            raise ValueError("There are no observations corresponding to the supplied 'year'. If problem persists, try casting year as str.")
 
         # Recode the reference importer
         recode = self.baseline_data.copy()
@@ -279,6 +280,18 @@ class OneSectorGE(object):
             self._calculate_GEPPML_multilateral_resistance(version='baseline')
         else:
             self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
+
+        # Collect baseline MRs
+        bsln_mrs = list()
+        for key, country in self.country_set.items():
+            bsln_mrs.append((country.identifier, country.baseline_omr, country.baseline_imr))
+        bsln_mrs = pd.DataFrame(bsln_mrs, columns = [self.labels.identifier, self.labels.baseline_omr,
+                                                     self.labels.baseline_imr])
+        bsln_mrs.loc[bsln_mrs[self.labels.identifier]==self._reference_importer_recode, self.labels.identifier]=self._reference_importer
+        bsln_mrs.sort_values(self.labels.identifier, inplace = True)
+        bsln_mrs.set_index(self.labels.identifier, inplace = True)
+        self.baseline_mr = bsln_mrs
+
         # Calculate baseline factory gate prices
         self._calculate_baseline_factory_gate_params()
         self._baseline_built = True
@@ -331,10 +344,10 @@ class OneSectorGE(object):
             def imp_fe_identifier(country_id):
                 return "_".join([self.meta_data.imp_var_name, self.meta_data.year_var_name,
                                  'fe', (country_id + self._year)])
-        else:
-            raise ValueError("Fixed Effect Specification must feature {} or {}".format([self.meta_data.imp_var_name],
-                                                                                       [self.meta_data.imp_var_name,
-                                                                                        self.meta_data.year_var_name]))
+        # else:
+        #     raise ValueError("Fixed Effect Specification must feature {} or {}".format([self.meta_data.imp_var_name],
+        #                                                                                [self.meta_data.imp_var_name,
+        #                                                                                 self.meta_data.year_var_name]))
 
         # Exporter FEs
         if [self.meta_data.exp_var_name] in fe_specification:
@@ -345,11 +358,11 @@ class OneSectorGE(object):
             def exp_fe_identifier(country_id):
                 return "_".join([self.meta_data.exp_var_name, self.meta_data.year_var_name,
                                  'fe', (country_id + self._year)])
-        else:
-            raise ValueError(
-                "Fixed Effect Specification must feature {} or {}".format([self.meta_data.exp_var_name],
-                                                                          [self.meta_data.exp_var_name,
-                                                                           self.meta_data.year_var_name]))
+        # else:
+        #     raise ValueError(
+        #         "Fixed Effect Specification must feature {} or {}".format([self.meta_data.exp_var_name],
+        #                                                                   [self.meta_data.exp_var_name,
+        #                                                                    self.meta_data.year_var_name]))
 
         for row in range(country_data.shape[0]):
             country_id = country_data.loc[row, self.meta_data.imp_var_name]
@@ -513,6 +526,9 @@ class OneSectorGE(object):
                 for country in country_list:
                     self.country_set[country]._baseline_imr_ratio = mrs.loc[country, 'imrs']  # 1 / P^{1-sigma}
                     self.country_set[country]._baseline_omr_ratio = mrs.loc[country, 'omrs']  # 1 / π^{1-sigma}
+                    sigma_inverse = 1 / (1 - self.sigma)
+                    self.country_set[country].baseline_imr = 1 / (self.country_set[country]._baseline_imr_ratio ** sigma_inverse)
+                    self.country_set[country].baseline_omr = 1 / (self.country_set[country]._baseline_omr_ratio ** sigma_inverse)
 
             if version == 'conditional':
                 for country in country_list:
@@ -1665,8 +1681,6 @@ class Country(object):
 
         # Create actual values for imr (P) and omr (π) from ratio representation
         sigma_inverse = 1 / (1 - sigma)
-        self.baseline_imr = 1 / (self._baseline_imr_ratio**sigma_inverse)
-        self.baseline_omr = 1 / (self._baseline_omr_ratio**sigma_inverse)
         self.conditional_imr = 1 / (self._conditional_imr_ratio ** sigma_inverse)
         self.conditional_omr = 1 / (self._conditional_omr_ratio ** sigma_inverse)
         self.experiment_imr = 1 / (self._experiment_imr_ratio ** sigma_inverse)
@@ -1782,38 +1796,31 @@ class _GEMetaData(object):
         self.output_var_name = output_var_name
 
 
-class ParameterValues(object):
+class CostCoeffs(object):
     def __init__(self,
-             estimates:DataFrame,
+                 estimates:DataFrame,
                  identifier_col: str,
                  coeff_col:str,
                  stderr_col:str = None):
-                 #imp_fe_prefix: str = None, # Removed until completeion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completeion of GEPPML
-
+                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
+                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
         '''
         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
         source of gravity estimates.
         Args:
-            estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-                following non-optional columns.
-            identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-                correspond to the cost variables that you will use for trade costs in the simulation. This column is
-                required.
-            coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-                should be numeric and are required.
-            stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-                required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+         estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+             following non-optional columns.
+         identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+             correspond to the cost variables that you will use for trade costs in the simulation. This column is
+             required.
+         coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+             should be numeric and are required.
+         stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+             required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
 
         Returns:
-            ParameterValues: An instance of a ParameterValues object.
+         CostCoeffs: An instance of a ParameterValues object.
         '''
-        # '''
-        # imp_fe_prefix (str):  The prefix used to identify the importer fixed effects. These fixed effects and
-        #         prefix are only required for the GEPPML approach in OneSectorGE.
-        #     exp_fe_prefix (str):  The prefix used to identify the exporter fixed effects. These fixed effects and
-        #         prefix are only required for the GEPPML approach in OneSectorGE.
-        # '''
         estimates = estimates.set_index(identifier_col)
         self._table = estimates
         # Coefficient  Estimates
