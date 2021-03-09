@@ -71,4 +71,12 @@ country_results = ge_model.country_results
 bilateral_results = ge_model.bilateral_trade_results
 ge_model.export_results(directory="examples//",name="CAN_JPN_PTA_experiment")
 
+
+# -------
+# Post Estimation Analysis
+# -------
+nafta_share = ge_model.trade_share(importers = ['CAN'],exporters = ['USA','MEX'])
+weighted_shock = ge_model.trade_weighted_shock()
+bilat_shock = ge_model.trade_weighted_shock('bilateral')
+
 print(country_results[['factory gate price change (percent)', 'GDP change (percent)', 'foreign exports change (percent)']].head(3))

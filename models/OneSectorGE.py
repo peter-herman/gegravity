@@ -75,7 +75,7 @@ class OneSectorGE(object):
                 models.ResultsLabels for column details.
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
-            cost_shock (pandas.DataFrame): The baseline and experiment trade costs combined.
+            bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs.
             economy (Economy): The model's Economy object.
             experiment_data (pandas.DataFrame): The counterfactual experiment data.
             experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
@@ -188,6 +188,7 @@ class OneSectorGE(object):
         self.outputs_expenditures = None
         self.country_results = None
         self.country_mr_terms = None
+        self.bilateral_costs = None
 
         # Status checks
         self._baseline_built = False
@@ -660,7 +661,7 @@ class OneSectorGE(object):
         cost_shock.loc[cost_shock[
                            self.meta_data.exp_var_name] == self._reference_importer_recode, self.meta_data.exp_var_name] = self._reference_importer
         cost_shock.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
-        self.cost_shock = cost_shock
+        self.bilateral_costs = cost_shock
 
 
         self._experiment_defined = True
