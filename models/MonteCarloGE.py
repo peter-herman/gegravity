@@ -8,9 +8,11 @@ __all__ = ['MonteCarloGE']
 import numpy as np
 import pandas as pd
 from gme.estimate.EstimationModel import EstimationModel
-from models.OneSectorGE import OneSectorGE, CostCoeffs
+from models.OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
+from scipy.stats import multivariate_normal
+from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
 from typing import List
-
+# ToDo: Fix random draw distrobution.
 # ToDo add support for user supplied parameter estimates (CostCoeffs object)
 
 class MonteCarloGE(object):
@@ -18,14 +20,38 @@ class MonteCarloGE(object):
                  estimation_model: EstimationModel,
                  year:str,
                  trials: int,
+                 expend_var_name: str,
+                 output_var_name: str,
+                 sigma: float,
+                 reference_importer: str,
                  cost_variables: list,
                  mc_variables: list = None,
                  results_key: str = 'all',
-                 seed:int = None,
-                 parameter_values:CostCoeffs = None):
+                 seed: int = 0):
+        '''
+
+        Args:
+            estimation_model(EstimationModel): A GME EstimationModel that must have been estimated with the option
+                full_results = True (MonteCarlo simulation requires additional info from estimation compared to
+                OneSectorGE)
+            year:
+            trials:
+            expend_var_name:
+            output_var_name:
+            sigma:
+            reference_importer:
+            cost_variables:
+            mc_variables:
+            results_key:
+            seed:
+        '''
+
+        # Store some inputs in model object
         self._estimation_model = estimation_model
-        self.meta_data = self._estimation_model.estimation_data._meta_data
+        self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._year = str(year)
+        self.sigma = sigma
+        self._reference_importer = reference_importer
         self._cost_variables = cost_variables
         if mc_variables is None:
             self._mc_variables = self._cost_variables
@@ -35,17 +61,15 @@ class MonteCarloGE(object):
             self._seed = np.random.randint(0,10000)
         else:
             self._seed = seed
-        self.results_key = results_key
+        self._results_key = results_key
 
         # Define Parameter values
-        if parameter_values is not None:
-            self.main_coeffs = parameter_values.params
-            self.main_stderrs = parameter_values.bse
-        else:
-            self.main_coeffs = self._estimation_model.results_dict[self.results_key].params
-            self.main_stderrs = self._estimation_model.results_dict[self.results_key].bse
+        self.main_coeffs = self._estimation_model.results_dict[self._results_key].params
+        self.main_stderrs = self._estimation_model.results_dict[self._results_key].bse
         self.trials = trials
-        self.coeff_sample = self.get_mc_params()
+
+        # Generate Sampling Distribution
+        self.coeff_sample = self._draw_mc_trade_costs()
 
         ##
         # Define Results attributes
@@ -64,7 +88,6 @@ class MonteCarloGE(object):
         # ToDo: Complete these ones
         self.all_bilateral_trade_results = None
         self.bilateral_trade_results = None
-
         self.solver_diagnostics = None
 
 
@@ -75,7 +98,7 @@ class MonteCarloGE(object):
         if self.baseline_data.shape[0] == 0:
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
-        # Create sumamry of sample distrbution
+        # Create summary of sample distrbution
         sample_stats = self.coeff_sample.T.describe().T
         new_col_names = ['sample_{}'.format(col) for col in sample_stats]
         sample_stats.columns = new_col_names
@@ -83,44 +106,65 @@ class MonteCarloGE(object):
                                        'stderr_estimate': self.main_stderrs[self._mc_variables]})
         self.sample_stats = pd.concat([main_cost_ests, sample_stats], axis=1)
 
-    def get_mc_params(self):
-        var_samples = list()
-        # Define seeds for each variable draw
-        np.random.seed(self._seed)
-        variable_seeds = np.random.randint(0, 10000, len(self._mc_variables))
-        # Create sample for each mc variable
-        for num, var in enumerate(self._mc_variables):
-            beta = self.main_coeffs[var]
-            stderr = self.main_stderrs[var]
-            np.random.seed(variable_seeds[num])
-            var_draw = np.random.normal(beta, stderr, self.trials)
-            var_samples.append(pd.DataFrame({var: var_draw}))
-        # Combine all variable samples
-        mc_sample = pd.concat(var_samples, axis=1).T
+    def _draw_mc_trade_costs(self):
+        '''
+        Draw coefficient values from multivariate normal distribution
 
-        # Add rows without variation for cost variables not a part of mc
-        costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
-        for var in costs_not_mc:
-            mc_sample.loc[var,:] = self.main_coeffs[var]
-        return mc_sample.reset_index()
+        Returns: A dataframe of random draws of coefficients. Rows are cost variables from self._mc_variables, columns
+            are different draws with the exception of a column with corresponding cost variable names ('index')
+        '''
+        # Get results and check that all needed info is available (i.e. covariance matrix in estimation model)
+        est_results = self._estimation_model.results_dict[self._results_key]
+        if not isinstance(est_results,GLMResultsWrapper):
+            raise TypeError('MonteCarloGE requires that gme.EstimationModel be estimated with option full_results=True')
+        betas = est_results.params.values
 
-    def OneSectorGE(self,
-                    experiment_data:pd.DataFrame,
-                    expend_var_name: str = 'expenditure',
-                    output_var_name: str = 'output',
-                    sigma: float = 5,
-                    reference_importer: str = None,
-                    omr_rescale: float = 1000,
-                    imr_rescale: float = 1,
-                    mr_method: str = 'hybr',
-                    mr_max_iter: int = 1400,
-                    mr_tolerance: float = 1e-8,
-                    ge_method:str = 'hybr',
-                    ge_tolerance: float = 1e-8,
-                    ge_max_iter: int = 1000,
-                    approach: str = None,
-                    quiet: bool = True
-                    ):
+        cov = self._estimation_model.results_dict[self._results_key].cov_params()
+        distribution_alt = multivariate_normal(betas, cov, seed=0)
+        draws = list()
+        for i in range(self.trials):
+            draws.append(pd.Series(distribution_alt.rvs()))
+        all_draws = pd.concat(draws, axis=1)
+        all_draws.index = est_results.params.index
+        all_draws = all_draws.loc[['LN_DIST', 'CNTG', 'BRDR'],:]
+        return all_draws.reset_index()
+
+
+
+    # def get_mc_params(self):
+    #     var_samples = list()
+    #     # Define seeds for each variable draw
+    #     np.random.seed(self._seed)
+    #     variable_seeds = np.random.randint(0, 10000, len(self._mc_variables))
+    #     # Create sample for each mc variable
+    #     for num, var in enumerate(self._mc_variables):
+    #         beta = self.main_coeffs[var]
+    #         stderr = self.main_stderrs[var]
+    #         np.random.seed(variable_seeds[num])
+    #         var_draw = np.random.normal(beta, stderr, self.trials)
+    #         var_samples.append(pd.DataFrame({var: var_draw}))
+    #     # Combine all variable samples
+    #     mc_sample = pd.concat(var_samples, axis=1).T
+    #
+    #     # Add rows without variation for cost variables not a part of mc
+    #     costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
+    #     for var in costs_not_mc:
+    #         mc_sample.loc[var,:] = self.main_coeffs[var]
+    #     return mc_sample.reset_index()
+
+    def run_trials(self,
+                   experiment_data:pd.DataFrame,
+                   omr_rescale: float = 1000,
+                   imr_rescale: float = 1,
+                   mr_method: str = 'hybr',
+                   mr_max_iter: int = 1400,
+                   mr_tolerance: float = 1e-8,
+                   ge_method:str = 'hybr',
+                   ge_tolerance: float = 1e-8,
+                   ge_max_iter: int = 1000,
+                   approach: str = None,
+                   quiet: bool = False
+                   ):
         models = list()
         for trial in range(self.trials):
             print("\n* Simulating trial {} *".format(trial))
@@ -128,20 +172,20 @@ class MonteCarloGE(object):
             try:
                 trial_model = OneSectorGE(self._estimation_model,
                                           year=self._year,
-                                          expend_var_name=expend_var_name,
-                                          output_var_name=output_var_name,
-                                          sigma=sigma,
-                                          results_key=self.results_key,
+                                          reference_importer=self._reference_importer,
+                                          expend_var_name=self.meta_data.expend_var_name,
+                                          output_var_name=self.meta_data.output_var_name,
+                                          sigma=self.sigma,
+                                          results_key=self._results_key,
                                           cost_variables=self._cost_variables,
                                           cost_coeff_values=param_values,
-                                          reference_importer = reference_importer,
-                                          omr_rescale = omr_rescale,
-                                          imr_rescale = imr_rescale,
-                                          mr_method = mr_method,
-                                          mr_max_iter = mr_max_iter,
-                                          mr_tolerance = mr_tolerance,
-                                          approach = approach,
+                                          # approach = approach,
                                           quiet = quiet)
+                trial_model.build_baseline(omr_rescale=omr_rescale,
+                                           imr_rescale=imr_rescale,
+                                           mr_method=mr_method,
+                                           mr_max_iter=mr_max_iter,
+                                           mr_tolerance=mr_tolerance)
                 trial_model.define_experiment(experiment_data)
                 trial_model.simulate(ge_method=ge_method,
                                      ge_tolerance=ge_tolerance,
