@@ -627,7 +627,7 @@ class OneSectorGE(object):
         '''
         Specify the counterfactual data to use for experiment.
         Args:
-            experiment_data(Pandas.DataFrame): A dataframe contianing the counterfactual trade-cost data to use for the
+            experiment_data(Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
                 experiment. The best approach for creating this data is to copy the baseline data
                 (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
 
@@ -1361,7 +1361,7 @@ class OneSectorGE(object):
                 value is 'hybr'.
             mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
                 by the solver used to solve for MR terms. The default value is 1400.
-            mr_tolerance (float): (optional) This parameterset the convergence tolerance level for the solver used to
+            mr_tolerance (float): (optional) This parameter sets the convergence tolerance level for the solver used to
                 solve for MR terms. The default value is 1e-8.
             countries (List[str]):  A list of countries for which to return the estimated OMR values for user
                 evaluation.

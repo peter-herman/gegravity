@@ -83,10 +83,10 @@ class MonteCarloGE(object):
         self.factory_gate_prices = None
         self.all_aggregate_trade_results = None
         self.aggregate_trade_results = None
-
-        # ToDo: Complete these ones
         self.all_bilateral_trade_results = None
         self.bilateral_trade_results = None
+        self.all_bilateral_costs = None
+        self.bilateral_costs = None
         self.solver_diagnostics = None
 
 
@@ -133,7 +133,7 @@ class MonteCarloGE(object):
 
     def run_trials(self,
                    experiment_data:pd.DataFrame,
-                   omr_rescale: float = 1000,
+                   omr_rescale: float = 1,
                    imr_rescale: float = 1,
                    mr_method: str = 'hybr',
                    mr_max_iter: int = 1400,
@@ -141,8 +141,49 @@ class MonteCarloGE(object):
                    ge_method:str = 'hybr',
                    ge_tolerance: float = 1e-8,
                    ge_max_iter: int = 1000,
-                   quiet: bool = False
-                   ):
+                   quiet: bool = False,
+                   result_stats:list = ['mean', 'std', 'sem']):
+        '''
+        Conduct Monte Carlo Simulation of OneSectorGE gravity model.
+        Args:
+            experiment_data (Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
+                experiment. The best approach for creating this data is to copy the baseline data
+                (MonteCarloGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
+            omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
+                are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
+                different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
+                (10^0). However, users should be careful with this choice as results, even when convergent, may not be
+                fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
+                feasible values for a given model.
+            imr_rescale (int): (optional) This value rescales the IMR values to potentially aid in conversion. However,
+                because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
+                because changing the default value, which is 1.
+            mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
+                experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+                value is 'hybr'. (See also OneSectorGE.build_baseline())
+            mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
+                by the solver used to solve for MR terms. The default value is 1400.
+                (See also OneSectorGE.build_baseline())
+            mr_tolerance  (float): (optional) This parameter sets the convergence tolerance level for the solver used to
+                solve for MR terms. The default value is 1e-8. (See also OneSectorGE.build_baseline())
+            ge_method (str): (optional) The solver method to use for the full GE non-linear solver. See scipy.root()
+                documentation for option. Default is 'hybr'.
+            ge_tolerance (float): (optional) The tolerance for determining if the GE system of equations is solved.
+                Default is 1e-8.
+            ge_max_iter (int): (optional) The maximum number of iterations allowed for the full GE nonlinear solver.
+                Default is 1000.
+            quiet (bool): If True, suppress console printouts detailing the solver success/failures of each trial.
+                Default is False.
+            result_stats (list): A list of functions to compute in order to summarize the results across trials. The
+                default is ['mean', 'std', 'sem'], which computes the mean, standard deviation, and standard mean error
+                of the results, respectively. The model should accept any function that can be used with the
+                pandas.DataFrame.agg() function.
+
+        Returns:
+            None
+                No return but populates many results attributes of the MonteCarloGE model.
+
+        '''
         models = list()
         num_failed_iterations = 0
         for trial in range(self.trials):
@@ -174,37 +215,29 @@ class MonteCarloGE(object):
                 print("Failed to solve model.\n")
                 num_failed_iterations+=1
         self.num_failed_iterations = num_failed_iterations
-        self.all_country_results, self.country_results = self._compile_results(models, 'country_results')
-        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms')
-        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures')
-        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices')
-        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results')
-        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade')
-        self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, 'bilateral_costs')
-        # ToDo: Finish compilation of results from GE model. Still need solver diagnostics
+        self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats)
+        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats)
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures', result_stats)
+        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices', result_stats)
+        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results', result_stats)
+        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade', result_stats)
+        self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, 'bilateral_costs', result_stats)
+        self._compile_diagnostics(models)
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
 
 
-        # [x] self.bilateral_trade_results = None
-        # [x] self.aggregate_trade_results = None
-        # [] self.solver_diagnostics = dict()
-        # [x] self.factory_gate_prices = None
-        # [x] self.outputs_expenditures = None
-        # [x] self.country_results = None
-        # [x] self.country_mr_terms = None
-        # [] self.bilateral_costs = None
-
-    def _compile_results(self, models, result_type):
+    def _compile_results(self, models, result_type, result_stats):
         '''
         Compile results across all trials.
         :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
         :param result_type: (str) Type of results to compile. Function works with:
-            'country_results' - compiles results from model.country_mr_results
-            'mr_terms' - compiles results from model.country_mr_terms
-            'output_expenditures' - compiles results from model.output_expenditures
-            'factory_gate_prices - compiles results from model.factory_gate_prices
-            'aggregate_trade_results' - compiles results from model.aggregate_trade_results
-            #ToDo Update docstring here
+            'country_results' - compiles results from OneSectorGE.country_mr_results
+            'mr_terms' - compiles results from OneSectorGE.country_mr_terms
+            'output_expenditures' - compiles results from OneSectorGE.output_expenditures
+            'factory_gate_prices - compiles results from OneSectorGE.factory_gate_prices
+            'aggregate_trade_results' - compiles results from OneSectorGE.aggregate_trade_results
+            'bilateral_trade' - complies results from OneSectorGE.bilateral_trade_results
+            'bilateral_costs' - compiles results from OneSectorGE.bilateral_costs
         :return:(pd.DataFrame, pd.DataFrame) Two dataframes. The first contains all results for each trial, with
             multiindex columns labeled (trial, result type). The second provides summary stats from all trials (mean,
             std, stderr)
@@ -248,16 +281,16 @@ class MonteCarloGE(object):
         var_list = list(summary_results.columns)
         var_list.remove('trial')
         for var in var_list:
-            agg_dict[var] = ['mean', 'std']
+            agg_dict[var] = result_stats
         if result_type in ['bilateral_trade','bilateral_costs']:
             summary_results = summary_results.groupby(level=[0, 1]).agg(agg_dict)
         else:
             summary_results = summary_results.groupby(level=0).agg(agg_dict)
 
         # Compute standard error for each result type
-        for col in summary_results.columns:
-            if col[1] == 'std':
-                summary_results[(col[0], 'stderr')] = summary_results[col] / (self.trials ** 0.5)
+        # for col in summary_results.columns:
+        #     if col[1] == 'std':
+        #         summary_results[(col[0], 'stderr')] = summary_results[col] / (self.trials ** 0.5)
         if result_type in ['bilateral_trade','bilateral_costs']:
             summary_results = summary_results.stack(level=1).reset_index(level=2)
             summary_results.rename(columns = {'level_2':'statistic'},inplace = True)
@@ -265,6 +298,20 @@ class MonteCarloGE(object):
             summary_results = summary_results.stack(level=1).reset_index(level=1)
             summary_results.rename(columns = {'level_1':'statistic'},inplace = True)
         return combined_results, summary_results
+
+    def _compile_diagnostics(self, models):
+        '''
+        Compiles the diagnostics from each trial into a single dictionary, indexed by the trial number.
+        Args:
+            models: the list of OneSectorGE models associated with each trial
+
+        Returns: None, Populates the attribute self.solver_daignostics
+
+        '''
+        combined_diagnostics = dict()
+        for trial in range(self.trials):
+            combined_diagnostics[0] = models[trial].solver_diagnostics
+        self.solver_diagnostics = combined_diagnostics
 
 
 
