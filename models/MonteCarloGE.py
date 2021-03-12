@@ -12,8 +12,6 @@ from models.OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
 from scipy.stats import multivariate_normal
 from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
 from typing import List
-# ToDo: Fix random draw distrobution.
-# ToDo add support for user supplied parameter estimates (CostCoeffs object)
 
 class MonteCarloGE(object):
     def __init__(self,
@@ -74,6 +72,7 @@ class MonteCarloGE(object):
         ##
         # Define Results attributes
         ##
+        self.num_failed_iterations = None
         self.all_country_results = None
         self.country_results = None
         self.all_country_mr_terms = None
@@ -108,7 +107,9 @@ class MonteCarloGE(object):
 
     def _draw_mc_trade_costs(self):
         '''
-        Draw coefficient values from multivariate normal distribution
+        Draw coefficient values from multivariate normal distribution. For Poisson MLE,
+        B-hat ~ Normal(B, (X'WX)^{-1}) where (X'WX)^{-1} is the covariance matrix. See An Introduction to Generalized
+        Linear Models (2nd Ed) Annette J. Dobson, Chapman & Hall/CRC, Boca Raton Florida, Section 5.4.
 
         Returns: A dataframe of random draws of coefficients. Rows are cost variables from self._mc_variables, columns
             are different draws with the exception of a column with corresponding cost variable names ('index')
@@ -130,28 +131,6 @@ class MonteCarloGE(object):
         return all_draws.reset_index()
 
 
-
-    # def get_mc_params(self):
-    #     var_samples = list()
-    #     # Define seeds for each variable draw
-    #     np.random.seed(self._seed)
-    #     variable_seeds = np.random.randint(0, 10000, len(self._mc_variables))
-    #     # Create sample for each mc variable
-    #     for num, var in enumerate(self._mc_variables):
-    #         beta = self.main_coeffs[var]
-    #         stderr = self.main_stderrs[var]
-    #         np.random.seed(variable_seeds[num])
-    #         var_draw = np.random.normal(beta, stderr, self.trials)
-    #         var_samples.append(pd.DataFrame({var: var_draw}))
-    #     # Combine all variable samples
-    #     mc_sample = pd.concat(var_samples, axis=1).T
-    #
-    #     # Add rows without variation for cost variables not a part of mc
-    #     costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
-    #     for var in costs_not_mc:
-    #         mc_sample.loc[var,:] = self.main_coeffs[var]
-    #     return mc_sample.reset_index()
-
     def run_trials(self,
                    experiment_data:pd.DataFrame,
                    omr_rescale: float = 1000,
@@ -162,10 +141,10 @@ class MonteCarloGE(object):
                    ge_method:str = 'hybr',
                    ge_tolerance: float = 1e-8,
                    ge_max_iter: int = 1000,
-                   approach: str = None,
                    quiet: bool = False
                    ):
         models = list()
+        num_failed_iterations = 0
         for trial in range(self.trials):
             print("\n* Simulating trial {} *".format(trial))
             param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col='index')
@@ -193,14 +172,27 @@ class MonteCarloGE(object):
                 models.append(trial_model)
             except:
                 print("Failed to solve model.\n")
+                num_failed_iterations+=1
+        self.num_failed_iterations = num_failed_iterations
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results')
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms')
         self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures')
         self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices')
         self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results')
         self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade')
+        self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, 'bilateral_costs')
         # ToDo: Finish compilation of results from GE model. Still need solver diagnostics
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
+
+
+        # [x] self.bilateral_trade_results = None
+        # [x] self.aggregate_trade_results = None
+        # [] self.solver_diagnostics = dict()
+        # [x] self.factory_gate_prices = None
+        # [x] self.outputs_expenditures = None
+        # [x] self.country_results = None
+        # [x] self.country_mr_terms = None
+        # [] self.bilateral_costs = None
 
     def _compile_results(self, models, result_type):
         '''
@@ -212,6 +204,7 @@ class MonteCarloGE(object):
             'output_expenditures' - compiles results from model.output_expenditures
             'factory_gate_prices - compiles results from model.factory_gate_prices
             'aggregate_trade_results' - compiles results from model.aggregate_trade_results
+            #ToDo Update docstring here
         :return:(pd.DataFrame, pd.DataFrame) Two dataframes. The first contains all results for each trial, with
             multiindex columns labeled (trial, result type). The second provides summary stats from all trials (mean,
             std, stderr)
@@ -231,8 +224,10 @@ class MonteCarloGE(object):
                 model_results = model.aggregate_trade_results
             if result_type == 'bilateral_trade':
                 model_results = model.bilateral_trade_results
+            if result_type == 'bilateral_costs':
+                model_results = model.bilateral_costs
 
-            # Label columns via multiindex with (trial, result)
+            # Label columns via multiindex with (trial #, result label)
             multi_columns = [(num,col) for col in model_results.columns]
             model_results.columns = pd.MultiIndex.from_tuples(multi_columns)
             combined_results_list.append(model_results)
@@ -240,7 +235,7 @@ class MonteCarloGE(object):
 
         # Reshape trials to long format
         summary_results = combined_results.copy()
-        if result_type=='bilateral_trade':
+        if result_type in ['bilateral_trade','bilateral_costs']:
             # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
             summary_results = summary_results.stack(0).reset_index(level=2)
             summary_results.rename(columns={'level_2': 'trial'}, inplace=True)
@@ -254,7 +249,7 @@ class MonteCarloGE(object):
         var_list.remove('trial')
         for var in var_list:
             agg_dict[var] = ['mean', 'std']
-        if result_type == 'bilateral_trade':
+        if result_type in ['bilateral_trade','bilateral_costs']:
             summary_results = summary_results.groupby(level=[0, 1]).agg(agg_dict)
         else:
             summary_results = summary_results.groupby(level=0).agg(agg_dict)
@@ -263,7 +258,7 @@ class MonteCarloGE(object):
         for col in summary_results.columns:
             if col[1] == 'std':
                 summary_results[(col[0], 'stderr')] = summary_results[col] / (self.trials ** 0.5)
-        if result_type=='bilateral_trade':
+        if result_type in ['bilateral_trade','bilateral_costs']:
             summary_results = summary_results.stack(level=1).reset_index(level=2)
             summary_results.rename(columns = {'level_2':'statistic'},inplace = True)
         else:

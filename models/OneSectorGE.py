@@ -650,9 +650,10 @@ class OneSectorGE(object):
                                                       on=[self.meta_data.imp_var_name,
                                                           self.meta_data.exp_var_name,
                                                           self.meta_data.year_var_name])
-        cost_change.rename(columns={'trade_cost_x': 'baseline_trade_cost', 'trade_cost_y': 'experiment_trade_cost'},
+        cost_change.rename(columns={'trade_cost_x': self.labels.baseline_trade_cost, 'trade_cost_y': self.labels.experiment_trade_cost},
                            inplace=True)
-        self._cost_shock_recode = cost_change.loc[cost_change['baseline_trade_cost'] != cost_change['experiment_trade_cost']].copy()
+        # Chop down to only those that change
+        self._cost_shock_recode = cost_change.copy() #.loc[cost_change['baseline_trade_cost'] != cost_change['experiment_trade_cost']].copy()
 
         # Create un-recoded public version
         cost_shock = self._cost_shock_recode.copy()
@@ -661,7 +662,10 @@ class OneSectorGE(object):
         cost_shock.loc[cost_shock[
                            self.meta_data.exp_var_name] == self._reference_importer_recode, self.meta_data.exp_var_name] = self._reference_importer
         cost_shock.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
-        self.bilateral_costs = cost_shock
+        cost_shock[self.labels.trade_cost_change] = 100*(cost_shock[self.labels.experiment_trade_cost] - cost_shock[self.labels.baseline_trade_cost])/cost_shock[self.labels.baseline_trade_cost]
+        cost_shock.drop(self.meta_data.year_var_name, axis = 1, inplace = True)
+        self.bilateral_costs = cost_shock.set_index([self.meta_data.exp_var_name,self.meta_data.imp_var_name])
+
 
 
         self._experiment_defined = True
@@ -1856,6 +1860,9 @@ class ResultsLabels(object):
         \n**baseline observed trade**: Observed trade values. (Not necessarily equivalent to modeled values.)
         \n**experiment observed trade**: Estiamted counterfactual trade values based on predicted change and observed
         baseline values. (Not necessarily equivalent to modeled values.)
+        \n**baseline trade cost**: Baseline estimated trade costs (\tau_{ij})
+        \n**experiment trade cost**: Counterfactual experiment trade costs (\tau'_{ij})
+        \n**trade cost change (%)**: Change in trade costs 100*(\tau'_{ij} - \tau_{ij})/\tau_{ij}
 
     # Country level Results
         \n **country**: Country identifier.
@@ -1936,6 +1943,9 @@ class ResultsLabels(object):
         self.trade_change_level = 'trade change (observed level)'
         self.baseline_observed_trade = 'baseline observed trade'
         self.experiment_observed_trade = 'experiment observed trade'
+        self.baseline_trade_cost = 'baseline trade cost'
+        self.experiment_trade_cost = 'experiment trade cost'
+        self.trade_cost_change = 'trade cost change (%)'
 
         # Country level
         self.identifier= 'country'
