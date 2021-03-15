@@ -30,7 +30,7 @@
 <pre><code class="python">__Author__ = &#34;Peter Herman&#34;
 __Project__ = &#34;Gravity Code&#34;
 __Created__ = &#34;08/15/2018&#34;
-__all__ = [&#39;OneSectorGE&#39;, &#39;ParameterValues&#39;, &#39;Country&#39;, &#39;Economy&#39;,&#39;ResultsLabels&#39;]
+__all__ = [&#39;OneSectorGE&#39;, &#39;CostCoeffs&#39;, &#39;Country&#39;, &#39;Economy&#39;, &#39;ResultsLabels&#39;]
 __Description__ = &#34;&#34;&#34;A single sector or aggregate full GE model based on Larch and Yotov, &#39;General Equilibrium Trade
                   Policy Analysis with Structural Gravity,&#34; 2016. (WTO Working Paper ERSD-2016-08)&#34;&#34;&#34;
 
@@ -45,7 +45,6 @@ from scipy.optimize import root
 from numpy import multiply, median
 from warnings import warn
 import math as math
-from models.ResultsLabels import ResultsLabels
 
 
 &#39;&#39;&#39;
@@ -61,12 +60,12 @@ class OneSectorGE(object):
                  estimation_model: EstimationModel,
                  year: str,
                  reference_importer: str,
-                 expend_var_name: str = &#39;expenditure&#39;,
-                 output_var_name: str = &#39;output&#39;,
-                 sigma: float = 5,
+                 expend_var_name: str,
+                 output_var_name: str,
+                 sigma: float,
                  results_key: str = &#39;all&#39;,
                  cost_variables: List[str] = None,
-                 parameter_values = None,
+                 cost_coeff_values = None,
                  #approach: str = None,
                  quiet:bool = False):
         &#39;&#39;&#39;
@@ -85,14 +84,15 @@ class OneSectorGE(object):
                 False in GME model), this key is &#39;all&#39;, which is the default.
             cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
                 default, all included non-fixed effect variables are used.
-            parameter_values (ParameterValues): (optional) A set of parameter values or estimates to use for constructing
-                trade costs. Should be of type gegravity.ParameterValues, statsmodels.GLMResultsWrapper, or
+            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
                 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
         Attributes:
             aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See models.ResultsLabels for
                 column details.
+            baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
             baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
                 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
                 values B.
@@ -104,7 +104,7 @@ class OneSectorGE(object):
                 models.ResultsLabels for column details.
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
-            cost_shock (pandas.DataFrame): The baseline and experiment trade costs combined.
+            bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs.
             economy (Economy): The model&#39;s Economy object.
             experiment_data (pandas.DataFrame): The counterfactual experiment data.
             experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
@@ -183,13 +183,14 @@ class OneSectorGE(object):
         self.labels = ResultsLabels()
         self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
-        if parameter_values is None:
+        if cost_coeff_values is None:
             self._estimation_results = self._estimation_model.results_dict[results_key]
         else:
             self._estimation_results = None
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
+        self._reference_importer_recode = &#39;ZZZ_&#39;+reference_importer
         self._omr_rescale = None
         self._imr_rescale = None
         self._mr_max_iter = None
@@ -202,12 +203,13 @@ class OneSectorGE(object):
         self.economy = None
         self.baseline_trade_costs = None # t_{ij}^{1-sigma}
         self.experiment_trade_costs = None # t_{ij}^{1-sigma}
-        self.cost_shock = None
-        self.experiment_data = None
+        self._cost_shock_recode = None
+        self._experiment_data_recode = None
         self.approach = None # Disabled until GEPPML is completed
         self.quiet = quiet
 
         # Results fields
+        self.baseline_mr = None
         self.bilateral_trade_results = None
         self.aggregate_trade_results = None
         self.solver_diagnostics = dict()
@@ -215,10 +217,12 @@ class OneSectorGE(object):
         self.outputs_expenditures = None
         self.country_results = None
         self.country_mr_terms = None
+        self.bilateral_costs = None
 
         # Status checks
         self._baseline_built = False
         self._experiment_defined = False
+        self._simulated = False
 
 
         # ---
@@ -232,8 +236,8 @@ class OneSectorGE(object):
         else:
             self.cost_variables = cost_variables
 
-        if parameter_values is not None:
-            self.cost_coeffs = parameter_values.params
+        if cost_coeff_values is not None:
+            self.cost_coeffs = cost_coeff_values.params
         else:
             self.cost_coeffs = self._estimation_results.params[self.cost_variables]
 
@@ -243,7 +247,13 @@ class OneSectorGE(object):
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         if self.baseline_data.shape[0] == 0:
-            raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;&#34;)
+            raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;. If problem persists, try casting year as str.&#34;)
+
+        # Recode the reference importer
+        recode = self.baseline_data.copy()
+        recode.loc[recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
+        recode.loc[recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
+        self._recoded_baseline_data = recode
 
 
         # Initialize a set of countries and the economy
@@ -253,7 +263,7 @@ class OneSectorGE(object):
         for country in self.country_set:
             self.country_set[country]._calculate_baseline_output_expenditure_shares(self.economy)
         # Calculate baseline trade costs
-        self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
+        self.baseline_trade_costs = self._create_trade_costs(self._recoded_baseline_data)
 
 
 
@@ -300,6 +310,18 @@ class OneSectorGE(object):
             self._calculate_GEPPML_multilateral_resistance(version=&#39;baseline&#39;)
         else:
             self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version=&#39;baseline&#39;)
+
+        # Collect baseline MRs
+        bsln_mrs = list()
+        for key, country in self.country_set.items():
+            bsln_mrs.append((country.identifier, country.baseline_omr, country.baseline_imr))
+        bsln_mrs = pd.DataFrame(bsln_mrs, columns = [self.labels.identifier, self.labels.baseline_omr,
+                                                     self.labels.baseline_imr])
+        bsln_mrs.loc[bsln_mrs[self.labels.identifier]==self._reference_importer_recode, self.labels.identifier]=self._reference_importer
+        bsln_mrs.sort_values(self.labels.identifier, inplace = True)
+        bsln_mrs.set_index(self.labels.identifier, inplace = True)
+        self.baseline_mr = bsln_mrs
+
         # Calculate baseline factory gate prices
         self._calculate_baseline_factory_gate_params()
         self._baseline_built = True
@@ -313,11 +335,11 @@ class OneSectorGE(object):
         # Requires that the baseline data has output and expenditure data
 
         # Make sure the year data is in string form
-        self.baseline_data[self.meta_data.year_var_name] = self.baseline_data.loc[:,
+        self._recoded_baseline_data[self.meta_data.year_var_name] = self._recoded_baseline_data.loc[:,
                                                            self.meta_data.year_var_name].astype(str)
 
         # Create Country-level observations
-        year_data = self.baseline_data.loc[self.baseline_data[self.meta_data.year_var_name] == self._year, :]
+        year_data = self._recoded_baseline_data.loc[self._recoded_baseline_data[self.meta_data.year_var_name] == self._year, :]
 
         importer_info = year_data[[self.meta_data.imp_var_name, self.meta_data.expend_var_name]].copy()
 
@@ -335,7 +357,7 @@ class OneSectorGE(object):
                                 right_on=[self.meta_data.exp_var_name])
 
         reference_expenditure = float(
-            country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer,
+            country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer_recode,
                              self.meta_data.expend_var_name])
 
         # Convert DataFrame to a dictionary of country objects
@@ -352,10 +374,10 @@ class OneSectorGE(object):
             def imp_fe_identifier(country_id):
                 return &#34;_&#34;.join([self.meta_data.imp_var_name, self.meta_data.year_var_name,
                                  &#39;fe&#39;, (country_id + self._year)])
-        else:
-            raise ValueError(&#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.imp_var_name],
-                                                                                       [self.meta_data.imp_var_name,
-                                                                                        self.meta_data.year_var_name]))
+        # else:
+        #     raise ValueError(&#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.imp_var_name],
+        #                                                                                [self.meta_data.imp_var_name,
+        #                                                                                 self.meta_data.year_var_name]))
 
         # Exporter FEs
         if [self.meta_data.exp_var_name] in fe_specification:
@@ -366,11 +388,11 @@ class OneSectorGE(object):
             def exp_fe_identifier(country_id):
                 return &#34;_&#34;.join([self.meta_data.exp_var_name, self.meta_data.year_var_name,
                                  &#39;fe&#39;, (country_id + self._year)])
-        else:
-            raise ValueError(
-                &#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.exp_var_name],
-                                                                          [self.meta_data.exp_var_name,
-                                                                           self.meta_data.year_var_name]))
+        # else:
+        #     raise ValueError(
+        #         &#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.exp_var_name],
+        #                                                                   [self.meta_data.exp_var_name,
+        #                                                                    self.meta_data.year_var_name]))
 
         for row in range(country_data.shape[0]):
             country_id = country_data.loc[row, self.meta_data.imp_var_name]
@@ -493,6 +515,12 @@ class OneSectorGE(object):
         # Step 2: Solve
         initial_values = [1] * (2 * mr_params[&#39;number_of_countries&#39;] - 1)
         if test:
+            # Fill some variables that may not be created yet if test is done before baseline is built
+            if mr_params[&#39;omr_rescale&#39;] is None:
+                mr_params[&#39;omr_rescale&#39;] = 1
+            if mr_params[&#39;imr_rescale&#39;] is None:
+                mr_params[&#39;imr_rescale&#39;] = 1
+
             # Option for testing and diagnosing the MR function
             test_diagnostics = dict()
             test_diagnostics[&#39;initial values&#39;] = initial_values
@@ -528,6 +556,9 @@ class OneSectorGE(object):
                 for country in country_list:
                     self.country_set[country]._baseline_imr_ratio = mrs.loc[country, &#39;imrs&#39;]  # 1 / P^{1-sigma}
                     self.country_set[country]._baseline_omr_ratio = mrs.loc[country, &#39;omrs&#39;]  # 1 / π^{1-sigma}
+                    sigma_inverse = 1 / (1 - self.sigma)
+                    self.country_set[country].baseline_imr = 1 / (self.country_set[country]._baseline_imr_ratio ** sigma_inverse)
+                    self.country_set[country].baseline_omr = 1 / (self.country_set[country]._baseline_omr_ratio ** sigma_inverse)
 
             if version == &#39;conditional&#39;:
                 for country in country_list:
@@ -563,12 +594,12 @@ class OneSectorGE(object):
             return E_j / (math.exp(imp_fe_j) * E_R)
 
         if version == &#39;baseline&#39;:
-            reference_expnd = self.country_set[self._reference_importer].baseline_expenditure
+            reference_expnd = self.country_set[self._reference_importer_recode].baseline_expenditure
             for country in country_list:
                 country_obj = self.country_set[country]
 
                 # Set values for reference importer
-                if country == self._reference_importer:
+                if country == self._reference_importer_recode:
 
                     # Check that the estimation produced appropriate fixed effect estimates
                     if country_obj.baseline_importer_fe != &#39;no estimate&#39;:
@@ -604,7 +635,7 @@ class OneSectorGE(object):
         if version == &#39;conditional&#39;:
             # Step 1: Re-estimate model
             baseline_specification = self._estimation_model.specification
-            counter_factual_data = self.experiment_data.copy()
+            counter_factual_data = self._experiment_data_recode.copy()
             counter_factual_data = counter_factual_data.merge(self.experiment_trade_costs, how=&#39;inner&#39;,
                                                               on=[self.meta_data.exp_var_name,
                                                                   self.meta_data.imp_var_name,
@@ -625,7 +656,7 @@ class OneSectorGE(object):
         &#39;&#39;&#39;
         Specify the counterfactual data to use for experiment.
         Args:
-            experiment_data(Pandas.DataFrame): A dataframe contianing the counterfactual trade-cost data to use for the
+            experiment_data(Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
                 experiment. The best approach for creating this data is to copy the baseline data
                 (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
 
@@ -635,15 +666,37 @@ class OneSectorGE(object):
         &#39;&#39;&#39;
         if not self._baseline_built:
             raise ValueError(&#34;Baseline must be built first (i.e. ge_model.build_baseline() method&#34;)
-        self.experiment_data = experiment_data
-        self.experiment_trade_costs = self._create_trade_costs(self.experiment_data)
+        self.experiment_data = experiment_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name])
+
+        # Recode reference importer
+        exper_recode = experiment_data.copy()
+        exper_recode.loc[exper_recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
+        exper_recode.loc[exper_recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
+        self._experiment_data_recode = exper_recode
+
+        self.experiment_trade_costs = self._create_trade_costs(self._experiment_data_recode)
         cost_change = self.baseline_trade_costs.merge(right=self.experiment_trade_costs, how=&#39;outer&#39;,
                                                       on=[self.meta_data.imp_var_name,
                                                           self.meta_data.exp_var_name,
                                                           self.meta_data.year_var_name])
-        cost_change.rename(columns={&#39;trade_cost_x&#39;: &#39;baseline_trade_cost&#39;, &#39;trade_cost_y&#39;: &#39;experiment_trade_cost&#39;},
+        cost_change.rename(columns={&#39;trade_cost_x&#39;: self.labels.baseline_trade_cost, &#39;trade_cost_y&#39;: self.labels.experiment_trade_cost},
                            inplace=True)
-        self.cost_shock = cost_change.loc[cost_change[&#39;baseline_trade_cost&#39;] != cost_change[&#39;experiment_trade_cost&#39;]]
+        # Chop down to only those that change
+        self._cost_shock_recode = cost_change.copy() #.loc[cost_change[&#39;baseline_trade_cost&#39;] != cost_change[&#39;experiment_trade_cost&#39;]].copy()
+
+        # Create un-recoded public version
+        cost_shock = self._cost_shock_recode.copy()
+        cost_shock.loc[cost_shock[
+                           self.meta_data.imp_var_name] == self._reference_importer_recode, self.meta_data.imp_var_name] = self._reference_importer
+        cost_shock.loc[cost_shock[
+                           self.meta_data.exp_var_name] == self._reference_importer_recode, self.meta_data.exp_var_name] = self._reference_importer
+        cost_shock.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
+        cost_shock[self.labels.trade_cost_change] = 100*(cost_shock[self.labels.experiment_trade_cost] - cost_shock[self.labels.baseline_trade_cost])/cost_shock[self.labels.baseline_trade_cost]
+        cost_shock.drop(self.meta_data.year_var_name, axis = 1, inplace = True)
+        self.bilateral_costs = cost_shock.set_index([self.meta_data.exp_var_name,self.meta_data.imp_var_name])
+
+
+
         self._experiment_defined = True
 
     def simulate(self, ge_method: str = &#39;hybr&#39;, ge_tolerance: float = 1e-8, ge_max_iter: int = 1000):
@@ -661,18 +714,11 @@ class OneSectorGE(object):
             None
                 No return but populates new attributes of model.
         &#39;&#39;&#39;
-        # &#39;&#39;&#39;
-        # Simulate the counterfactual scenario.
-        # :param ge_method: (str)
-        # :param ge_tolerance: (float)
-        #
-        # :param ge_max_iter: (int)
-        # :return: (None) No return but many fields in the model containing results are populated.
-        # &#39;&#39;&#39;
         if not self._baseline_built:
             raise ValueError(&#34;Baseline must be built first (i.e. OneSectorGE.build_baseline() method&#34;)
         if not self._experiment_defined:
             raise ValueError(&#34;Expiriment must be defined first (i.e. OneSectorGE.define_expiriment() method&#34;)
+
         self._ge_method = ge_method
         self._ge_tolerance = ge_tolerance
         self._ge_max_iter = ge_max_iter
@@ -685,9 +731,17 @@ class OneSectorGE(object):
         self._calculate_full_ge()
         # Step 3: Generate post-simulation results
         [self.country_set[country]._construct_country_measures(sigma=self.sigma) for country in self.country_set.keys()]
+        # Un-recode reference importer
+        self.country_set[self._reference_importer] = self.country_set[self._reference_importer_recode]
+        self.country_set[self._reference_importer].identifier = self._reference_importer
+        # Remover recoded Country onject
+        self.country_set.pop(self._reference_importer_recode)
+
         self._construct_experiment_output_expend()
         self._construct_experiment_trade()
         self._compile_results()
+        self._simulated = True
+
 
     def _calculate_full_ge(self):
         # Solve Full GE model
@@ -737,9 +791,13 @@ class OneSectorGE(object):
         imrs = np.append(imrs, 1)
         omrs = full_ge_results.x[len(country_list) - 1:2 * len(country_list) - 1] * ge_params[&#39;omr_rescale&#39;]
         prices = full_ge_results.x[2 * len(country_list) - 1:]
-        factory_gate_prices = pd.DataFrame({&#39;exporter&#39;: country_list,
+        factory_gate_prices = pd.DataFrame({self.meta_data.exp_var_name: country_list,
                                             self.labels.experiment_factory_price: prices})
-        self.factory_gate_prices = factory_gate_prices.set_index(&#39;exporter&#39;)
+        # un-Recode reference importer
+        factory_gate_prices.loc[factory_gate_prices[self.meta_data.exp_var_name]==self._reference_importer_recode,
+                                                    self.meta_data.exp_var_name] = self._reference_importer
+        factory_gate_prices.sort_values([self.meta_data.exp_var_name], inplace = True)
+        self.factory_gate_prices = factory_gate_prices.set_index(self.meta_data.exp_var_name)
         for i, country in enumerate(country_list):
             self.country_set[country]._experiment_imr_ratio = imrs[i] # 1 / P^{1-sigma}
             self.country_set[country]._experiment_omr_ratio = omrs[i] # 1 / π^{1-sigma}
@@ -779,12 +837,13 @@ class OneSectorGE(object):
         self.economy.experiment_total_output = total_output
         self.economy.output_change = 100 * (total_output - self.economy.baseline_total_output) \
                                      / self.economy.baseline_total_output
-
+        results_table.sort_values([self.labels.identifier], inplace=True)
         results_table = results_table.set_index(self.labels.identifier)
         # Ensure all values are numeric
         for col in results_table.columns:
             results_table[col] = results_table[col].astype(float)
         # Save to model
+
         self.outputs_expenditures = results_table
 
     def _construct_experiment_trade(self):
@@ -831,6 +890,27 @@ class OneSectorGE(object):
             bsln_gravity = bsln_expend * bsln_output_share * bsln_imr_ratio * bsln_omr_ratio
             trade_data.loc[row, &#39;bsln_gravity&#39;] = bsln_gravity
 
+        # Un-recode reference importer in baseline and experiment trade costs
+        bsln_trade_costs = self.baseline_trade_costs.copy()
+        bsln_trade_costs.loc[bsln_trade_costs[self.meta_data.exp_var_name]==self._reference_importer_recode,
+                             self.meta_data.exp_var_name] = self._reference_importer
+        bsln_trade_costs.loc[bsln_trade_costs[self.meta_data.imp_var_name]==self._reference_importer_recode,
+                             self.meta_data.imp_var_name] = self._reference_importer
+        bsln_trade_costs.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace = True)
+        self.baseline_trade_costs = bsln_trade_costs
+
+        exper_trade_costs = self.experiment_trade_costs.copy()
+        exper_trade_costs.loc[exper_trade_costs[self.meta_data.exp_var_name] == self._reference_importer_recode,
+                              self.meta_data.exp_var_name] = self._reference_importer
+        exper_trade_costs.loc[exper_trade_costs[self.meta_data.imp_var_name] == self._reference_importer_recode,
+                              self.meta_data.imp_var_name] = self._reference_importer
+        exper_trade_costs.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace = True)
+        self.experiment_trade_costs = exper_trade_costs
+
+
+
+
+        # add baseline trade costs
         trade_data = trade_data.merge(self.baseline_trade_costs, how=&#39;left&#39;, on=[importer_col, exporter_col])
         trade_data.rename(columns={&#39;trade_cost&#39;: &#39;baseline_trade_cost&#39;}, inplace=True)
 
@@ -850,7 +930,8 @@ class OneSectorGE(object):
                                        / trade_data[bsln_modeled_trade_label]
 
         bilateral_trade_results = trade_data[[exporter_col, importer_col, bsln_modeled_trade_label,
-                                                   exper_trade_label, trade_change_label]]
+                                                   exper_trade_label, trade_change_label]].copy()
+        bilateral_trade_results.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace = True)
         self.bilateral_trade_results = bilateral_trade_results.set_index([exporter_col, importer_col])
 
         ##
@@ -970,11 +1051,13 @@ class OneSectorGE(object):
         results = list()
         mr_results = list()
         for country in self.country_set.keys():
-            results.append(self.country_set[country].get_results(self.labels))
-            mr_results.append(self.country_set[country].get_mr_results(self.labels))
+            results.append(self.country_set[country]._get_results(self.labels))
+            mr_results.append(self.country_set[country]._get_mr_results(self.labels))
         country_results = pd.concat(results, axis=0)
+        country_results.sort_values([self.labels.identifier], inplace = True)
         self.country_results = country_results.set_index(self.labels.identifier)
         country_mr_results = pd.concat(mr_results, axis=0)
+        country_mr_results.sort_values([self.labels.identifier], inplace = True)
         self.country_mr_terms = country_mr_results.set_index(self.labels.identifier)
 
 
@@ -1204,6 +1287,7 @@ class OneSectorGE(object):
             bilat_trade[self.labels.trade_change_level] = bilat_trade[self.labels.experiment_observed_trade] - bilat_trade[self.labels.baseline_observed_trade]
             bilat_trade = bilat_trade[[exporter, importer, self.labels.baseline_observed_trade,
                                        self.labels.experiment_observed_trade, self.labels.trade_change_level, self.labels.trade_change]]
+            bilat_trade.sort_values([exporter, importer], inplace = True)
             return bilat_trade
 
     def trade_weighted_shock(self, how:str = &#39;country&#39;, aggregations:list=[&#39;mean&#39;, &#39;sum&#39;, &#39;max&#39;]):
@@ -1223,7 +1307,7 @@ class OneSectorGE(object):
         # Collect needed results
         bilat_trade = self.bilateral_trade_results.copy()
         bilat_trade.reset_index(inplace=True)
-        cost_shock = self.cost_shock.copy()
+        cost_shock = self._cost_shock_recode.copy()
 
         # Define column names
         imp_col = self.meta_data.imp_var_name
@@ -1265,15 +1349,24 @@ class OneSectorGE(object):
         &#39;&#39;&#39;
         Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
             debugging initial data problems. Note that the returned function values reflect those generated by the
-            initial values and do not reflect a solution to the system.
+            initial values and do not reflect a solution to the system. The inputs are &#39;cost_exp_share&#39;, which is
+            $t_{ij}^{1-\sigma} * E_j / Y$, and &#39;cost_out_shr&#39;, which is $t_{ij}^{1-\sigma} * Y_i / Y$. Errors in the
+            inputs could be due to missing trade cost data (e.g. missing values in gravity variables), output data, or
+            expenditure data.
         Args:
             inputs_only (bool): If False (default), the method tests the computability of the MR system of equations
                 and returns both the inputs to the system and the output. If True, only the system inputs are return and
-                the equations are not computed and can help diagnose input issues that raise errors.
+                the equations are not computed and, which help diagnose input issues like missing dtata that raise
+                errors.
         Returns:
             dict: A dictionary containing a collection of parameter and value inputs as well as the function
-                values at the initial values.
+                values at the initial values. The dictionary contains a matrix of &#39;cost_exp_share&#39; and &#39;cost_out_share&#39;
+                values, organized alphabetically with the reference importer in the last row/column. &#34;function_value&#34;
+                reflects the multilateral resistance system function values, which should be zero when the system is
+                solved.
         &#39;&#39;&#39;
+        if self._simulated:
+            raise ValueError(&#34;test_baseline_mr_function() cannot be run on a full solved/simulated model. Please reinitialize OneSectorGE model.&#34;)
         test_diagnostics = self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
                                                                    version=&#39;baseline&#39;, test=True,
                                                                    inputs_only=inputs_only)
@@ -1297,7 +1390,7 @@ class OneSectorGE(object):
                 value is &#39;hybr&#39;.
             mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
                 by the solver used to solve for MR terms. The default value is 1400.
-            mr_tolerance (float): (optional) This parameterset the convergence tolerance level for the solver used to
+            mr_tolerance (float): (optional) This parameter sets the convergence tolerance level for the solver used to
                 solve for MR terms. The default value is 1e-8.
             countries (List[str]):  A list of countries for which to return the estimated OMR values for user
                 evaluation.
@@ -1313,7 +1406,9 @@ class OneSectorGE(object):
                 &#39;reference_importer_omr&#39;: The solution value for the reference importer&#39;s OMR value.\n
                 &#39;..._omr&#39;: The solution value(s) for the user supplied countries.
         &#39;&#39;&#39;
-
+        # Check to see if model has already been solved and recoded reference importer was dropped.
+        if self._simulated:
+            raise ValueError(&#34;check_omr_rescale() cannot be run on a full solved/simulated model. Please reinitialize OneSectorGE model.&#34;)
         self._mr_max_iter = mr_max_iter
         self._mr_tolerance = mr_tolerance
         self._mr_method = mr_method
@@ -1342,9 +1437,13 @@ class OneSectorGE(object):
             value_results[&#39;max_func_value&#39;] = func_vals.max()
             value_results[&#39;mean_func_value&#39;] = func_vals.mean()
             value_results[&#39;mean_func_value&#39;] = median(func_vals)
-            value_results[&#39;reference_importer_omr&#39;] = self.country_set[self._reference_importer]._baseline_omr_ratio
+            omr_ratio = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
+            omr = omr =(1/omr_ratio)**(1/(1-self.sigma))
+            value_results[&#39;reference_importer_omr&#39;] = omr
             for country in countries:
-                value_results[&#39;{}_omr&#39;.format(country)] = self.country_set[country]._baseline_omr_ratio
+                omr_ratio = self.country_set[country]._baseline_omr_ratio
+                omr =(1/omr_ratio)**(1/(1-self.sigma))
+                value_results[&#39;{}_omr&#39;.format(country)] = omr
             findings.append(value_results)
         findings_table = pd.DataFrame(findings)
 
@@ -1419,7 +1518,17 @@ def _full_ge(x, ge_params):
 
 class Economy(object):
     &#39;&#39;&#39;
-    Object for storing economy-wide information.
+    Object for storing economy-wide information. Retrievable from OneSectorGE.economy.
+
+    Attributes:
+        sigma (float): The user supplied elasticity of substitution.
+        experiment_total_output (float): The estimated counterfactual total output across all countries
+            ($Y&#39; = sum_i Y_i$).
+        experiment_total_expenditure (float): The estimated counterfactual total expenditure across all countries
+            ($E&#39; = sum_j E&#39;_j$).
+        baseline_total_output (float): The baseline total output across all countries ($Y = sum_i Y_i$).
+        baseline_total_expenditure (float): The baseline total expenditure across all countries ($E = sum_j E_j$).
+        output_change (float): Estimated percent change in total output value ($100*[Y&#39;-Y]/Y$)
     &#39;&#39;&#39;
     def __init__(self,
                  sigma: float = 4):
@@ -1523,7 +1632,7 @@ class Country(object):
         gdp_change (float): Estimated percent chnage in real GDP (100*(GDP&#39; - GDP)/GDP)
         phi (float): Phi parameter for expenditure-output share (φ_i = E_i / Y_i). Based on Eqn. (30) from Larch and
             Yotov, (2016).
-        welfare_stat (float) Welfare statistic based on Arkolakis et al (2012) and Yotov et al. (2016)
+        welfare_stat (float): Welfare statistic based on Arkolakis et al (2012) and Yotov et al. (2016)
             ([E_i/P_i]/[E&#39;_i/P&#39;_i]).
     &#39;&#39;&#39;
     # This may need to be a country/year thing at some point
@@ -1606,8 +1715,6 @@ class Country(object):
 
         # Create actual values for imr (P) and omr (π) from ratio representation
         sigma_inverse = 1 / (1 - sigma)
-        self.baseline_imr = 1 / (self._baseline_imr_ratio**sigma_inverse)
-        self.baseline_omr = 1 / (self._baseline_omr_ratio**sigma_inverse)
         self.conditional_imr = 1 / (self._conditional_imr_ratio ** sigma_inverse)
         self.conditional_omr = 1 / (self._conditional_omr_ratio ** sigma_inverse)
         self.experiment_imr = 1 / (self._experiment_imr_ratio ** sigma_inverse)
@@ -1646,7 +1753,7 @@ class Country(object):
 
 
 
-    def get_results(self, labels):
+    def _get_results(self, labels):
         &#39;&#39;&#39;
         Collect and return the country&#39;s main results.
         Returns:
@@ -1667,7 +1774,7 @@ class Country(object):
                                  })
         return row
 
-    def get_mr_results(self, labels):
+    def _get_mr_results(self, labels):
         &#39;&#39;&#39;
         Collect and return the country&#39;s MR terms (baseline, conditional, and experiment)
         Returns:
@@ -1723,39 +1830,33 @@ class _GEMetaData(object):
         self.output_var_name = output_var_name
 
 
-class ParameterValues(object):
+class CostCoeffs(object):
     def __init__(self,
-             estimates:DataFrame,
+                 estimates:DataFrame,
                  identifier_col: str,
                  coeff_col:str,
                  stderr_col:str = None):
-                 #imp_fe_prefix: str = None, # Removed until completeion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completeion of GEPPML
-
+                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
+                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
         &#39;&#39;&#39;
         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
         source of gravity estimates.
         Args:
-            estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-                following non-optional columns.
-            identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-                correspond to the cost variables that you will use for trade costs in the simulation. This column is
-                required.
-            coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-                should be numeric and are required.
-            stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-                required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+         estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+             following non-optional columns.
+         identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+             correspond to the cost variables that you will use for trade costs in the simulation. This column is
+             required.
+         coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+             should be numeric and are required.
+         stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+             required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
 
         Returns:
-            ParameterValues: An instance of a ParameterValues object.
+         CostCoeffs: An instance of a ParameterValues object.
         &#39;&#39;&#39;
-        # &#39;&#39;&#39;
-        # imp_fe_prefix (str):  The prefix used to identify the importer fixed effects. These fixed effects and
-        #         prefix are only required for the GEPPML approach in OneSectorGE.
-        #     exp_fe_prefix (str):  The prefix used to identify the exporter fixed effects. These fixed effects and
-        #         prefix are only required for the GEPPML approach in OneSectorGE.
-        # &#39;&#39;&#39;
         estimates = estimates.set_index(identifier_col)
+        self._table = estimates
         # Coefficient  Estimates
         self.params = estimates[coeff_col].copy()
         # Standard error estimates
@@ -1766,6 +1867,9 @@ class ParameterValues(object):
 
         # self.imp_fe_prefix = imp_fe_prefix
         # self.exp_fe_prefix = exp_fe_prefix
+
+    def __repr__(self):
+        return repr(self._table)
 
 
 
@@ -1785,6 +1889,9 @@ class ResultsLabels(object):
         \n**baseline observed trade**: Observed trade values. (Not necessarily equivalent to modeled values.)
         \n**experiment observed trade**: Estiamted counterfactual trade values based on predicted change and observed
         baseline values. (Not necessarily equivalent to modeled values.)
+        \n**baseline trade cost**: Baseline estimated trade costs (\tau_{ij})
+        \n**experiment trade cost**: Counterfactual experiment trade costs (\tau&#39;_{ij})
+        \n**trade cost change (%)**: Change in trade costs 100*(\tau&#39;_{ij} - \tau_{ij})/\tau_{ij}
 
     # Country level Results
         \n **country**: Country identifier.
@@ -1865,6 +1972,9 @@ class ResultsLabels(object):
         self.trade_change_level = &#39;trade change (observed level)&#39;
         self.baseline_observed_trade = &#39;baseline observed trade&#39;
         self.experiment_observed_trade = &#39;experiment observed trade&#39;
+        self.baseline_trade_cost = &#39;baseline trade cost&#39;
+        self.experiment_trade_cost = &#39;experiment trade cost&#39;
+        self.trade_cost_change = &#39;trade cost change (%)&#39;
 
         # Country level
         self.identifier= &#39;country&#39;
@@ -1935,6 +2045,72 @@ class ResultsLabels(object):
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
+<dt id="models.OneSectorGE.CostCoeffs"><code class="flex name class">
+<span>class <span class="ident">CostCoeffs</span></span>
+<span>(</span><span>estimates: pandas.core.frame.DataFrame, identifier_col: str, coeff_col: str, stderr_col: str = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
+source of gravity estimates.
+Args:
+estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+following non-optional columns.
+identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+correspond to the cost variables that you will use for trade costs in the simulation. This column is
+required.
+coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+should be numeric and are required.
+stderr_col (str):
+The column name for the standard error estimates for each variable. This column is only
+required for the MonteCarloGE model and may be omitted for the OneSectorGE model.</p>
+<p>Returns:
+CostCoeffs: An instance of a ParameterValues object.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class CostCoeffs(object):
+    def __init__(self,
+                 estimates:DataFrame,
+                 identifier_col: str,
+                 coeff_col:str,
+                 stderr_col:str = None):
+                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
+                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
+        &#39;&#39;&#39;
+        Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
+        source of gravity estimates.
+        Args:
+         estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+             following non-optional columns.
+         identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+             correspond to the cost variables that you will use for trade costs in the simulation. This column is
+             required.
+         coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+             should be numeric and are required.
+         stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+             required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+
+        Returns:
+         CostCoeffs: An instance of a ParameterValues object.
+        &#39;&#39;&#39;
+        estimates = estimates.set_index(identifier_col)
+        self._table = estimates
+        # Coefficient  Estimates
+        self.params = estimates[coeff_col].copy()
+        # Standard error estimates
+        if stderr_col is not None:
+            self.bse = estimates[stderr_col].copy()
+        else:
+            self.bse = None
+
+        # self.imp_fe_prefix = imp_fe_prefix
+        # self.exp_fe_prefix = exp_fe_prefix
+
+    def __repr__(self):
+        return repr(self._table)</code></pre>
+</details>
+</dd>
 <dt id="models.OneSectorGE.Country"><code class="flex name class">
 <span>class <span class="ident">Country</span></span>
 <span>(</span><span>identifier: str = None, year: str = None, baseline_output: float = None, baseline_expenditure: float = None, baseline_importer_fe: float = None, baseline_exporter_fe: float = None, reference_expenditure: float = None)</span>
@@ -2043,9 +2219,10 @@ flows) (X'_i = sum_j X'_ij for all j!=i).</dd>
 <dt><strong><code>phi</code></strong> :&ensp;<code>float</code></dt>
 <dd>Phi parameter for expenditure-output share (φ_i = E_i / Y_i). Based on Eqn. (30) from Larch and
 Yotov, (2016).</dd>
-</dl>
-<p>welfare_stat (float) Welfare statistic based on Arkolakis et al (2012) and Yotov et al. (2016)
-([E_i/P_i]/[E'_i/P'_i]).</p></div>
+<dt><strong><code>welfare_stat</code></strong> :&ensp;<code>float</code></dt>
+<dd>Welfare statistic based on Arkolakis et al (2012) and Yotov et al. (2016)
+([E_i/P_i]/[E'_i/P'_i]).</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -2119,7 +2296,7 @@ Yotov, (2016).</dd>
         gdp_change (float): Estimated percent chnage in real GDP (100*(GDP&#39; - GDP)/GDP)
         phi (float): Phi parameter for expenditure-output share (φ_i = E_i / Y_i). Based on Eqn. (30) from Larch and
             Yotov, (2016).
-        welfare_stat (float) Welfare statistic based on Arkolakis et al (2012) and Yotov et al. (2016)
+        welfare_stat (float): Welfare statistic based on Arkolakis et al (2012) and Yotov et al. (2016)
             ([E_i/P_i]/[E&#39;_i/P&#39;_i]).
     &#39;&#39;&#39;
     # This may need to be a country/year thing at some point
@@ -2202,8 +2379,6 @@ Yotov, (2016).</dd>
 
         # Create actual values for imr (P) and omr (π) from ratio representation
         sigma_inverse = 1 / (1 - sigma)
-        self.baseline_imr = 1 / (self._baseline_imr_ratio**sigma_inverse)
-        self.baseline_omr = 1 / (self._baseline_omr_ratio**sigma_inverse)
         self.conditional_imr = 1 / (self._conditional_imr_ratio ** sigma_inverse)
         self.conditional_omr = 1 / (self._conditional_omr_ratio ** sigma_inverse)
         self.experiment_imr = 1 / (self._experiment_imr_ratio ** sigma_inverse)
@@ -2242,7 +2417,7 @@ Yotov, (2016).</dd>
 
 
 
-    def get_results(self, labels):
+    def _get_results(self, labels):
         &#39;&#39;&#39;
         Collect and return the country&#39;s main results.
         Returns:
@@ -2263,7 +2438,7 @@ Yotov, (2016).</dd>
                                  })
         return row
 
-    def get_mr_results(self, labels):
+    def _get_mr_results(self, labels):
         &#39;&#39;&#39;
         Collect and return the country&#39;s MR terms (baseline, conditional, and experiment)
         Returns:
@@ -2304,89 +2479,47 @@ Yotov, (2016).</dd>
                     self.expenditure_change,
                     self.terms_of_trade_change)</code></pre>
 </details>
-<h3>Methods</h3>
-<dl>
-<dt id="models.OneSectorGE.Country.get_mr_results"><code class="name flex">
-<span>def <span class="ident">get_mr_results</span></span>(<span>self, labels)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Collect and return the country's MR terms (baseline, conditional, and experiment)</p>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>pandas.DataFrame</code></dt>
-<dd>A one-row dataFrame containing column of MR terms.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_mr_results(self, labels):
-    &#39;&#39;&#39;
-    Collect and return the country&#39;s MR terms (baseline, conditional, and experiment)
-    Returns:
-         pandas.DataFrame: A one-row dataFrame containing column of MR terms.
-    &#39;&#39;&#39;
-    row = pd.DataFrame(data={labels.identifier: [self.identifier],
-                             labels.baseline_imr: [self.baseline_imr],
-                             labels.conditional_imr: [self.conditional_imr],
-                             labels.experiment_imr: [self.experiment_imr],
-                             labels.baseline_omr: [self.baseline_omr],
-                             labels.conditional_omr: [self.conditional_omr],
-                             labels.experiment_omr: [self.experiment_omr]})
-    return row</code></pre>
-</details>
-</dd>
-<dt id="models.OneSectorGE.Country.get_results"><code class="name flex">
-<span>def <span class="ident">get_results</span></span>(<span>self, labels)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Collect and return the country's main results.</p>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>pandas.DataFrame</code></dt>
-<dd>A one-row dataFrame containing columns of typical results.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_results(self, labels):
-    &#39;&#39;&#39;
-    Collect and return the country&#39;s main results.
-    Returns:
-        pandas.DataFrame: A one-row dataFrame containing columns of typical results.
-    &#39;&#39;&#39;
-    row = pd.DataFrame(data={labels.identifier: [self.identifier],
-                             labels.factory_price_change: [self.factory_price_change],
-                             labels.omr_change: [self.omr_change],
-                             labels.imr_change: [self.imr_change],
-                             labels.gdp_change: [self.gdp_change],
-                             labels.welfare_stat: [self.welfare_stat],
-                             labels.terms_of_trade_change: [self.terms_of_trade_change],
-                             labels.output_change: [self.output_change],
-                             labels.expenditure_change: [self.expenditure_change],
-                             labels.foreign_exports_change: [self.foreign_exports_change],
-                             labels.foreign_imports_change: [self.foreign_imports_change],
-                             labels.intranational_trade_change:self.intranational_trade_change,
-                             })
-    return row</code></pre>
-</details>
-</dd>
-</dl>
 </dd>
 <dt id="models.OneSectorGE.Economy"><code class="flex name class">
 <span>class <span class="ident">Economy</span></span>
 <span>(</span><span>sigma: float = 4)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Object for storing economy-wide information.</p></div>
+<div class="desc"><p>Object for storing economy-wide information. Retrievable from OneSectorGE.economy.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>sigma</code></strong> :&ensp;<code>float</code></dt>
+<dd>The user supplied elasticity of substitution.</dd>
+<dt><strong><code>experiment_total_output</code></strong> :&ensp;<code>float</code></dt>
+<dd>The estimated counterfactual total output across all countries
+($Y' = sum_i Y_i$).</dd>
+<dt><strong><code>experiment_total_expenditure</code></strong> :&ensp;<code>float</code></dt>
+<dd>The estimated counterfactual total expenditure across all countries
+($E' = sum_j E'_j$).</dd>
+<dt><strong><code>baseline_total_output</code></strong> :&ensp;<code>float</code></dt>
+<dd>The baseline total output across all countries ($Y = sum_i Y_i$).</dd>
+<dt><strong><code>baseline_total_expenditure</code></strong> :&ensp;<code>float</code></dt>
+<dd>The baseline total expenditure across all countries ($E = sum_j E_j$).</dd>
+<dt><strong><code>output_change</code></strong> :&ensp;<code>float</code></dt>
+<dd>Estimated percent change in total output value ($100*[Y'-Y]/Y$)</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Economy(object):
     &#39;&#39;&#39;
-    Object for storing economy-wide information.
+    Object for storing economy-wide information. Retrievable from OneSectorGE.economy.
+
+    Attributes:
+        sigma (float): The user supplied elasticity of substitution.
+        experiment_total_output (float): The estimated counterfactual total output across all countries
+            ($Y&#39; = sum_i Y_i$).
+        experiment_total_expenditure (float): The estimated counterfactual total expenditure across all countries
+            ($E&#39; = sum_j E&#39;_j$).
+        baseline_total_output (float): The baseline total output across all countries ($Y = sum_i Y_i$).
+        baseline_total_expenditure (float): The baseline total expenditure across all countries ($E = sum_j E_j$).
+        output_change (float): Estimated percent change in total output value ($100*[Y&#39;-Y]/Y$)
     &#39;&#39;&#39;
     def __init__(self,
                  sigma: float = 4):
@@ -2423,7 +2556,7 @@ Yotov, (2016).</dd>
 </dd>
 <dt id="models.OneSectorGE.OneSectorGE"><code class="flex name class">
 <span>class <span class="ident">OneSectorGE</span></span>
-<span>(</span><span>estimation_model: gme.estimate.EstimationModel.EstimationModel, year: str, reference_importer: str, expend_var_name: str = 'expenditure', output_var_name: str = 'output', sigma: float = 5, results_key: str = 'all', cost_variables: List[str] = None, parameter_values=None, quiet: bool = False)</span>
+<span>(</span><span>estimation_model: gme.estimate.EstimationModel.EstimationModel, year: str, reference_importer: str, expend_var_name: str, output_var_name: str, sigma: float, results_key: str = 'all', cost_variables: List[str] = None, cost_coeff_values=None, quiet: bool = False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Define a general equilibrium (GE) gravity model.</p>
@@ -2450,9 +2583,9 @@ False in GME model), this key is 'all', which is the default.</dd>
 <dt><strong><code>cost_variables</code></strong> :&ensp;<code>List[str]</code></dt>
 <dd>(optional) A list of variables to use to compute bilateral trade costs. By
 default, all included non-fixed effect variables are used.</dd>
-<dt><strong><code>parameter_values</code></strong> :&ensp;<code><a title="models.OneSectorGE.ParameterValues" href="#models.OneSectorGE.ParameterValues">ParameterValues</a></code></dt>
+<dt><strong><code>cost_coeff_values</code></strong> :&ensp;<code><a title="models.OneSectorGE.CostCoeffs" href="#models.OneSectorGE.CostCoeffs">CostCoeffs</a></code></dt>
 <dd>(optional) A set of parameter values or estimates to use for constructing
-trade costs. Should be of type gegravity.ParameterValues, statsmodels.GLMResultsWrapper, or
+trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.</dd>
 <dt><strong><code>quiet</code></strong> :&ensp;<code>bool</code></dt>
 <dd>(optional) If True, suppresses all console feedback from model during simulation. Default is False.</dd>
@@ -2462,6 +2595,8 @@ gme.SlimResults. If no values are provided, the estimates in the EstimationModel
 <dt><strong><code>aggregate_trade_results</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>Country-level, aggregate results. See models.ResultsLabels for
 column details.</dd>
+<dt><strong><code>baseline_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
+<dd>Baseline data supplied to model in gme.EstimationModel.</dd>
 <dt><strong><code>baseline_trade_costs</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>The constructed baseline trade costs for each bilateral pair
 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
@@ -2478,8 +2613,8 @@ models.ResultsLabels for column details.</dd>
 <dt><strong><code>country_set</code></strong> :&ensp;<code>dict[<a title="models.OneSectorGE.Country" href="#models.OneSectorGE.Country">Country</a>]</code></dt>
 <dd>A dictionary containing a Country object for each country in the model, keyed
 by their respective identifiers.</dd>
-<dt><strong><code>cost_shock</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>The baseline and experiment trade costs combined.</dd>
+<dt><strong><code>bilateral_costs</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
+<dd>The baseline and experiment trade costs.</dd>
 <dt><strong><code>economy</code></strong> :&ensp;<code><a title="models.OneSectorGE.Economy" href="#models.OneSectorGE.Economy">Economy</a></code></dt>
 <dd>The model's Economy object.</dd>
 <dt><strong><code>experiment_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
@@ -2511,12 +2646,12 @@ scipy.optimize.root.</dd>
                  estimation_model: EstimationModel,
                  year: str,
                  reference_importer: str,
-                 expend_var_name: str = &#39;expenditure&#39;,
-                 output_var_name: str = &#39;output&#39;,
-                 sigma: float = 5,
+                 expend_var_name: str,
+                 output_var_name: str,
+                 sigma: float,
                  results_key: str = &#39;all&#39;,
                  cost_variables: List[str] = None,
-                 parameter_values = None,
+                 cost_coeff_values = None,
                  #approach: str = None,
                  quiet:bool = False):
         &#39;&#39;&#39;
@@ -2535,14 +2670,15 @@ scipy.optimize.root.</dd>
                 False in GME model), this key is &#39;all&#39;, which is the default.
             cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
                 default, all included non-fixed effect variables are used.
-            parameter_values (ParameterValues): (optional) A set of parameter values or estimates to use for constructing
-                trade costs. Should be of type gegravity.ParameterValues, statsmodels.GLMResultsWrapper, or
+            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
                 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
         Attributes:
             aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See models.ResultsLabels for
                 column details.
+            baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
             baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
                 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
                 values B.
@@ -2554,7 +2690,7 @@ scipy.optimize.root.</dd>
                 models.ResultsLabels for column details.
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
-            cost_shock (pandas.DataFrame): The baseline and experiment trade costs combined.
+            bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs.
             economy (Economy): The model&#39;s Economy object.
             experiment_data (pandas.DataFrame): The counterfactual experiment data.
             experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
@@ -2633,13 +2769,14 @@ scipy.optimize.root.</dd>
         self.labels = ResultsLabels()
         self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
-        if parameter_values is None:
+        if cost_coeff_values is None:
             self._estimation_results = self._estimation_model.results_dict[results_key]
         else:
             self._estimation_results = None
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
+        self._reference_importer_recode = &#39;ZZZ_&#39;+reference_importer
         self._omr_rescale = None
         self._imr_rescale = None
         self._mr_max_iter = None
@@ -2652,12 +2789,13 @@ scipy.optimize.root.</dd>
         self.economy = None
         self.baseline_trade_costs = None # t_{ij}^{1-sigma}
         self.experiment_trade_costs = None # t_{ij}^{1-sigma}
-        self.cost_shock = None
-        self.experiment_data = None
+        self._cost_shock_recode = None
+        self._experiment_data_recode = None
         self.approach = None # Disabled until GEPPML is completed
         self.quiet = quiet
 
         # Results fields
+        self.baseline_mr = None
         self.bilateral_trade_results = None
         self.aggregate_trade_results = None
         self.solver_diagnostics = dict()
@@ -2665,10 +2803,12 @@ scipy.optimize.root.</dd>
         self.outputs_expenditures = None
         self.country_results = None
         self.country_mr_terms = None
+        self.bilateral_costs = None
 
         # Status checks
         self._baseline_built = False
         self._experiment_defined = False
+        self._simulated = False
 
 
         # ---
@@ -2682,8 +2822,8 @@ scipy.optimize.root.</dd>
         else:
             self.cost_variables = cost_variables
 
-        if parameter_values is not None:
-            self.cost_coeffs = parameter_values.params
+        if cost_coeff_values is not None:
+            self.cost_coeffs = cost_coeff_values.params
         else:
             self.cost_coeffs = self._estimation_results.params[self.cost_variables]
 
@@ -2693,7 +2833,13 @@ scipy.optimize.root.</dd>
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         if self.baseline_data.shape[0] == 0:
-            raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;&#34;)
+            raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;. If problem persists, try casting year as str.&#34;)
+
+        # Recode the reference importer
+        recode = self.baseline_data.copy()
+        recode.loc[recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
+        recode.loc[recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
+        self._recoded_baseline_data = recode
 
 
         # Initialize a set of countries and the economy
@@ -2703,7 +2849,7 @@ scipy.optimize.root.</dd>
         for country in self.country_set:
             self.country_set[country]._calculate_baseline_output_expenditure_shares(self.economy)
         # Calculate baseline trade costs
-        self.baseline_trade_costs = self._create_trade_costs(self.baseline_data)
+        self.baseline_trade_costs = self._create_trade_costs(self._recoded_baseline_data)
 
 
 
@@ -2750,6 +2896,18 @@ scipy.optimize.root.</dd>
             self._calculate_GEPPML_multilateral_resistance(version=&#39;baseline&#39;)
         else:
             self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version=&#39;baseline&#39;)
+
+        # Collect baseline MRs
+        bsln_mrs = list()
+        for key, country in self.country_set.items():
+            bsln_mrs.append((country.identifier, country.baseline_omr, country.baseline_imr))
+        bsln_mrs = pd.DataFrame(bsln_mrs, columns = [self.labels.identifier, self.labels.baseline_omr,
+                                                     self.labels.baseline_imr])
+        bsln_mrs.loc[bsln_mrs[self.labels.identifier]==self._reference_importer_recode, self.labels.identifier]=self._reference_importer
+        bsln_mrs.sort_values(self.labels.identifier, inplace = True)
+        bsln_mrs.set_index(self.labels.identifier, inplace = True)
+        self.baseline_mr = bsln_mrs
+
         # Calculate baseline factory gate prices
         self._calculate_baseline_factory_gate_params()
         self._baseline_built = True
@@ -2763,11 +2921,11 @@ scipy.optimize.root.</dd>
         # Requires that the baseline data has output and expenditure data
 
         # Make sure the year data is in string form
-        self.baseline_data[self.meta_data.year_var_name] = self.baseline_data.loc[:,
+        self._recoded_baseline_data[self.meta_data.year_var_name] = self._recoded_baseline_data.loc[:,
                                                            self.meta_data.year_var_name].astype(str)
 
         # Create Country-level observations
-        year_data = self.baseline_data.loc[self.baseline_data[self.meta_data.year_var_name] == self._year, :]
+        year_data = self._recoded_baseline_data.loc[self._recoded_baseline_data[self.meta_data.year_var_name] == self._year, :]
 
         importer_info = year_data[[self.meta_data.imp_var_name, self.meta_data.expend_var_name]].copy()
 
@@ -2785,7 +2943,7 @@ scipy.optimize.root.</dd>
                                 right_on=[self.meta_data.exp_var_name])
 
         reference_expenditure = float(
-            country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer,
+            country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer_recode,
                              self.meta_data.expend_var_name])
 
         # Convert DataFrame to a dictionary of country objects
@@ -2802,10 +2960,10 @@ scipy.optimize.root.</dd>
             def imp_fe_identifier(country_id):
                 return &#34;_&#34;.join([self.meta_data.imp_var_name, self.meta_data.year_var_name,
                                  &#39;fe&#39;, (country_id + self._year)])
-        else:
-            raise ValueError(&#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.imp_var_name],
-                                                                                       [self.meta_data.imp_var_name,
-                                                                                        self.meta_data.year_var_name]))
+        # else:
+        #     raise ValueError(&#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.imp_var_name],
+        #                                                                                [self.meta_data.imp_var_name,
+        #                                                                                 self.meta_data.year_var_name]))
 
         # Exporter FEs
         if [self.meta_data.exp_var_name] in fe_specification:
@@ -2816,11 +2974,11 @@ scipy.optimize.root.</dd>
             def exp_fe_identifier(country_id):
                 return &#34;_&#34;.join([self.meta_data.exp_var_name, self.meta_data.year_var_name,
                                  &#39;fe&#39;, (country_id + self._year)])
-        else:
-            raise ValueError(
-                &#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.exp_var_name],
-                                                                          [self.meta_data.exp_var_name,
-                                                                           self.meta_data.year_var_name]))
+        # else:
+        #     raise ValueError(
+        #         &#34;Fixed Effect Specification must feature {} or {}&#34;.format([self.meta_data.exp_var_name],
+        #                                                                   [self.meta_data.exp_var_name,
+        #                                                                    self.meta_data.year_var_name]))
 
         for row in range(country_data.shape[0]):
             country_id = country_data.loc[row, self.meta_data.imp_var_name]
@@ -2943,6 +3101,12 @@ scipy.optimize.root.</dd>
         # Step 2: Solve
         initial_values = [1] * (2 * mr_params[&#39;number_of_countries&#39;] - 1)
         if test:
+            # Fill some variables that may not be created yet if test is done before baseline is built
+            if mr_params[&#39;omr_rescale&#39;] is None:
+                mr_params[&#39;omr_rescale&#39;] = 1
+            if mr_params[&#39;imr_rescale&#39;] is None:
+                mr_params[&#39;imr_rescale&#39;] = 1
+
             # Option for testing and diagnosing the MR function
             test_diagnostics = dict()
             test_diagnostics[&#39;initial values&#39;] = initial_values
@@ -2978,6 +3142,9 @@ scipy.optimize.root.</dd>
                 for country in country_list:
                     self.country_set[country]._baseline_imr_ratio = mrs.loc[country, &#39;imrs&#39;]  # 1 / P^{1-sigma}
                     self.country_set[country]._baseline_omr_ratio = mrs.loc[country, &#39;omrs&#39;]  # 1 / π^{1-sigma}
+                    sigma_inverse = 1 / (1 - self.sigma)
+                    self.country_set[country].baseline_imr = 1 / (self.country_set[country]._baseline_imr_ratio ** sigma_inverse)
+                    self.country_set[country].baseline_omr = 1 / (self.country_set[country]._baseline_omr_ratio ** sigma_inverse)
 
             if version == &#39;conditional&#39;:
                 for country in country_list:
@@ -3013,12 +3180,12 @@ scipy.optimize.root.</dd>
             return E_j / (math.exp(imp_fe_j) * E_R)
 
         if version == &#39;baseline&#39;:
-            reference_expnd = self.country_set[self._reference_importer].baseline_expenditure
+            reference_expnd = self.country_set[self._reference_importer_recode].baseline_expenditure
             for country in country_list:
                 country_obj = self.country_set[country]
 
                 # Set values for reference importer
-                if country == self._reference_importer:
+                if country == self._reference_importer_recode:
 
                     # Check that the estimation produced appropriate fixed effect estimates
                     if country_obj.baseline_importer_fe != &#39;no estimate&#39;:
@@ -3054,7 +3221,7 @@ scipy.optimize.root.</dd>
         if version == &#39;conditional&#39;:
             # Step 1: Re-estimate model
             baseline_specification = self._estimation_model.specification
-            counter_factual_data = self.experiment_data.copy()
+            counter_factual_data = self._experiment_data_recode.copy()
             counter_factual_data = counter_factual_data.merge(self.experiment_trade_costs, how=&#39;inner&#39;,
                                                               on=[self.meta_data.exp_var_name,
                                                                   self.meta_data.imp_var_name,
@@ -3075,7 +3242,7 @@ scipy.optimize.root.</dd>
         &#39;&#39;&#39;
         Specify the counterfactual data to use for experiment.
         Args:
-            experiment_data(Pandas.DataFrame): A dataframe contianing the counterfactual trade-cost data to use for the
+            experiment_data(Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
                 experiment. The best approach for creating this data is to copy the baseline data
                 (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
 
@@ -3085,15 +3252,37 @@ scipy.optimize.root.</dd>
         &#39;&#39;&#39;
         if not self._baseline_built:
             raise ValueError(&#34;Baseline must be built first (i.e. ge_model.build_baseline() method&#34;)
-        self.experiment_data = experiment_data
-        self.experiment_trade_costs = self._create_trade_costs(self.experiment_data)
+        self.experiment_data = experiment_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name])
+
+        # Recode reference importer
+        exper_recode = experiment_data.copy()
+        exper_recode.loc[exper_recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
+        exper_recode.loc[exper_recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
+        self._experiment_data_recode = exper_recode
+
+        self.experiment_trade_costs = self._create_trade_costs(self._experiment_data_recode)
         cost_change = self.baseline_trade_costs.merge(right=self.experiment_trade_costs, how=&#39;outer&#39;,
                                                       on=[self.meta_data.imp_var_name,
                                                           self.meta_data.exp_var_name,
                                                           self.meta_data.year_var_name])
-        cost_change.rename(columns={&#39;trade_cost_x&#39;: &#39;baseline_trade_cost&#39;, &#39;trade_cost_y&#39;: &#39;experiment_trade_cost&#39;},
+        cost_change.rename(columns={&#39;trade_cost_x&#39;: self.labels.baseline_trade_cost, &#39;trade_cost_y&#39;: self.labels.experiment_trade_cost},
                            inplace=True)
-        self.cost_shock = cost_change.loc[cost_change[&#39;baseline_trade_cost&#39;] != cost_change[&#39;experiment_trade_cost&#39;]]
+        # Chop down to only those that change
+        self._cost_shock_recode = cost_change.copy() #.loc[cost_change[&#39;baseline_trade_cost&#39;] != cost_change[&#39;experiment_trade_cost&#39;]].copy()
+
+        # Create un-recoded public version
+        cost_shock = self._cost_shock_recode.copy()
+        cost_shock.loc[cost_shock[
+                           self.meta_data.imp_var_name] == self._reference_importer_recode, self.meta_data.imp_var_name] = self._reference_importer
+        cost_shock.loc[cost_shock[
+                           self.meta_data.exp_var_name] == self._reference_importer_recode, self.meta_data.exp_var_name] = self._reference_importer
+        cost_shock.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
+        cost_shock[self.labels.trade_cost_change] = 100*(cost_shock[self.labels.experiment_trade_cost] - cost_shock[self.labels.baseline_trade_cost])/cost_shock[self.labels.baseline_trade_cost]
+        cost_shock.drop(self.meta_data.year_var_name, axis = 1, inplace = True)
+        self.bilateral_costs = cost_shock.set_index([self.meta_data.exp_var_name,self.meta_data.imp_var_name])
+
+
+
         self._experiment_defined = True
 
     def simulate(self, ge_method: str = &#39;hybr&#39;, ge_tolerance: float = 1e-8, ge_max_iter: int = 1000):
@@ -3111,18 +3300,11 @@ scipy.optimize.root.</dd>
             None
                 No return but populates new attributes of model.
         &#39;&#39;&#39;
-        # &#39;&#39;&#39;
-        # Simulate the counterfactual scenario.
-        # :param ge_method: (str)
-        # :param ge_tolerance: (float)
-        #
-        # :param ge_max_iter: (int)
-        # :return: (None) No return but many fields in the model containing results are populated.
-        # &#39;&#39;&#39;
         if not self._baseline_built:
             raise ValueError(&#34;Baseline must be built first (i.e. OneSectorGE.build_baseline() method&#34;)
         if not self._experiment_defined:
             raise ValueError(&#34;Expiriment must be defined first (i.e. OneSectorGE.define_expiriment() method&#34;)
+
         self._ge_method = ge_method
         self._ge_tolerance = ge_tolerance
         self._ge_max_iter = ge_max_iter
@@ -3135,9 +3317,17 @@ scipy.optimize.root.</dd>
         self._calculate_full_ge()
         # Step 3: Generate post-simulation results
         [self.country_set[country]._construct_country_measures(sigma=self.sigma) for country in self.country_set.keys()]
+        # Un-recode reference importer
+        self.country_set[self._reference_importer] = self.country_set[self._reference_importer_recode]
+        self.country_set[self._reference_importer].identifier = self._reference_importer
+        # Remover recoded Country onject
+        self.country_set.pop(self._reference_importer_recode)
+
         self._construct_experiment_output_expend()
         self._construct_experiment_trade()
         self._compile_results()
+        self._simulated = True
+
 
     def _calculate_full_ge(self):
         # Solve Full GE model
@@ -3187,9 +3377,13 @@ scipy.optimize.root.</dd>
         imrs = np.append(imrs, 1)
         omrs = full_ge_results.x[len(country_list) - 1:2 * len(country_list) - 1] * ge_params[&#39;omr_rescale&#39;]
         prices = full_ge_results.x[2 * len(country_list) - 1:]
-        factory_gate_prices = pd.DataFrame({&#39;exporter&#39;: country_list,
+        factory_gate_prices = pd.DataFrame({self.meta_data.exp_var_name: country_list,
                                             self.labels.experiment_factory_price: prices})
-        self.factory_gate_prices = factory_gate_prices.set_index(&#39;exporter&#39;)
+        # un-Recode reference importer
+        factory_gate_prices.loc[factory_gate_prices[self.meta_data.exp_var_name]==self._reference_importer_recode,
+                                                    self.meta_data.exp_var_name] = self._reference_importer
+        factory_gate_prices.sort_values([self.meta_data.exp_var_name], inplace = True)
+        self.factory_gate_prices = factory_gate_prices.set_index(self.meta_data.exp_var_name)
         for i, country in enumerate(country_list):
             self.country_set[country]._experiment_imr_ratio = imrs[i] # 1 / P^{1-sigma}
             self.country_set[country]._experiment_omr_ratio = omrs[i] # 1 / π^{1-sigma}
@@ -3229,12 +3423,13 @@ scipy.optimize.root.</dd>
         self.economy.experiment_total_output = total_output
         self.economy.output_change = 100 * (total_output - self.economy.baseline_total_output) \
                                      / self.economy.baseline_total_output
-
+        results_table.sort_values([self.labels.identifier], inplace=True)
         results_table = results_table.set_index(self.labels.identifier)
         # Ensure all values are numeric
         for col in results_table.columns:
             results_table[col] = results_table[col].astype(float)
         # Save to model
+
         self.outputs_expenditures = results_table
 
     def _construct_experiment_trade(self):
@@ -3281,6 +3476,27 @@ scipy.optimize.root.</dd>
             bsln_gravity = bsln_expend * bsln_output_share * bsln_imr_ratio * bsln_omr_ratio
             trade_data.loc[row, &#39;bsln_gravity&#39;] = bsln_gravity
 
+        # Un-recode reference importer in baseline and experiment trade costs
+        bsln_trade_costs = self.baseline_trade_costs.copy()
+        bsln_trade_costs.loc[bsln_trade_costs[self.meta_data.exp_var_name]==self._reference_importer_recode,
+                             self.meta_data.exp_var_name] = self._reference_importer
+        bsln_trade_costs.loc[bsln_trade_costs[self.meta_data.imp_var_name]==self._reference_importer_recode,
+                             self.meta_data.imp_var_name] = self._reference_importer
+        bsln_trade_costs.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace = True)
+        self.baseline_trade_costs = bsln_trade_costs
+
+        exper_trade_costs = self.experiment_trade_costs.copy()
+        exper_trade_costs.loc[exper_trade_costs[self.meta_data.exp_var_name] == self._reference_importer_recode,
+                              self.meta_data.exp_var_name] = self._reference_importer
+        exper_trade_costs.loc[exper_trade_costs[self.meta_data.imp_var_name] == self._reference_importer_recode,
+                              self.meta_data.imp_var_name] = self._reference_importer
+        exper_trade_costs.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace = True)
+        self.experiment_trade_costs = exper_trade_costs
+
+
+
+
+        # add baseline trade costs
         trade_data = trade_data.merge(self.baseline_trade_costs, how=&#39;left&#39;, on=[importer_col, exporter_col])
         trade_data.rename(columns={&#39;trade_cost&#39;: &#39;baseline_trade_cost&#39;}, inplace=True)
 
@@ -3300,7 +3516,8 @@ scipy.optimize.root.</dd>
                                        / trade_data[bsln_modeled_trade_label]
 
         bilateral_trade_results = trade_data[[exporter_col, importer_col, bsln_modeled_trade_label,
-                                                   exper_trade_label, trade_change_label]]
+                                                   exper_trade_label, trade_change_label]].copy()
+        bilateral_trade_results.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace = True)
         self.bilateral_trade_results = bilateral_trade_results.set_index([exporter_col, importer_col])
 
         ##
@@ -3420,11 +3637,13 @@ scipy.optimize.root.</dd>
         results = list()
         mr_results = list()
         for country in self.country_set.keys():
-            results.append(self.country_set[country].get_results(self.labels))
-            mr_results.append(self.country_set[country].get_mr_results(self.labels))
+            results.append(self.country_set[country]._get_results(self.labels))
+            mr_results.append(self.country_set[country]._get_mr_results(self.labels))
         country_results = pd.concat(results, axis=0)
+        country_results.sort_values([self.labels.identifier], inplace = True)
         self.country_results = country_results.set_index(self.labels.identifier)
         country_mr_results = pd.concat(mr_results, axis=0)
+        country_mr_results.sort_values([self.labels.identifier], inplace = True)
         self.country_mr_terms = country_mr_results.set_index(self.labels.identifier)
 
 
@@ -3654,6 +3873,7 @@ scipy.optimize.root.</dd>
             bilat_trade[self.labels.trade_change_level] = bilat_trade[self.labels.experiment_observed_trade] - bilat_trade[self.labels.baseline_observed_trade]
             bilat_trade = bilat_trade[[exporter, importer, self.labels.baseline_observed_trade,
                                        self.labels.experiment_observed_trade, self.labels.trade_change_level, self.labels.trade_change]]
+            bilat_trade.sort_values([exporter, importer], inplace = True)
             return bilat_trade
 
     def trade_weighted_shock(self, how:str = &#39;country&#39;, aggregations:list=[&#39;mean&#39;, &#39;sum&#39;, &#39;max&#39;]):
@@ -3673,7 +3893,7 @@ scipy.optimize.root.</dd>
         # Collect needed results
         bilat_trade = self.bilateral_trade_results.copy()
         bilat_trade.reset_index(inplace=True)
-        cost_shock = self.cost_shock.copy()
+        cost_shock = self._cost_shock_recode.copy()
 
         # Define column names
         imp_col = self.meta_data.imp_var_name
@@ -3715,15 +3935,24 @@ scipy.optimize.root.</dd>
         &#39;&#39;&#39;
         Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
             debugging initial data problems. Note that the returned function values reflect those generated by the
-            initial values and do not reflect a solution to the system.
+            initial values and do not reflect a solution to the system. The inputs are &#39;cost_exp_share&#39;, which is
+            $t_{ij}^{1-\sigma} * E_j / Y$, and &#39;cost_out_shr&#39;, which is $t_{ij}^{1-\sigma} * Y_i / Y$. Errors in the
+            inputs could be due to missing trade cost data (e.g. missing values in gravity variables), output data, or
+            expenditure data.
         Args:
             inputs_only (bool): If False (default), the method tests the computability of the MR system of equations
                 and returns both the inputs to the system and the output. If True, only the system inputs are return and
-                the equations are not computed and can help diagnose input issues that raise errors.
+                the equations are not computed and, which help diagnose input issues like missing dtata that raise
+                errors.
         Returns:
             dict: A dictionary containing a collection of parameter and value inputs as well as the function
-                values at the initial values.
+                values at the initial values. The dictionary contains a matrix of &#39;cost_exp_share&#39; and &#39;cost_out_share&#39;
+                values, organized alphabetically with the reference importer in the last row/column. &#34;function_value&#34;
+                reflects the multilateral resistance system function values, which should be zero when the system is
+                solved.
         &#39;&#39;&#39;
+        if self._simulated:
+            raise ValueError(&#34;test_baseline_mr_function() cannot be run on a full solved/simulated model. Please reinitialize OneSectorGE model.&#34;)
         test_diagnostics = self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
                                                                    version=&#39;baseline&#39;, test=True,
                                                                    inputs_only=inputs_only)
@@ -3747,7 +3976,7 @@ scipy.optimize.root.</dd>
                 value is &#39;hybr&#39;.
             mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
                 by the solver used to solve for MR terms. The default value is 1400.
-            mr_tolerance (float): (optional) This parameterset the convergence tolerance level for the solver used to
+            mr_tolerance (float): (optional) This parameter sets the convergence tolerance level for the solver used to
                 solve for MR terms. The default value is 1e-8.
             countries (List[str]):  A list of countries for which to return the estimated OMR values for user
                 evaluation.
@@ -3763,7 +3992,9 @@ scipy.optimize.root.</dd>
                 &#39;reference_importer_omr&#39;: The solution value for the reference importer&#39;s OMR value.\n
                 &#39;..._omr&#39;: The solution value(s) for the user supplied countries.
         &#39;&#39;&#39;
-
+        # Check to see if model has already been solved and recoded reference importer was dropped.
+        if self._simulated:
+            raise ValueError(&#34;check_omr_rescale() cannot be run on a full solved/simulated model. Please reinitialize OneSectorGE model.&#34;)
         self._mr_max_iter = mr_max_iter
         self._mr_tolerance = mr_tolerance
         self._mr_method = mr_method
@@ -3792,9 +4023,13 @@ scipy.optimize.root.</dd>
             value_results[&#39;max_func_value&#39;] = func_vals.max()
             value_results[&#39;mean_func_value&#39;] = func_vals.mean()
             value_results[&#39;mean_func_value&#39;] = median(func_vals)
-            value_results[&#39;reference_importer_omr&#39;] = self.country_set[self._reference_importer]._baseline_omr_ratio
+            omr_ratio = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
+            omr = omr =(1/omr_ratio)**(1/(1-self.sigma))
+            value_results[&#39;reference_importer_omr&#39;] = omr
             for country in countries:
-                value_results[&#39;{}_omr&#39;.format(country)] = self.country_set[country]._baseline_omr_ratio
+                omr_ratio = self.country_set[country]._baseline_omr_ratio
+                omr =(1/omr_ratio)**(1/(1-self.sigma))
+                value_results[&#39;{}_omr&#39;.format(country)] = omr
             findings.append(value_results)
         findings_table = pd.DataFrame(findings)
 
@@ -3882,6 +4117,18 @@ solve for MR terms. The default value is 1e-8.</dd>
         self._calculate_GEPPML_multilateral_resistance(version=&#39;baseline&#39;)
     else:
         self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version=&#39;baseline&#39;)
+
+    # Collect baseline MRs
+    bsln_mrs = list()
+    for key, country in self.country_set.items():
+        bsln_mrs.append((country.identifier, country.baseline_omr, country.baseline_imr))
+    bsln_mrs = pd.DataFrame(bsln_mrs, columns = [self.labels.identifier, self.labels.baseline_omr,
+                                                 self.labels.baseline_imr])
+    bsln_mrs.loc[bsln_mrs[self.labels.identifier]==self._reference_importer_recode, self.labels.identifier]=self._reference_importer
+    bsln_mrs.sort_values(self.labels.identifier, inplace = True)
+    bsln_mrs.set_index(self.labels.identifier, inplace = True)
+    self.baseline_mr = bsln_mrs
+
     # Calculate baseline factory gate prices
     self._calculate_baseline_factory_gate_params()
     self._baseline_built = True</code></pre>
@@ -3994,6 +4241,7 @@ measures is returned.</dd>
         bilat_trade[self.labels.trade_change_level] = bilat_trade[self.labels.experiment_observed_trade] - bilat_trade[self.labels.baseline_observed_trade]
         bilat_trade = bilat_trade[[exporter, importer, self.labels.baseline_observed_trade,
                                    self.labels.experiment_observed_trade, self.labels.trade_change_level, self.labels.trade_change]]
+        bilat_trade.sort_values([exporter, importer], inplace = True)
         return bilat_trade</code></pre>
 </details>
 </dd>
@@ -4017,7 +4265,7 @@ value is 'hybr'.</dd>
 <dd>(optional) This parameter sets the maximum limit on the number of iterations conducted
 by the solver used to solve for MR terms. The default value is 1400.</dd>
 <dt><strong><code>mr_tolerance</code></strong> :&ensp;<code>float</code></dt>
-<dd>(optional) This parameterset the convergence tolerance level for the solver used to
+<dd>(optional) This parameter sets the convergence tolerance level for the solver used to
 solve for MR terms. The default value is 1e-8.</dd>
 <dt><strong><code>countries</code></strong> :&ensp;<code>List[str]</code></dt>
 <dd>A list of countries for which to return the estimated OMR values for user
@@ -4061,7 +4309,7 @@ objective functions. Function values closer to zero imply a better solution to s
             value is &#39;hybr&#39;.
         mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
             by the solver used to solve for MR terms. The default value is 1400.
-        mr_tolerance (float): (optional) This parameterset the convergence tolerance level for the solver used to
+        mr_tolerance (float): (optional) This parameter sets the convergence tolerance level for the solver used to
             solve for MR terms. The default value is 1e-8.
         countries (List[str]):  A list of countries for which to return the estimated OMR values for user
             evaluation.
@@ -4077,7 +4325,9 @@ objective functions. Function values closer to zero imply a better solution to s
             &#39;reference_importer_omr&#39;: The solution value for the reference importer&#39;s OMR value.\n
             &#39;..._omr&#39;: The solution value(s) for the user supplied countries.
     &#39;&#39;&#39;
-
+    # Check to see if model has already been solved and recoded reference importer was dropped.
+    if self._simulated:
+        raise ValueError(&#34;check_omr_rescale() cannot be run on a full solved/simulated model. Please reinitialize OneSectorGE model.&#34;)
     self._mr_max_iter = mr_max_iter
     self._mr_tolerance = mr_tolerance
     self._mr_method = mr_method
@@ -4106,9 +4356,13 @@ objective functions. Function values closer to zero imply a better solution to s
         value_results[&#39;max_func_value&#39;] = func_vals.max()
         value_results[&#39;mean_func_value&#39;] = func_vals.mean()
         value_results[&#39;mean_func_value&#39;] = median(func_vals)
-        value_results[&#39;reference_importer_omr&#39;] = self.country_set[self._reference_importer]._baseline_omr_ratio
+        omr_ratio = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
+        omr = omr =(1/omr_ratio)**(1/(1-self.sigma))
+        value_results[&#39;reference_importer_omr&#39;] = omr
         for country in countries:
-            value_results[&#39;{}_omr&#39;.format(country)] = self.country_set[country]._baseline_omr_ratio
+            omr_ratio = self.country_set[country]._baseline_omr_ratio
+            omr =(1/omr_ratio)**(1/(1-self.sigma))
+            value_results[&#39;{}_omr&#39;.format(country)] = omr
         findings.append(value_results)
     findings_table = pd.DataFrame(findings)
 
@@ -4121,7 +4375,7 @@ objective functions. Function values closer to zero imply a better solution to s
 <dd>
 <div class="desc"><p>Specify the counterfactual data to use for experiment.</p>
 <h2 id="args">Args</h2>
-<p>experiment_data(Pandas.DataFrame): A dataframe contianing the counterfactual trade-cost data to use for the
+<p>experiment_data(Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
 experiment. The best approach for creating this data is to copy the baseline data
 (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.</p>
 <h2 id="returns">Returns</h2>
@@ -4135,7 +4389,7 @@ There is no return but the new information is added to model.</p></div>
     &#39;&#39;&#39;
     Specify the counterfactual data to use for experiment.
     Args:
-        experiment_data(Pandas.DataFrame): A dataframe contianing the counterfactual trade-cost data to use for the
+        experiment_data(Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
             experiment. The best approach for creating this data is to copy the baseline data
             (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
 
@@ -4145,15 +4399,37 @@ There is no return but the new information is added to model.</p></div>
     &#39;&#39;&#39;
     if not self._baseline_built:
         raise ValueError(&#34;Baseline must be built first (i.e. ge_model.build_baseline() method&#34;)
-    self.experiment_data = experiment_data
-    self.experiment_trade_costs = self._create_trade_costs(self.experiment_data)
+    self.experiment_data = experiment_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name])
+
+    # Recode reference importer
+    exper_recode = experiment_data.copy()
+    exper_recode.loc[exper_recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
+    exper_recode.loc[exper_recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
+    self._experiment_data_recode = exper_recode
+
+    self.experiment_trade_costs = self._create_trade_costs(self._experiment_data_recode)
     cost_change = self.baseline_trade_costs.merge(right=self.experiment_trade_costs, how=&#39;outer&#39;,
                                                   on=[self.meta_data.imp_var_name,
                                                       self.meta_data.exp_var_name,
                                                       self.meta_data.year_var_name])
-    cost_change.rename(columns={&#39;trade_cost_x&#39;: &#39;baseline_trade_cost&#39;, &#39;trade_cost_y&#39;: &#39;experiment_trade_cost&#39;},
+    cost_change.rename(columns={&#39;trade_cost_x&#39;: self.labels.baseline_trade_cost, &#39;trade_cost_y&#39;: self.labels.experiment_trade_cost},
                        inplace=True)
-    self.cost_shock = cost_change.loc[cost_change[&#39;baseline_trade_cost&#39;] != cost_change[&#39;experiment_trade_cost&#39;]]
+    # Chop down to only those that change
+    self._cost_shock_recode = cost_change.copy() #.loc[cost_change[&#39;baseline_trade_cost&#39;] != cost_change[&#39;experiment_trade_cost&#39;]].copy()
+
+    # Create un-recoded public version
+    cost_shock = self._cost_shock_recode.copy()
+    cost_shock.loc[cost_shock[
+                       self.meta_data.imp_var_name] == self._reference_importer_recode, self.meta_data.imp_var_name] = self._reference_importer
+    cost_shock.loc[cost_shock[
+                       self.meta_data.exp_var_name] == self._reference_importer_recode, self.meta_data.exp_var_name] = self._reference_importer
+    cost_shock.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
+    cost_shock[self.labels.trade_cost_change] = 100*(cost_shock[self.labels.experiment_trade_cost] - cost_shock[self.labels.baseline_trade_cost])/cost_shock[self.labels.baseline_trade_cost]
+    cost_shock.drop(self.meta_data.year_var_name, axis = 1, inplace = True)
+    self.bilateral_costs = cost_shock.set_index([self.meta_data.exp_var_name,self.meta_data.imp_var_name])
+
+
+
     self._experiment_defined = True</code></pre>
 </details>
 </dd>
@@ -4328,18 +4604,11 @@ No return but populates new attributes of model.</p></div>
         None
             No return but populates new attributes of model.
     &#39;&#39;&#39;
-    # &#39;&#39;&#39;
-    # Simulate the counterfactual scenario.
-    # :param ge_method: (str)
-    # :param ge_tolerance: (float)
-    #
-    # :param ge_max_iter: (int)
-    # :return: (None) No return but many fields in the model containing results are populated.
-    # &#39;&#39;&#39;
     if not self._baseline_built:
         raise ValueError(&#34;Baseline must be built first (i.e. OneSectorGE.build_baseline() method&#34;)
     if not self._experiment_defined:
         raise ValueError(&#34;Expiriment must be defined first (i.e. OneSectorGE.define_expiriment() method&#34;)
+
     self._ge_method = ge_method
     self._ge_tolerance = ge_tolerance
     self._ge_max_iter = ge_max_iter
@@ -4352,9 +4621,16 @@ No return but populates new attributes of model.</p></div>
     self._calculate_full_ge()
     # Step 3: Generate post-simulation results
     [self.country_set[country]._construct_country_measures(sigma=self.sigma) for country in self.country_set.keys()]
+    # Un-recode reference importer
+    self.country_set[self._reference_importer] = self.country_set[self._reference_importer_recode]
+    self.country_set[self._reference_importer].identifier = self._reference_importer
+    # Remover recoded Country onject
+    self.country_set.pop(self._reference_importer_recode)
+
     self._construct_experiment_output_expend()
     self._construct_experiment_trade()
-    self._compile_results()</code></pre>
+    self._compile_results()
+    self._simulated = True</code></pre>
 </details>
 </dd>
 <dt id="models.OneSectorGE.OneSectorGE.test_baseline_mr_function"><code class="name flex">
@@ -4363,19 +4639,26 @@ No return but populates new attributes of model.</p></div>
 <dd>
 <div class="desc"><p>Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
 debugging initial data problems. Note that the returned function values reflect those generated by the
-initial values and do not reflect a solution to the system.</p>
+initial values and do not reflect a solution to the system. The inputs are 'cost_exp_share', which is
+$t_{ij}^{1-\sigma} * E_j / Y$, and 'cost_out_shr', which is $t_{ij}^{1-\sigma} * Y_i / Y$. Errors in the
+inputs could be due to missing trade cost data (e.g. missing values in gravity variables), output data, or
+expenditure data.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>inputs_only</code></strong> :&ensp;<code>bool</code></dt>
 <dd>If False (default), the method tests the computability of the MR system of equations
 and returns both the inputs to the system and the output. If True, only the system inputs are return and
-the equations are not computed and can help diagnose input issues that raise errors.</dd>
+the equations are not computed and, which help diagnose input issues like missing dtata that raise
+errors.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>dict</code></dt>
 <dd>A dictionary containing a collection of parameter and value inputs as well as the function
-values at the initial values.</dd>
+values at the initial values. The dictionary contains a matrix of 'cost_exp_share' and 'cost_out_share'
+values, organized alphabetically with the reference importer in the last row/column. "function_value"
+reflects the multilateral resistance system function values, which should be zero when the system is
+solved.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -4385,15 +4668,24 @@ values at the initial values.</dd>
     &#39;&#39;&#39;
     Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
         debugging initial data problems. Note that the returned function values reflect those generated by the
-        initial values and do not reflect a solution to the system.
+        initial values and do not reflect a solution to the system. The inputs are &#39;cost_exp_share&#39;, which is
+        $t_{ij}^{1-\sigma} * E_j / Y$, and &#39;cost_out_shr&#39;, which is $t_{ij}^{1-\sigma} * Y_i / Y$. Errors in the
+        inputs could be due to missing trade cost data (e.g. missing values in gravity variables), output data, or
+        expenditure data.
     Args:
         inputs_only (bool): If False (default), the method tests the computability of the MR system of equations
             and returns both the inputs to the system and the output. If True, only the system inputs are return and
-            the equations are not computed and can help diagnose input issues that raise errors.
+            the equations are not computed and, which help diagnose input issues like missing dtata that raise
+            errors.
     Returns:
         dict: A dictionary containing a collection of parameter and value inputs as well as the function
-            values at the initial values.
+            values at the initial values. The dictionary contains a matrix of &#39;cost_exp_share&#39; and &#39;cost_out_share&#39;
+            values, organized alphabetically with the reference importer in the last row/column. &#34;function_value&#34;
+            reflects the multilateral resistance system function values, which should be zero when the system is
+            solved.
     &#39;&#39;&#39;
+    if self._simulated:
+        raise ValueError(&#34;test_baseline_mr_function() cannot be run on a full solved/simulated model. Please reinitialize OneSectorGE model.&#34;)
     test_diagnostics = self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
                                                                version=&#39;baseline&#39;, test=True,
                                                                inputs_only=inputs_only)
@@ -4511,7 +4803,7 @@ default value is ['mean', 'sum', 'max'].</dd>
     # Collect needed results
     bilat_trade = self.bilateral_trade_results.copy()
     bilat_trade.reset_index(inplace=True)
-    cost_shock = self.cost_shock.copy()
+    cost_shock = self._cost_shock_recode.copy()
 
     # Define column names
     imp_col = self.meta_data.imp_var_name
@@ -4548,80 +4840,6 @@ default value is ['mean', 'sum', 'max'].</dd>
 </dd>
 </dl>
 </dd>
-<dt id="models.OneSectorGE.ParameterValues"><code class="flex name class">
-<span>class <span class="ident">ParameterValues</span></span>
-<span>(</span><span>estimates: pandas.core.frame.DataFrame, identifier_col: str, coeff_col: str, stderr_col: str = None)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
-source of gravity estimates.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>estimates</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>A dataframe containing gravity model estimates, which ought to include the
-following non-optional columns.</dd>
-<dt><strong><code>identifier_col</code></strong> :&ensp;<code>str</code></dt>
-<dd>The name of the column containing the identifiers for each estimate. These should
-correspond to the cost variables that you will use for trade costs in the simulation. This column is
-required.</dd>
-<dt><strong><code>coeff_col</code></strong> :&ensp;<code>str</code></dt>
-<dd>The name of the column containing the coefficient estimates for each variable. They
-should be numeric and are required.</dd>
-<dt><strong><code>stderr_col</code></strong> :&ensp;<code>str</code></dt>
-<dd>The column name for the standard error estimates for each variable. This column is only
-required for the MonteCarloGE model and may be omitted for the OneSectorGE model.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code><a title="models.OneSectorGE.ParameterValues" href="#models.OneSectorGE.ParameterValues">ParameterValues</a></code></dt>
-<dd>An instance of a ParameterValues object.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class ParameterValues(object):
-    def __init__(self,
-             estimates:DataFrame,
-                 identifier_col: str,
-                 coeff_col:str,
-                 stderr_col:str = None):
-                 #imp_fe_prefix: str = None, # Removed until completeion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completeion of GEPPML
-
-        &#39;&#39;&#39;
-        Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
-        source of gravity estimates.
-        Args:
-            estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-                following non-optional columns.
-            identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-                correspond to the cost variables that you will use for trade costs in the simulation. This column is
-                required.
-            coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-                should be numeric and are required.
-            stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-                required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
-
-        Returns:
-            ParameterValues: An instance of a ParameterValues object.
-        &#39;&#39;&#39;
-        # &#39;&#39;&#39;
-        # imp_fe_prefix (str):  The prefix used to identify the importer fixed effects. These fixed effects and
-        #         prefix are only required for the GEPPML approach in OneSectorGE.
-        #     exp_fe_prefix (str):  The prefix used to identify the exporter fixed effects. These fixed effects and
-        #         prefix are only required for the GEPPML approach in OneSectorGE.
-        # &#39;&#39;&#39;
-        estimates = estimates.set_index(identifier_col)
-        # Coefficient  Estimates
-        self.params = estimates[coeff_col].copy()
-        # Standard error estimates
-        if stderr_col is not None:
-            self.bse = estimates[stderr_col].copy()
-        else:
-            self.bse = None</code></pre>
-</details>
-</dd>
 <dt id="models.OneSectorGE.ResultsLabels"><code class="flex name class">
 <span>class <span class="ident">ResultsLabels</span></span>
 </code></dt>
@@ -4639,6 +4857,14 @@ sample. (i.e. estimated trade change times observed values)</p>
 <p><strong>baseline observed trade</strong>: Observed trade values. (Not necessarily equivalent to modeled values.)</p>
 <p><strong>experiment observed trade</strong>: Estiamted counterfactual trade values based on predicted change and observed
 baseline values. (Not necessarily equivalent to modeled values.)</p>
+<p><strong>baseline trade cost</strong>: Baseline estimated trade costs (
+au_{ij})</p>
+<p><strong>experiment trade cost</strong>: Counterfactual experiment trade costs (
+au'_{ij})</p>
+<p><strong>trade cost change (%)</strong>: Change in trade costs 100*(
+au'<em ij>{ij} -
+au</em>)/
+au_{ij}</p>
 <pre><code># Country level Results
 </code></pre>
 <p><strong>country</strong>: Country identifier.</p>
@@ -4729,6 +4955,9 @@ resistance terms (π'_i).</p>
         \n**baseline observed trade**: Observed trade values. (Not necessarily equivalent to modeled values.)
         \n**experiment observed trade**: Estiamted counterfactual trade values based on predicted change and observed
         baseline values. (Not necessarily equivalent to modeled values.)
+        \n**baseline trade cost**: Baseline estimated trade costs (\tau_{ij})
+        \n**experiment trade cost**: Counterfactual experiment trade costs (\tau&#39;_{ij})
+        \n**trade cost change (%)**: Change in trade costs 100*(\tau&#39;_{ij} - \tau_{ij})/\tau_{ij}
 
     # Country level Results
         \n **country**: Country identifier.
@@ -4809,6 +5038,9 @@ resistance terms (π'_i).</p>
         self.trade_change_level = &#39;trade change (observed level)&#39;
         self.baseline_observed_trade = &#39;baseline observed trade&#39;
         self.experiment_observed_trade = &#39;experiment observed trade&#39;
+        self.baseline_trade_cost = &#39;baseline trade cost&#39;
+        self.experiment_trade_cost = &#39;experiment trade cost&#39;
+        self.trade_cost_change = &#39;trade cost change (%)&#39;
 
         # Country level
         self.identifier= &#39;country&#39;
@@ -4887,11 +5119,10 @@ resistance terms (π'_i).</p>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
+<h4><code><a title="models.OneSectorGE.CostCoeffs" href="#models.OneSectorGE.CostCoeffs">CostCoeffs</a></code></h4>
+</li>
+<li>
 <h4><code><a title="models.OneSectorGE.Country" href="#models.OneSectorGE.Country">Country</a></code></h4>
-<ul class="">
-<li><code><a title="models.OneSectorGE.Country.get_mr_results" href="#models.OneSectorGE.Country.get_mr_results">get_mr_results</a></code></li>
-<li><code><a title="models.OneSectorGE.Country.get_results" href="#models.OneSectorGE.Country.get_results">get_results</a></code></li>
-</ul>
 </li>
 <li>
 <h4><code><a title="models.OneSectorGE.Economy" href="#models.OneSectorGE.Economy">Economy</a></code></h4>
@@ -4909,9 +5140,6 @@ resistance terms (π'_i).</p>
 <li><code><a title="models.OneSectorGE.OneSectorGE.trade_share" href="#models.OneSectorGE.OneSectorGE.trade_share">trade_share</a></code></li>
 <li><code><a title="models.OneSectorGE.OneSectorGE.trade_weighted_shock" href="#models.OneSectorGE.OneSectorGE.trade_weighted_shock">trade_weighted_shock</a></code></li>
 </ul>
-</li>
-<li>
-<h4><code><a title="models.OneSectorGE.ParameterValues" href="#models.OneSectorGE.ParameterValues">ParameterValues</a></code></h4>
 </li>
 <li>
 <h4><code><a title="models.OneSectorGE.ResultsLabels" href="#models.OneSectorGE.ResultsLabels">ResultsLabels</a></code></h4>

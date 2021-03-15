@@ -4,4 +4,10 @@ pdoc3 --http : models
 pdoc3 --html --output-dir docs models --force
 
 pdoc3 --html --template-dir "docs/templates" --config latex_math=True --output-dir docs models --force
-pdoc3 --template-dir "docs/templates" --http : models
+
+
+
+
+:: Using Regular pdoc
+pdoc --docformat "google" ./models
+

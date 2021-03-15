@@ -27,22 +27,91 @@ class MonteCarloGE(object):
                  results_key: str = 'all',
                  seed: int = 0):
         '''
-
+        Create a Monte Carlo GE model.
         Args:
-            estimation_model(EstimationModel): A GME EstimationModel that must have been estimated with the option
+            estimation_model (EstimationModel): A GME EstimationModel that must have been estimated with the option
                 full_results = True (MonteCarlo simulation requires additional info from estimation compared to
-                OneSectorGE)
-            year:
-            trials:
-            expend_var_name:
-            output_var_name:
-            sigma:
-            reference_importer:
-            cost_variables:
-            mc_variables:
-            results_key:
-            seed:
+                OneSectorGE).
+            year (str): The year to be used for the baseline model. Works best if estimation_model year column has been
+                cast as string.
+            trials (int): The number of trial simulations to conduct.
+            expend_var_name (str): Column name of variable containing expenditure data in estimation_model.
+            output_var_name (str): Column name of variable containing output data in estimation_model.
+            sigma (float): Elasticity of substitution.
+            reference_importer (str): Identifier for the country to be used as the reference importer (inward
+                multilateral resistance normalized to 1 and other multilateral resistances solved relative to it).
+            cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
+                default, all included non-fixed effect variables are used.
+            mc_variables (List[str]): (optional) A subset of the cost_variables to randomly sample in the Monte Carlo
+                experiment. Coefficients for the variables in this list are randomly drawn based on their estimated mean
+                 and variance/covariance. Those excluded use their gravity estimated values only. By default, the model
+                uses all cost variables (or those supplied to cost_variables argument) are
+            results_key (str): (optional) If using parameter estimates from estimation_model, this is the key (i.e.
+                sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
+                False in GME model), this key is 'all', which is the default.
+            seed (int): (optional) The seed to use for the random draws of cost coefficients in order to provide
+                unchanging, consistent draws across runs. By default, the seed is randomly determined each time the
+                model is constructed.
+
+        Attributes:
+            baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
+            coeff_sample (Pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
+                column corresponds to a different trial.
+            main_coeffs (pandas.Series): The main coefficient estimates for the cost varaibles supplied to the model.
+            main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
+            trials (int): The number of trial simulations of the model.
+            sample_stats (pandas.DataFrame): A dataframe depicting both the initially supplied estimate values for each
+                cost variable as well as descriptive statistics for the randomly drawn values across all trials.
+            sigma (int): The elasticity of substitution parameter value.
+
+            **Attributes containing results populated after MonteCarloGE.run_trials()**:\n\n
+
+            aggregate_trade_results (Pandas.DataFrame): Aggregate trade results summarized across all trials. See
+                OneSectorGE ResultsLabels for description of results.
+            bilateral_costs (Pandas.DataFrame): Baseline and counterfactual bilateral trade costs summarized across all
+                trials. See OneSectorGE ResultsLabels for description of results.
+            bilateral_trade_results (Pandas.DataFrame): Bilateral trade results summarized across all trials.
+                See OneSectorGE ResultsLabels for description of results.
+            country_mr_terms (Pandas.DataFrame): Baseline and experiment multilateral resistance terms summarized
+                across all trials. See OneSectorGE ResultsLabels for description of results.
+            country_results (Pandas.DataFrame): The main country level results summarized across
+                all trials. See OneSectorGE ResultsLabels for description of results.
+            factory_gate_prices (Pandas.DataFrame): Factory gate prices summarized across all trials. See OneSectorGE
+                ResultsLabels for description of results.
+            num_failed_trials (int): The number of trials for which the model failed to solve.
+            outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values summarized
+                across all trials. See OneSectorGE ResultsLabels for description of results.
+            solver_diagnostics (dict): A dictionary containing diagnostic information for each individual trial. The
+                solver diagnostics for each trial correspond to the three solution routines: baseline
+                multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
+                effects) and the full GE model. See the diagnostic info from scipy.optimize.root for more details.
+
+            **Additional results populated if MonteCarloGE.run_trials(all_results=True)**\n\n
+            all_aggregate_trade_results (Pandas.DataFrame): All aggregate trade results for each individual trial.
+                Columns are multi-indexed by the trial number and type of result. See OneSectorGE ResultsLabels
+                for description of results.
+            all_bilateral_costs (Pandas.DataFrame): Bilateral trade costs for each individual trial. Columns are
+                multi-indexed by the trial number and type of result. See OneSectorGE ResultsLabels for description of
+                results.
+            all_bilateral_trade_results (Pandas.DataFrame): Bilateral trade results for all individual trials.
+                Columns are multi-indexed by the trial number and type of result.
+                See OneSectorGE ResultsLabels for description of results.
+            all_country_mr_terms (Pandas.DataFrame): All baseline and experiment multilateral resistance terms for each
+                individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
+                ResultsLabels for description of results.
+            all_country_results (Pandas.DataFrame): Main results for all individual trials.
+                Columns are multi-indexed by the trial number and type of result.
+                See OneSectorGE ResultsLabels for description of results.
+            all_factory_gate_prices (Pandas.DataFrame): Factory gate prices for each individual trial. Columns are
+                multi-indexed by the trial number and type of result. See OneSectorGE ResultsLabels for description of
+                results.
+            all_outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values for each
+                individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
+                ResultsLabels for description of results.
+
+
         '''
+
 
         # Store some inputs in model object
         self._estimation_model = estimation_model
@@ -72,7 +141,7 @@ class MonteCarloGE(object):
         ##
         # Define Results attributes
         ##
-        self.num_failed_iterations = None
+        self.num_failed_trials = None
         self.all_country_results = None
         self.country_results = None
         self.all_country_mr_terms = None
@@ -98,7 +167,11 @@ class MonteCarloGE(object):
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
         # Create summary of sample distrbution
-        sample_stats = self.coeff_sample.T.describe().T
+        sample_stats = self.coeff_sample.copy()
+        sample_stats.set_index('index', inplace= True)
+        sample_stats = sample_stats.T.describe().T
+
+        # sample_stats = self.coeff_sample.T.describe().T
         new_col_names = ['sample_{}'.format(col) for col in sample_stats]
         sample_stats.columns = new_col_names
         main_cost_ests = pd.DataFrame({'beta_estimate': self.main_coeffs[self._mc_variables],
@@ -121,7 +194,7 @@ class MonteCarloGE(object):
         betas = est_results.params.values
 
         cov = self._estimation_model.results_dict[self._results_key].cov_params()
-        distribution_alt = multivariate_normal(betas, cov, seed=0)
+        distribution_alt = multivariate_normal(betas, cov, seed=self._seed)
         draws = list()
         for i in range(self.trials):
             draws.append(pd.Series(distribution_alt.rvs()))
@@ -142,7 +215,8 @@ class MonteCarloGE(object):
                    ge_tolerance: float = 1e-8,
                    ge_max_iter: int = 1000,
                    quiet: bool = False,
-                   result_stats:list = ['mean', 'std', 'sem']):
+                   result_stats:list = ['mean', 'std', 'sem'],
+                   all_results:bool = False):
         '''
         Conduct Monte Carlo Simulation of OneSectorGE gravity model.
         Args:
@@ -161,16 +235,16 @@ class MonteCarloGE(object):
             mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
                 experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
                 value is 'hybr'. (See also OneSectorGE.build_baseline())
-            mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
+            mr_max_iter (int): This parameter sets the maximum limit on the number of iterations conducted
                 by the solver used to solve for MR terms. The default value is 1400.
                 (See also OneSectorGE.build_baseline())
-            mr_tolerance  (float): (optional) This parameter sets the convergence tolerance level for the solver used to
+            mr_tolerance  (float): This parameter sets the convergence tolerance level for the solver used to
                 solve for MR terms. The default value is 1e-8. (See also OneSectorGE.build_baseline())
-            ge_method (str): (optional) The solver method to use for the full GE non-linear solver. See scipy.root()
+            ge_method (str): The solver method to use for the full GE non-linear solver. See scipy.root()
                 documentation for option. Default is 'hybr'.
-            ge_tolerance (float): (optional) The tolerance for determining if the GE system of equations is solved.
+            ge_tolerance (float): The tolerance for determining if the GE system of equations is solved.
                 Default is 1e-8.
-            ge_max_iter (int): (optional) The maximum number of iterations allowed for the full GE nonlinear solver.
+            ge_max_iter (int): The maximum number of iterations allowed for the full GE nonlinear solver.
                 Default is 1000.
             quiet (bool): If True, suppress console printouts detailing the solver success/failures of each trial.
                 Default is False.
@@ -178,6 +252,8 @@ class MonteCarloGE(object):
                 default is ['mean', 'std', 'sem'], which computes the mean, standard deviation, and standard mean error
                 of the results, respectively. The model should accept any function that can be used with the
                 pandas.DataFrame.agg() function.
+            all_results (bool): If true, MonteCarloGE attributes containing individual results for all trials are
+                populated. Default is False to reduce memory use.
 
         Returns:
             None
@@ -214,19 +290,19 @@ class MonteCarloGE(object):
             except:
                 print("Failed to solve model.\n")
                 num_failed_iterations+=1
-        self.num_failed_iterations = num_failed_iterations
-        self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats)
-        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats)
-        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures', result_stats)
-        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices', result_stats)
-        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results', result_stats)
-        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade', result_stats)
-        self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, 'bilateral_costs', result_stats)
+        self.num_failed_trials = num_failed_iterations
+        self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
+        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures', result_stats, all_results)
+        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices', result_stats, all_results)
+        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results', result_stats, all_results)
+        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade', result_stats, all_results)
+        self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, 'bilateral_costs', result_stats, all_results)
         self._compile_diagnostics(models)
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
 
 
-    def _compile_results(self, models, result_type, result_stats):
+    def _compile_results(self, models, result_type, result_stats, all_results):
         '''
         Compile results across all trials.
         :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
@@ -297,7 +373,10 @@ class MonteCarloGE(object):
         else:
             summary_results = summary_results.stack(level=1).reset_index(level=1)
             summary_results.rename(columns = {'level_1':'statistic'},inplace = True)
-        return combined_results, summary_results
+        if all_results:
+            return combined_results, summary_results
+        else:
+            return None, summary_results
 
     def _compile_diagnostics(self, models):
         '''
