@@ -7,12 +7,15 @@ in Python"""
 # Load Packages
 from models.OneSectorGE import OneSectorGE
 import pandas as pd # Data manipulation package
+pd.set_option("display.max_columns", None)
+pd.set_option('display.width', 1000)
+
 import gme as gme # Gravity econometrics package
 
 # Load data
 gravity_data_location = "examples/sample_data_set.csv"
 grav_data = pd.read_csv(gravity_data_location)
-
+print(grav_data.head())
 
 # ----
 # Prepare inputs for GE Model
@@ -26,7 +29,7 @@ gme_data = gme.EstimationData(grav_data, # Dataset
                               trade_var_name="trade")# Trade column name
 # Create Gravity Model
 gme_model = gme.EstimationModel(gme_data, # Specify data to use
-                                lhs_var="trade", # dependant, "left hand side" variable
+                                lhs_var="trade", # dependent, "left hand side" variable
                                 rhs_var=["pta","contiguity","common_language",
                                          "lndist","international"], # independent variables
                                 fixed_effects=[["exporter"],["importer"]]) # Fixed effects to use
@@ -48,6 +51,14 @@ ge_model = OneSectorGE(gme_model, year = "2006",
                        reference_importer = "DEU",  # Reference importer
                        sigma = 5)  # Elasticity of substitution
 
+# Test that the model system of equations is computable from the supplied data and parameters
+test_diagnostics = ge_model.test_baseline_mr_function()
+# See what is returned:
+print(test_diagnostics.keys())
+# Check the values of the model parameters computed from the baseline data
+input_params = test_diagnostics['mr_params']
+
+
 # Check for OMR rescale factor that results in convergence
 # rescale_eval = ge_model.check_omr_rescale()
 
@@ -59,10 +70,11 @@ exp_data = ge_model.baseline_data.copy()
 exp_data.loc[(exp_data["importer"] == "CAN") & (exp_data["exporter"] == "JPN"), "pta"] = 1
 exp_data.loc[(exp_data["importer"] == "JPN") & (exp_data["exporter"] == "CAN"), "pta"] = 1
 ge_model.define_experiment(exp_data)
+print(ge_model.bilateral_costs.head())
 
 
 ge_model.simulate()
-
+print(ge_model.bilateral_trade_results.head())
 # -----
 # View Results
 # -----
@@ -76,7 +88,19 @@ ge_model.export_results(directory="examples//",name="CAN_JPN_PTA_experiment")
 # Post Estimation Analysis
 # -------
 nafta_share = ge_model.trade_share(importers = ['CAN'],exporters = ['USA','MEX'])
-weighted_shock = ge_model.trade_weighted_shock()
-bilat_shock = ge_model.trade_weighted_shock('bilateral')
 
-print(country_results[['factory gate price change (percent)', 'GDP change (percent)', 'foreign exports change (percent)']].head(3))
+# Print the first few rows of country-level estimated change in factory prices, GDP, and foreign exports
+print(country_results[['factory gate price change (percent)', 'GDP change (percent)', 'foreign exports change (percent)']].head())
+
+# Calculate counterfactual experiment trade based on observed levels and estimated changes in trade
+levels = ge_model.calculate_levels()
+print(levels.head())
+
+# Calculate trade weighted shocks
+# Start with bilateral level shocks
+bilat_cost_shock = ge_model.trade_weighted_shock(how = 'bilateral')
+print(bilat_cost_shock.head())
+
+# Now at country-level, which summarizes the bilateral shocks
+country_cost_shock  = ge_model.trade_weighted_shock(how='country', aggregations = ['mean', 'sum', 'max'])
+print(country_cost_shock.head())

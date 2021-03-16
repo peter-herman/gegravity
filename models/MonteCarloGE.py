@@ -27,9 +27,9 @@ class MonteCarloGE(object):
                  results_key: str = 'all',
                  seed: int = 0):
         '''
-        Create a Monte Carlo GE model.
+        Define a Monte Carlo GE model.
         Args:
-            estimation_model (EstimationModel): A GME EstimationModel that must have been estimated with the option
+            estimation_model (gme.EstimationModel): A GME EstimationModel that must have been estimated with the option
                 full_results = True (MonteCarlo simulation requires additional info from estimation compared to
                 OneSectorGE).
             year (str): The year to be used for the baseline model. Works best if estimation_model year column has been
@@ -63,9 +63,8 @@ class MonteCarloGE(object):
             sample_stats (pandas.DataFrame): A dataframe depicting both the initially supplied estimate values for each
                 cost variable as well as descriptive statistics for the randomly drawn values across all trials.
             sigma (int): The elasticity of substitution parameter value.
-
+            ---
             **Attributes containing results populated after MonteCarloGE.run_trials()**:\n\n
-
             aggregate_trade_results (Pandas.DataFrame): Aggregate trade results summarized across all trials. See
                 OneSectorGE ResultsLabels for description of results.
             bilateral_costs (Pandas.DataFrame): Baseline and counterfactual bilateral trade costs summarized across all
@@ -85,7 +84,7 @@ class MonteCarloGE(object):
                 solver diagnostics for each trial correspond to the three solution routines: baseline
                 multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
                 effects) and the full GE model. See the diagnostic info from scipy.optimize.root for more details.
-
+            ---
             **Additional results populated if MonteCarloGE.run_trials(all_results=True)**\n\n
             all_aggregate_trade_results (Pandas.DataFrame): All aggregate trade results for each individual trial.
                 Columns are multi-indexed by the trial number and type of result. See OneSectorGE ResultsLabels
@@ -108,8 +107,6 @@ class MonteCarloGE(object):
             all_outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values for each
                 individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
                 ResultsLabels for description of results.
-
-
         '''
 
 
@@ -220,7 +217,7 @@ class MonteCarloGE(object):
         '''
         Conduct Monte Carlo Simulation of OneSectorGE gravity model.
         Args:
-            experiment_data (Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
+            experiment_data (pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
                 experiment. The best approach for creating this data is to copy the baseline data
                 (MonteCarloGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
             omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
@@ -238,7 +235,7 @@ class MonteCarloGE(object):
             mr_max_iter (int): This parameter sets the maximum limit on the number of iterations conducted
                 by the solver used to solve for MR terms. The default value is 1400.
                 (See also OneSectorGE.build_baseline())
-            mr_tolerance  (float): This parameter sets the convergence tolerance level for the solver used to
+            mr_tolerance (float): This parameter sets the convergence tolerance level for the solver used to
                 solve for MR terms. The default value is 1e-8. (See also OneSectorGE.build_baseline())
             ge_method (str): The solver method to use for the full GE non-linear solver. See scipy.root()
                 documentation for option. Default is 'hybr'.
@@ -256,8 +253,7 @@ class MonteCarloGE(object):
                 populated. Default is False to reduce memory use.
 
         Returns:
-            None
-                No return but populates many results attributes of the MonteCarloGE model.
+            None: No return but populates many results attributes of the MonteCarloGE model.
 
         '''
         models = list()

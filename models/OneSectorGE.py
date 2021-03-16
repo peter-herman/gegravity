@@ -62,28 +62,32 @@ class OneSectorGE(object):
 
         Attributes:
             aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See models.ResultsLabels for
-                column details.
+                column details. Populated by OneSectorGE.simulate().
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
             baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
                 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
                 values B.
             bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See models.ResultsLabels for
-                column details.
+                column details. Populated by OneSectorGE.simulate().
             country_mr_terms (pandas.DataFrame): Baseline and counterfactual inward and outward multilateral resistance
-                estimates. See models.ResultsLabels for column details.
+                estimates. See models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_results (pandas.DataFrame): A collection of the main country-level simulation results. See
-                models.ResultsLabels for column details.
+                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
-            bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs.
+            bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs. Populated by
+                OneSectorGE.define_experiment().
             economy (Economy): The model's Economy object.
-            experiment_data (pandas.DataFrame): The counterfactual experiment data.
+            experiment_data (pandas.DataFrame): The counterfactual experiment data. Populated by
+                OneSectorGE.define_experiment().
             experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
                 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
-                values B
+                values B. Populated by
+                OneSectorGE.define_experiment().
             factory_gate_prices (pandas.DataFrame): Counterfactual prices (baseline prices are all normalized to 1).
+                Populated by OneSectorGE.simulate().
             outputs_expenditures (pandas.DataFrame): Baseline and counterfactual expenditure and output values. See
-                models.ResultsLabels for column details.
+                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             sigma (int): The elasticity of substitution parameter value
             solver_diagnostics (dict): A dictionary of solver diagnostics for the three solution routines: baseline
                 multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
@@ -92,56 +96,60 @@ class OneSectorGE(object):
 
         Examples:
 
+            Create and estimate the GME model baseline model.
+
+            >>> import gegravity as ge
+            >>> import pandas as pd
+            >>> import gme as gme
+
+            Load the data.
+            >>> grav_data = pd.read_csv("sample_data_set.csv")
+            >>> grav_data.head()
+              exporter importer  year  trade        Y       E  pta  contiguity  common_language  lndist  international
+            0      GBR      AUS  2006   4310   925638  362227    0           0                1  9.7126              1
+            1      FIN      AUS  2006    514   142759  362227    0           0                0  9.5997              1
+            2      USA      AUS  2006  16619  5019964  362227    1           0                1  9.5963              1
+            3      IND      AUS  2006    763   548517  362227    0           0                1  9.1455              1
+            4      SGP      AUS  2006   8756   329817  362227    1           0                1  8.6732              1
+
+            Define the gme estimation data.
+            >>> gme_data = gme.EstimationData(grav_data,
+            ...                               imp_var_name="importer",
+            ...                               exp_var_name="exporter",
+            ...                               year_var_name = "year",
+            ...                               trade_var_name="trade")
+
+            Define the gme ravity model.
+            >>> gme_model = gme.EstimationModel(gme_data,
+            ...                                 lhs_var="trade",
+            ...                                 rhs_var=["pta","contiguity","common_language",
+            ...                                          "lndist","international"],
+            ...                                 fixed_effects=[["exporter"],["importer"]])
+
+            Estimate parameters of the model
+            >>> gme_model.estimate()
+            select specification variables: ['pta', 'contiguity', 'common_language', 'lndist', 'international', 'trade', 'importer', 'exporter', 'year'], Observations excluded by user: {'rows': 0, 'columns': 2}
+            drop_intratrade: no, Observations excluded by user: {'rows': 0, 'columns': 0}
+            drop_imp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
+            drop_exp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
+            keep_imp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
+            keep_exp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
+            drop_years: none, Observations excluded by user: {'rows': 0, 'columns': 0}
+            keep_years: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
+            drop_missing: yes, Observations excluded by user: {'rows': 0, 'columns': 0}
+            Estimation began at 11:47 AM  on Mar 16, 2021
+            Omitted Columns: ['importer_fe_ZAF', 'importer_fe_USA']
+            Estimation completed at 11:47 AM  on Mar 16, 2021
+
+            Define the gegravity OneSectorGE general equilibrium gravity model
+            >>> ge_model = ge.OneSectorGE(gme_model, year = "2006",
+            ...                           expend_var_name = "E",
+            ...                           output_var_name = "Y",
+            ...                           reference_importer = "DEU",
+            ...                           sigma = 5)
+
         '''
-        # '''
-        #
-        # # ---
-        # # Methods
-        # # ---
-        #
-        # ##
-        # # Model Construction and Simulation
-        # ##
-        #
-        # build_baseline(omr_rescale: float = 1, imr_rescale: float = 1,  mr_method: str = 'hybr',
-        #                mr_max_iter: int = 1400, mr_tolerance: float = 1e-8)
-        #     Solve the baseline model. This primarily solves for the baseline Multilateral Resistance (MR) terms.
-        #
-        # define_experiment(experiment_data: DataFrame = None)
-        #     Specify the counterfactual data to use for experiment.
-        #
-        # simulate(ge_method: str = 'hybr', ge_tolerance: float = 1e-8, ge_max_iter: int = 1000)
-        #     Simulate the counterfactual scenario.
-        #
-        # ##
-        # # Post-simulation Analysis
-        # ##
-        #
-        # trade_share(importers: List[str], exporters: List[str])
-        #     Calculate baseline and experiment import and export shares (in percentages) between user-supplied countries.
-        #
-        # export_results(directory:str = None, name:str = '')
-        #     Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral
-        #     results, and (3) solver diagnostics.
-        #
-        # calculate_levels(how: str = 'country'):
-        #     Calculate changes in the level (value) of trade using baseline trade values and simulation outcomes. Results
-        #     can be calculated at either the country level or bilateral level.
-        #
-        # ##
-        # # Trouble-shooting
-        # ##
-        #
-        # test_baseline_mr_function(inputs_only:bool=False)
-        #     Test whether the multilateral resistance system of equations can be computed from baseline data. Helpful for
-        #     debugging initial data problems. Note that the returned function values reflect those generated by the
-        #     initial values and do not reflect a solution to the system.
-        #
-        # check_omr_rescale(omr_rescale_range:int = 10, mr_method: str = 'hybr', mr_max_iter: int = 1400,
-        #                  mr_tolerance: float = 1e-8, countries:List[str] = [])
-        #     Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
-        #     feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
-        # '''
+
         if not isinstance(year, str):
             raise TypeError('year should be a string')
 
@@ -267,6 +275,23 @@ class OneSectorGE(object):
 
         Returns:
             None: Populates Attributes of model object.
+
+        Examples:
+            Building on the earlier OneSectorGE example:
+
+            >>> ge_model.build_baseline(omr_rescale=10)
+            Solving for baseline MRs...
+            The solution converged.
+
+            Examine the constructed baseline multilateral resistances.
+            >>> print(ge_model.baseline_mr.head())
+                     baseline omr  baseline imr
+            country
+            AUS          3.577130      1.421059
+            AUT          3.408633      1.224844
+            BEL          2.925592      1.050865
+            BRA          3.590866      1.292782
+            CAN          3.313605      1.338893
         '''
         self._omr_rescale = omr_rescale
         self._imr_rescale = imr_rescale
@@ -405,7 +430,7 @@ class OneSectorGE(object):
     def _create_trade_costs(self,
                             data_set: object = None):
         '''
-        Create bilateral trade costs. Returned values reflect \hat{t}^{1-\sigma}_{ij}, not \hat{t}. See equation (32)
+        Create bilateral trade costs. Returned values reflect hat{t}^{1-\sigma}_{ij}, not hat{t}. See equation (32)
         from Larch and Yotov (2016) "GENERAL EQUILIBRIUM TRADE POLICY ANALYSIS WITH STRUCTURAL GRAVITY"
         :param data_set: (DataFrame) The trade cost data to base trade costs on (either baseline or experimental)
         :return: (DataFrame) DataFrame of bilateral trade costs (t^{1-sigma})
@@ -627,13 +652,29 @@ class OneSectorGE(object):
         '''
         Specify the counterfactual data to use for experiment.
         Args:
-            experiment_data(Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
+            experiment_data (Pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
                 experiment. The best approach for creating this data is to copy the baseline data
                 (OneSectorGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
 
         Returns:
-            None:
-                There is no return but the new information is added to model.
+            None: There is no return but the new information is added to model.
+
+        Examples:
+            Building on the earlier examples, introduce a preferential trade agreement (pta) between Canada (CAN) and
+            Japan (JAP) by setting their respective pta columns equal to 1 in a copy of the baseline data.
+            >>> exp_data = ge_model.baseline_data.copy()
+            >>> exp_data.loc[(exp_data["importer"] == "CAN") & (exp_data["exporter"] == "JPN"), "pta"] = 1
+            >>> exp_data.loc[(exp_data["importer"] == "JPN") & (exp_data["exporter"] == "CAN"), "pta"] = 1
+            >>> ge_model.define_experiment(exp_data)
+            Examine the constructed experiment trade costs.
+            >>> print(ge_model.bilateral_costs.head())
+                               baseline trade cost  experiment trade cost  trade cost change (%)
+            exporter importer
+            AUS      AUS                  0.072546               0.072546                    0.0
+                     AUT                  0.000863               0.000863                    0.0
+                     BEL                  0.000848               0.000848                    0.0
+                     BRA                  0.000931               0.000931                    0.0
+                     CAN                  0.000902               0.000902                    0.0
         '''
         if not self._baseline_built:
             raise ValueError("Baseline must be built first (i.e. ge_model.build_baseline() method")
@@ -684,6 +725,24 @@ class OneSectorGE(object):
         Returns:
             None
                 No return but populates new attributes of model.
+
+        Examples:
+            Building on the ONESectorGE example:
+            >>> ge_model.simulate()
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+
+            Examine the bilateral trade results.
+            >>> print(ge_model.bilateral_trade_results.head())
+                                baseline modeled trade  experiment trade  trade change (percent)
+            exporter importer
+            AUS      AUS                216157.106891     216199.213687                0.019480
+                     AUT                   683.873129        683.730549               -0.020849
+                     BEL                  1586.476403       1586.023933               -0.028520
+                     BRA                  2794.995080       2794.072041               -0.033025
+                     CAN                  2891.501311       2821.979450               -2.404352
         '''
         if not self._baseline_built:
             raise ValueError("Baseline must be built first (i.e. OneSectorGE.build_baseline() method")
@@ -1188,6 +1247,18 @@ class OneSectorGE(object):
                 in levels and percentages. If calculated at the country level, these four measures are each returned for
                 total imports, exports, and intranational trade. If calculated at the bilateral level, only one set of the
                 measures is returned.
+
+        Examples:
+            Given a the simulated model from the OneSectorGE examples:
+            >>> levels = ge_model.calculate_levels()
+            >>> print(levels.head())
+                      baseline observed foreign exports  experiment observed foreign exports  baseline observed foreign imports  experiment observed foreign imports  baseline observed intranational trade  experiment observed intranational trade
+            exporter
+            AUS                                   42485                         42447.623715                              98938                         98903.447561                                 261365                            261415.913167
+            AUT                                   87153                         87122.499763                              96165                         96139.268309                                  73142                             73141.020467
+            BEL                                  258238                        258139.077300                             262743                        262661.185594                                 486707                            486652.495569
+            BRA                                   61501                         61451.693948                              56294                         56256.521328                                 465995                            465969.574658
+            CAN                                  256829                        261027.705536                             266512                        270678.983376                                 223583                            219107.825980
         '''
         if not self._baseline_built and self._experiment_defined:
             raise ValueError('Model must be fully solved before calculating levels.')
@@ -1274,20 +1345,46 @@ class OneSectorGE(object):
                 default value is ['mean', 'sum', 'max'].
         Returns:
             pandas.DataFrame: A dataframe of trade-weighted trade cost shocks.
+
+        Examples:
+            Given the simulated model from the OneSectorGE examples, compute trade weighted shocks. First, calculate at
+            the bilateral level to see which trade flows were most affected.
+            >>> bilat_cost_shock = ge_model.trade_weighted_shock(how = 'bilateral')
+            >>> print(bilat_cost_shock.head())
+              exporter importer  baseline modeled trade  trade cost change (%)  weighted_cost_change
+            0      AUS      AUS           216157.106891                    0.0                   0.0
+            1      AUS      AUT              683.873129                    0.0                   0.0
+            2      AUS      BEL             1586.476403                    0.0                   0.0
+            3      AUS      BRA             2794.995080                    0.0                   0.0
+            4      AUS      CAN             2891.501311                    0.0                   0.0
+
+            Next, we can see summary stats about the bilater cost changes at the country level:
+            >>> country_cost_shock  = ge_model.trade_weighted_shock(how='country', aggregations = ['mean', 'sum', 'max'])
+            >>> print(country_cost_shock.head())
+                                mean       sum       max      mean      sum      max
+                            exporter  exporter  exporter  importer importer importer
+            AUS             0.000000  0.000000  0.000000  0.000000      0.0      0.0
+            AUT             0.000000  0.000000  0.000000  0.000000      0.0      0.0
+            BEL             0.000000  0.000000  0.000000  0.000000      0.0      0.0
+            BRA             0.000000  0.000000  0.000000  0.000000      0.0      0.0
+            CAN             0.010171  0.305121  0.305121  0.033333      1.0      1.0
+
+            From this slice of the results, we We see Canada has relatively high shocks (the largest for an importer
+            given the maximum possible shock is 1).
         '''
         # Collect needed results
         bilat_trade = self.bilateral_trade_results.copy()
         bilat_trade.reset_index(inplace=True)
-        cost_shock = self._cost_shock_recode.copy()
+        cost_shock = self.bilateral_costs.copy()
 
         # Define column names
         imp_col = self.meta_data.imp_var_name
         exp_col = self.meta_data.exp_var_name
         baseline_trade_col = self.labels.baseline_modeled_trade
-        baseline_cost_col = 'baseline_trade_cost'
-        exper_cost_col = 'experiment_trade_cost'
-        cost_change = 'cost_change'
-        weighted_col = 'weighted_shock'
+        baseline_cost_col = self.labels.baseline_trade_cost
+        exper_cost_col = self.labels.experiment_trade_cost
+        cost_change = self.labels.trade_cost_change
+        weighted_col = 'weighted_cost_change'
 
         # Create change in costs and add to bilateral trade
         cost_shock[cost_change] = abs(cost_shock[exper_cost_col] - cost_shock[baseline_cost_col])
@@ -1331,10 +1428,29 @@ class OneSectorGE(object):
                 errors.
         Returns:
             dict: A dictionary containing a collection of parameter and value inputs as well as the function
-                values at the initial values. The dictionary contains a matrix of 'cost_exp_share' and 'cost_out_share'
-                values, organized alphabetically with the reference importer in the last row/column. "function_value"
-                reflects the multilateral resistance system function values, which should be zero when the system is
-                solved.
+                values at the initial values.
+                'initial_values' - The initial MR values used in the solver.
+                'mr_params' - A dictionary containing the following parameter inputs constructed from the baseline data.
+                    'number_of_countries' - The number of countries in the model.
+                    'omr_rescale' - OMR rescale factor (usually the default of 1 unless otherwise specified)
+                    'imr_rescale' - IMR rescale factor (usually the default of 1 unless otherwise specified)
+                    'cost_exp_shr' - The exogenous terms ce_{ij} = t_{ij}^{1-σ} * E_j / Y
+                    'cost_out_shr - The exogeneous terms co_{ij} = t_{ij}^{1-σ} * Y_i / Y
+                'function_value' = A vector of function values equal to
+                    [P_j^{1-σ} - sum_i (t_{ij}/π_i)^{1-σ}*Y_i/Y, π_i^{1-σ} - sum_j (t_{ij}/P_j)^{1-σ}*E_j/Y], where
+                    the i and j are alphabetic with the exception of the reference importer, which are at the end of
+                    each set of functions.
+
+        Examples:
+            Using a defined but not yet estimated OneSectorGE model:
+            >>> test_diagnostics = ge_model.test_baseline_mr_function()
+            >>> print(test_diagnostics.keys())
+
+            To check only the inputs and not the resulting function values, which can be helpful if function values
+            cannot be computed and raise errors:
+            >>> ge_model.test_baseline_mr_function(inputs_only = True)
+
+            To retrieve the 'cost_exp_shr' inputs, which
         '''
         if self._simulated:
             raise ValueError("test_baseline_mr_function() cannot be run on a full solved/simulated model. Please reinitialize OneSectorGE model.")
@@ -1846,11 +1962,10 @@ class CostCoeffs(object):
 
 class ResultsLabels(object):
     """
-    Labels and definitions used in results outputs:
+    Labels and definitions used in results outputs
 
-    # Bilateral Trade Results
-
-        \n **baseline modeled trade**: Trade constructed using estimated baseline trade costs and multilateral
+    # Bilateral Results:
+        \n**baseline modeled trade**: Trade constructed using estimated baseline trade costs and multilateral
             resistances (X\_{ij}).
         \n**experiment trade**: Counterfactual experiment trade constructed using experiment trade costs and GE
         experiment multilateral resistances (X'\_{ij}).
@@ -1936,6 +2051,8 @@ class ResultsLabels(object):
 
     """
     def __init__(self):
+
+
         # Trade Labels (bilateral)
         self.baseline_modeled_trade = 'baseline modeled trade'
         self.experiment_trade = 'experiment trade'
@@ -2005,4 +2122,6 @@ class ResultsLabels(object):
                         self.foreign_imports_change, self.baseline_observed_foreign_imports,
                         self.baseline_intranational_trade, self.experiment_intranational_trade,
                         self.intranational_trade_change, self.baseline_observed_intranational_trade]
+
+
 
