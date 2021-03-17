@@ -7,6 +7,7 @@ __all__ = ['MonteCarloGE']
 
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
 from models.OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
 from scipy.stats import multivariate_normal
@@ -61,7 +62,8 @@ class MonteCarloGE(object):
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
             trials (int): The number of trial simulations of the model.
             sample_stats (pandas.DataFrame): A dataframe depicting both the initially supplied estimate values for each
-                cost variable as well as descriptive statistics for the randomly drawn values across all trials.
+                cost variable ('beta_estimate' and 'stderr_estimate') as well as descriptive statistics for the randomly
+                drawn values across all trials.
             sigma (int): The elasticity of substitution parameter value.
             ---
             **Attributes containing results populated after MonteCarloGE.run_trials()**:\n\n
@@ -197,7 +199,7 @@ class MonteCarloGE(object):
             draws.append(pd.Series(distribution_alt.rvs()))
         all_draws = pd.concat(draws, axis=1)
         all_draws.index = est_results.params.index
-        all_draws = all_draws.loc[['LN_DIST', 'CNTG', 'BRDR'],:]
+        all_draws = all_draws.loc[self._mc_variables,:]
         return all_draws.reset_index()
 
 
@@ -286,6 +288,9 @@ class MonteCarloGE(object):
             except:
                 print("Failed to solve model.\n")
                 num_failed_iterations+=1
+
+        # Get results labels from one of the OneSectorGE models
+        self.labels = models[0].labels
         self.num_failed_trials = num_failed_iterations
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)
@@ -387,6 +392,92 @@ class MonteCarloGE(object):
         for trial in range(self.trials):
             combined_diagnostics[0] = models[trial].solver_diagnostics
         self.solver_diagnostics = combined_diagnostics
+
+    def export_results(self, directory:str = None, name:str = '',
+                       country_names:DataFrame = None, all_results = False):
+        '''
+        Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
+        and (3) solver diagnostics.
+        Args:
+            directory (str): (optional) Directory in which to write results files. If no directory is supplied,
+                three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral
+                results, solver diagnostics).
+            name (str): (optional) Name of the simulation to prefix to the result file names.
+            include_levels (bool): (optional) If True, includes additional columns reflecting the simulated changes in
+                levels based on observed trade flows (rather than modeled trade flows). Values are those from the
+                method calculate_levels.
+            country_names (pandas.DataFrame): (optional) Adds alternative identifiers such as names to the returned
+                results tables. The supplied DataFrame should include exactly two columns. The first column must be
+                the country identifiers used in the model. The second column must be the alternative identifiers to
+                add.
+
+        Returns:
+            None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
+                nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+                DataFrames.
+
+        Examples:
+
+
+        '''
+
+        importer_col = self.meta_data.imp_var_name
+        exporter_col = self.meta_data.exp_var_name
+
+        country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results,
+                              self.outputs_expenditures, self.country_mr_terms]
+        country_results = pd.concat(country_result_set, axis = 1)
+        # Order and select columns for inclusion, drop duplicates.
+        country_results_cols = country_results.columns
+        labs = self.labels
+        # Country results to include
+        results_cols = self.labels.country_level_labels
+
+        included_columns = [col for col in results_cols if col in country_results_cols]
+        country_results = country_results[included_columns]
+        country_results = country_results.loc[:, ~country_results.columns.duplicated()]
+
+        bilateral_results = self.bilateral_trade_results.reset_index()
+
+        if country_names is not None:
+            if country_names.shape[1]!=2:
+                raise ValueError("country_names should have exactly 2 columns, not {}".format(country_names.shape[1]))
+            code_col = country_names.columns[0]
+            name_col = country_names.columns[1]
+            country_names.set_index(code_col, inplace = True, drop = True)
+            country_results = country_names.merge(country_results, how = 'right', left_index = True, right_index=True)
+
+            # Add names to bilateral data
+            for side in [exporter_col, importer_col]:
+                side_names = country_names.copy()
+                side_names.reset_index(inplace = True)
+                side_names.rename(columns = {code_col:side, name_col:"{} {}".format(side,name_col)}, inplace = True)
+                bilateral_results = bilateral_results.merge(side_names, how = 'left', on = side)
+
+        # Create Dataframe with Diagnostic results
+        diagnostics = self.solver_diagnostics
+        column_list = list()
+        # Iterate through the three solver types: baseline_MRs, conditional_MRs, and Full_GE
+        for results_type, results in diagnostics.items():
+            for key, value in results.items():
+                # Single Entry fields must be converted to list before creating DataFrame
+                if key in ['success', 'status', 'nfev', 'message']:
+                    frame = pd.DataFrame({(results_type, key): [value]})
+                    column_list.append(frame)
+                # Vector-like fields Can be used as is. Several available fields are not included: 'fjac','r', and 'qtf'
+                elif key in ['x', 'fun']:
+                    frame = pd.DataFrame({(results_type, key): value})
+                    column_list.append(frame)
+        diag_frame = pd.concat(column_list, axis=1)
+        diag_frame = diag_frame.fillna('')
+
+        if directory is not None:
+            country_results.to_csv("{}/{}_country_results.csv".format(directory, name))
+            bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name), index=False)
+            diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index=False)
+        else:
+            return country_results, bilateral_results, diagnostics
+
 
 
 

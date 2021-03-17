@@ -103,7 +103,7 @@ class OneSectorGE(object):
             >>> import gme as gme
 
             Load the data.
-            >>> grav_data = pd.read_csv("sample_data_set.csv")
+            >>> grav_data = pd.read_csv(ssample_data_set.dlm
             >>> grav_data.head()
               exporter importer  year  trade        Y       E  pta  contiguity  common_language  lndist  international
             0      GBR      AUS  2006   4310   925638  362227    0           0                1  9.7126              1
