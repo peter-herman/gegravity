@@ -1100,13 +1100,20 @@ class OneSectorGE(object):
 
         Returns:
             pandas.DataFrame: A dataframe expressing baseline, experiment, and changes in trade between each specified importer and exporter.
+
+        Examples:
+            Building on the earlier examples, calculate the share of Canada's imports coming from the United States and
+            Mexico as well as the United States and Mexico's exports going to Canada.
+            >>> nafta_share = ge_model.trade_share(importers = ['CAN'],exporters = ['USA','MEX'])
+            >>> print(nafta_share)
+                                        description baseline modeled trade experiment trade change (percentage point) change (%)
+            0  Percent of CAN imports from USA, MEX                 21.948          21.4935                 -0.454491   -2.07077
+            1    Percent of USA, MEX exports to CAN                2.02794          1.98363                -0.0443055   -2.18475
+
+            Canada's imports from the other two decline by 2.07 percent (0.45 percentage points) while the share of the
+            United States and Mexico's exports declines by 2.18 percent (0.04 precentage points).
         '''
-        # '''
-        #
-        # :param importers:  A list of country codes to include as import partners.
-        # :param exporters: (list[str]) A list of country codes to include as export partners.
-        # :return: (DataFrame)
-        # '''
+
         importer_col = self.meta_data.imp_var_name
         exporter_col = self.meta_data.exp_var_name
         bsln_modeled_trade_label = self.labels.baseline_modeled_trade
@@ -1157,7 +1164,24 @@ class OneSectorGE(object):
 
         Returns:
             None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
-                nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of DataFrames.
+                nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+                DataFrames.
+
+        Examples:
+            Building off the earlier examples, export the results to a series of .csv files.
+            >>> ge_model.export_results(directory="c://examples//",name="CAN_JPN_PTA_experiment")
+
+            Alternatively, return the three outputs as dataframes instead and include trade value levels:
+            >>> county_table, bilateral_table_ diagnostic_table = ge_model.export_results(include_levels=True)
+
+            To include alternative country names, supply a DataFrame of country names to append.
+            >>> alt_names = pd.DataFrame({'iso3':'AUS','name':'Australia'},
+            ...                          {'iso3':'AUT','name':'Austria'},
+            ...                          {'iso3':'BEL','name':'Belgium'},
+            ...                          ...)
+            >>> ge_model.export_results(directory="c://examples//",name="CAN_JPN_PTA_experiment",
+            ...                         country_names=alt_names)
+
         '''
 
         importer_col = self.meta_data.imp_var_name
@@ -1488,10 +1512,36 @@ class OneSectorGE(object):
                 'omr_rescale (alt format)': A string representation of the rescale factor as an exponential expression.\n
                 'solved': If True, the MR model solved successfully. If False, it did not solve.\n
                 'message': Description of the outcome of the solver.\n
-                '..._func_value': Three columns reflelcting the maximum, mean, and median values from the solver
+                '..._func_value': Three columns reflecting the maximum, mean, and median values from the solver
                     objective functions. Function values closer to zero imply a better solution to system of equations.
                 'reference_importer_omr': The solution value for the reference importer's OMR value.\n
                 '..._omr': The solution value(s) for the user supplied countries.
+
+        Example:
+            Bulding off the earlier OneSectorGE example, define a gegravity OneSectorGE general equilibrium gravity
+            model.
+            >>> ge_model = ge.OneSectorGE(gme_model, year = "2006",
+            ...                           expend_var_name = "E",
+            ...                           output_var_name = "Y",
+            ...                           reference_importer = "DEU",
+            ...                           sigma = 5)
+
+            Next, test rescale factors from 0.001 (10^-3) to 1000 (10^3).
+            >>> omr_check = ge_model.check_omr_rescale(omr_rescale_range=3)
+            >>> print(omr_check)
+               omr_rescale omr_rescale (alt format)  solved                                            message  max_func_value  mean_func_value  reference_importer_omr
+            0        0.001                    10^-3   False  The iteration is not making good progress, as ...    8.774878e-02     4.441303e-04                2.339813
+            1        0.010                    10^-2    True                            The solution converged.    3.683065e-11    -2.652545e-12                2.918339
+            2        0.100                    10^-1    True                            The solution converged.    2.610248e-09     4.552991e-11                2.920591
+            3        1.000                     10^0    True                            The solution converged.    7.409855e-10    -1.980349e-11                2.967636
+            4       10.000                     10^1    True                            The solution converged.    9.853662e-10    -2.213563e-12                2.918339
+            5      100.000                     10^2    True                            The solution converged.    3.629199e-10     2.458433e-11                2.918339
+            6     1000.000                     10^3    True                            The solution converged.    3.392378e-09    -3.910916e-11                2.918339
+
+            From the tests, it looks like 10, 100, and 1000 are good candidate rescale factors based on the fact that
+            the model solves (i.e. converges) and all three produce consistent solutions for the reference importer's
+            OMR term (2.918).
+
         '''
         # Check to see if model has already been solved and recoded reference importer was dropped.
         if self._simulated:
@@ -1940,7 +1990,35 @@ class CostCoeffs(object):
              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
 
         Returns:
-         CostCoeffs: An instance of a ParameterValues object.
+            CostCoeffs: An instance of a ParameterValues object.
+
+        Examples:
+            Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
+            agreements.
+            >>> import pandas as pd
+            >>> import gegravity as ge
+            >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
+            ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
+            ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
+            >>> coeff_df = pd.DataFrame(coeff_data)
+            >>> print(coeff_df)
+                    var  coeff   ste
+            0  distance   -1.0  0.05
+            1    contig    0.8  0.10
+            2  distance   -1.0  0.05
+
+            Now, we can construct the CostCoeffs object from this data.
+            >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
+            ...                          coeff_col = 'coeff', stderr_col = 'ste')
+            >>> print(cost_params.params)
+            var
+            distance   -1.0
+            contig      0.8
+            distance   -1.0
+            Name: coeff, dtype: float64
+
+            And supply them to a OneSectorGE model via the argument
+            >>> OneSectorGE(cost_coeff_values=cost_params)
         '''
         estimates = estimates.set_index(identifier_col)
         self._table = estimates
