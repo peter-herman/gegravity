@@ -1256,7 +1256,7 @@ class OneSectorGE(object):
             bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name), index = False)
             diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index = False)
         else:
-            return country_results, bilateral_results, diagnostics
+            return country_results, bilateral_results, diag_frame
 
     def calculate_levels(self, how: str = 'country'):
         '''

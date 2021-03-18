@@ -19,7 +19,7 @@ import numpy as np
 # Prepare model data and economteric inputs
 # ---
 # Load sample data.
-raw_data = pd.read_csv("examples/sample_data_set.dlm")
+raw_data = pd.read_csv("D:\work\Peter_Herman\projects\gegravity\examples\sample_data_set.dlm")
 
 # Define cost variables to use in analysis.
 cost_variables = ["pta", "contiguity", "common_language", "lndist", "international"]
@@ -108,7 +108,10 @@ print(monte_model.num_failed_trials)
 # ---
 # Export the results
 # ---
-# Finally to export the results to a .csv file.
-# ToDo: Debug
+# Finally to export the results to a series of .csv files.
 monte_model.export_results(directory="examples//", name = 'monte')
+
+# Alternatively, you can return this outpur in python for further manipulation.
 i,j,k = monte_model.export_results()
+
+# Finally, all of the results can of course be exported individually using standard python or pandas procedures.

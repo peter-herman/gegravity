@@ -390,7 +390,7 @@ class MonteCarloGE(object):
         '''
         combined_diagnostics = dict()
         for trial in range(self.trials):
-            combined_diagnostics[0] = models[trial].solver_diagnostics
+            combined_diagnostics[trial] = models[trial].solver_diagnostics
         self.solver_diagnostics = combined_diagnostics
 
     def export_results(self, directory:str = None, name:str = '',
@@ -431,8 +431,7 @@ class MonteCarloGE(object):
         country_results_cols = country_results.columns
         labs = self.labels
         # Country results to include
-        results_cols = self.labels.country_level_labels
-
+        results_cols = ['statistic'] + self.labels.country_level_labels
         included_columns = [col for col in results_cols if col in country_results_cols]
         country_results = country_results[included_columns]
         country_results = country_results.loc[:, ~country_results.columns.duplicated()]
@@ -455,19 +454,19 @@ class MonteCarloGE(object):
                 bilateral_results = bilateral_results.merge(side_names, how = 'left', on = side)
 
         # Create Dataframe with Diagnostic results
-        diagnostics = self.solver_diagnostics
         column_list = list()
-        # Iterate through the three solver types: baseline_MRs, conditional_MRs, and Full_GE
-        for results_type, results in diagnostics.items():
-            for key, value in results.items():
-                # Single Entry fields must be converted to list before creating DataFrame
-                if key in ['success', 'status', 'nfev', 'message']:
-                    frame = pd.DataFrame({(results_type, key): [value]})
-                    column_list.append(frame)
-                # Vector-like fields Can be used as is. Several available fields are not included: 'fjac','r', and 'qtf'
-                elif key in ['x', 'fun']:
-                    frame = pd.DataFrame({(results_type, key): value})
-                    column_list.append(frame)
+        diagnostics = self.solver_diagnostics
+        for trial_num, trial in diagnostics.items():
+            for results_type, results in trial.items():
+                for key, value in results.items():
+                    # Single Entry fields must be converted to list before creating DataFrame
+                    if key in ['success', 'status', 'nfev', 'message']:
+                        frame = pd.DataFrame({("trial_{}".format(trial_num), results_type, key): [value]})
+                        column_list.append(frame)
+                    # Vector-like fields Can be used as is. Several available fields are not included: 'fjac','r', and 'qtf'
+                    elif key in ['x', 'fun']:
+                        frame = pd.DataFrame({("trial_{}".format(trial_num), results_type, key): value})
+                        column_list.append(frame)
         diag_frame = pd.concat(column_list, axis=1)
         diag_frame = diag_frame.fillna('')
 
@@ -476,7 +475,7 @@ class MonteCarloGE(object):
             bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name), index=False)
             diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index=False)
         else:
-            return country_results, bilateral_results, diagnostics
+            return country_results, bilateral_results, diag_frame
 
 
 
