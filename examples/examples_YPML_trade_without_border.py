@@ -1,7 +1,10 @@
 __Author__ = "Peter Herman"
 __Project__ = "gegravity"
 __Created__ = "February 16, 2021"
-__Description__ = ''' '''
+__Description__ = '''This example replicates the "trade without borders example from section 2.C of Yotov, Piermartini, 
+Montiero, and Larch, 2016, An Advanced Guide to Trade Policy Analysis: The structural Gravity Model, Online Revised
+Version, World Trade Organization and the United Nations Conference on Trade and Development. Required data files are 
+available at https://vi.unctad.org/tpa/web/vol2/vol2home.html'''
 
 
 import pandas as pd
@@ -13,7 +16,7 @@ from models.OneSectorGE import OneSectorGE
 # Setup
 # -----
 
-source_data_local = "D:\work\Peter_Herman\projects\gegravity\Yotov et al (2016) files\Chapter2\Datasets\\1_TradeWithoutBorder.dta"
+source_data_local = "Yotov et al (2016) files\\Chapter2\\Datasets\\1_TradeWithoutBorder.dta"
 grav_vars = ['ln_DIST', 'CNTG', 'INTL_BRDR']
 
 
@@ -39,7 +42,7 @@ gme_model.estimate()
 gme_model.results_dict['all'].summary()
 
 ##
-# Check Estimates
+# Check that estimates match those in the paper
 ##
 if round(gme_model.results_dict['all'].params['ln_DIST'],3)!= -0.791:
     raise ValueError("'Distance estimate does not match expectation.")
@@ -67,3 +70,6 @@ ge_model.define_experiment(experiment_data)
 ge_model.simulate(ge_max_iter=5000)
 
 cntry_results = ge_model.country_results
+
+# Results differ by the published version by small amount, which can be attributed to differing numerical procedures
+# and numerical precision throughout the many steps of the model

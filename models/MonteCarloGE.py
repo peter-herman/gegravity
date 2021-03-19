@@ -7,25 +7,117 @@ __all__ = ['MonteCarloGE']
 
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
-from models.OneSectorGE import OneSectorGE, CostCoeffs
+from models.OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
+from scipy.stats import multivariate_normal
+from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
 from typing import List
-
-# ToDo add support for user supplied parameter estimates (CostCoeffs object)
 
 class MonteCarloGE(object):
     def __init__(self,
                  estimation_model: EstimationModel,
                  year:str,
                  trials: int,
+                 expend_var_name: str,
+                 output_var_name: str,
+                 sigma: float,
+                 reference_importer: str,
                  cost_variables: list,
                  mc_variables: list = None,
                  results_key: str = 'all',
-                 seed:int = None,
-                 parameter_values:CostCoeffs = None):
+                 seed: int = 0):
+        '''
+        Define a Monte Carlo GE model.
+        Args:
+            estimation_model (gme.EstimationModel): A GME EstimationModel that must have been estimated with the option
+                full_results = True (MonteCarlo simulation requires additional info from estimation compared to
+                OneSectorGE).
+            year (str): The year to be used for the baseline model. Works best if estimation_model year column has been
+                cast as string.
+            trials (int): The number of trial simulations to conduct.
+            expend_var_name (str): Column name of variable containing expenditure data in estimation_model.
+            output_var_name (str): Column name of variable containing output data in estimation_model.
+            sigma (float): Elasticity of substitution.
+            reference_importer (str): Identifier for the country to be used as the reference importer (inward
+                multilateral resistance normalized to 1 and other multilateral resistances solved relative to it).
+            cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
+                default, all included non-fixed effect variables are used.
+            mc_variables (List[str]): (optional) A subset of the cost_variables to randomly sample in the Monte Carlo
+                experiment. Coefficients for the variables in this list are randomly drawn based on their estimated mean
+                 and variance/covariance. Those excluded use their gravity estimated values only. By default, the model
+                uses all cost variables (or those supplied to cost_variables argument) are
+            results_key (str): (optional) If using parameter estimates from estimation_model, this is the key (i.e.
+                sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
+                False in GME model), this key is 'all', which is the default.
+            seed (int): (optional) The seed to use for the random draws of cost coefficients in order to provide
+                unchanging, consistent draws across runs. By default, the seed is randomly determined each time the
+                model is constructed.
+
+        Attributes:
+            baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
+            coeff_sample (Pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
+                column corresponds to a different trial.
+            main_coeffs (pandas.Series): The main coefficient estimates for the cost varaibles supplied to the model.
+            main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
+            trials (int): The number of trial simulations of the model.
+            sample_stats (pandas.DataFrame): A dataframe depicting both the initially supplied estimate values for each
+                cost variable ('beta_estimate' and 'stderr_estimate') as well as descriptive statistics for the randomly
+                drawn values across all trials.
+            sigma (int): The elasticity of substitution parameter value.
+            ---
+            **Attributes containing results populated after MonteCarloGE.run_trials()**:\n\n
+            aggregate_trade_results (Pandas.DataFrame): Aggregate trade results summarized across all trials. See
+                OneSectorGE ResultsLabels for description of results.
+            bilateral_costs (Pandas.DataFrame): Baseline and counterfactual bilateral trade costs summarized across all
+                trials. See OneSectorGE ResultsLabels for description of results.
+            bilateral_trade_results (Pandas.DataFrame): Bilateral trade results summarized across all trials.
+                See OneSectorGE ResultsLabels for description of results.
+            country_mr_terms (Pandas.DataFrame): Baseline and experiment multilateral resistance terms summarized
+                across all trials. See OneSectorGE ResultsLabels for description of results.
+            country_results (Pandas.DataFrame): The main country level results summarized across
+                all trials. See OneSectorGE ResultsLabels for description of results.
+            factory_gate_prices (Pandas.DataFrame): Factory gate prices summarized across all trials. See OneSectorGE
+                ResultsLabels for description of results.
+            num_failed_trials (int): The number of trials for which the model failed to solve.
+            outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values summarized
+                across all trials. See OneSectorGE ResultsLabels for description of results.
+            solver_diagnostics (dict): A dictionary containing diagnostic information for each individual trial. The
+                solver diagnostics for each trial correspond to the three solution routines: baseline
+                multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
+                effects) and the full GE model. See the diagnostic info from scipy.optimize.root for more details.
+            ---
+            **Additional results populated if MonteCarloGE.run_trials(all_results=True)**\n\n
+            all_aggregate_trade_results (Pandas.DataFrame): All aggregate trade results for each individual trial.
+                Columns are multi-indexed by the trial number and type of result. See OneSectorGE ResultsLabels
+                for description of results.
+            all_bilateral_costs (Pandas.DataFrame): Bilateral trade costs for each individual trial. Columns are
+                multi-indexed by the trial number and type of result. See OneSectorGE ResultsLabels for description of
+                results.
+            all_bilateral_trade_results (Pandas.DataFrame): Bilateral trade results for all individual trials.
+                Columns are multi-indexed by the trial number and type of result.
+                See OneSectorGE ResultsLabels for description of results.
+            all_country_mr_terms (Pandas.DataFrame): All baseline and experiment multilateral resistance terms for each
+                individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
+                ResultsLabels for description of results.
+            all_country_results (Pandas.DataFrame): Main results for all individual trials.
+                Columns are multi-indexed by the trial number and type of result.
+                See OneSectorGE ResultsLabels for description of results.
+            all_factory_gate_prices (Pandas.DataFrame): Factory gate prices for each individual trial. Columns are
+                multi-indexed by the trial number and type of result. See OneSectorGE ResultsLabels for description of
+                results.
+            all_outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values for each
+                individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
+                ResultsLabels for description of results.
+        '''
+
+
+        # Store some inputs in model object
         self._estimation_model = estimation_model
-        self.meta_data = self._estimation_model.estimation_data._meta_data
+        self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
         self._year = str(year)
+        self.sigma = sigma
+        self._reference_importer = reference_importer
         self._cost_variables = cost_variables
         if mc_variables is None:
             self._mc_variables = self._cost_variables
@@ -35,21 +127,20 @@ class MonteCarloGE(object):
             self._seed = np.random.randint(0,10000)
         else:
             self._seed = seed
-        self.results_key = results_key
+        self._results_key = results_key
 
         # Define Parameter values
-        if parameter_values is not None:
-            self.main_coeffs = parameter_values.params
-            self.main_stderrs = parameter_values.bse
-        else:
-            self.main_coeffs = self._estimation_model.results_dict[self.results_key].params
-            self.main_stderrs = self._estimation_model.results_dict[self.results_key].bse
+        self.main_coeffs = self._estimation_model.results_dict[self._results_key].params
+        self.main_stderrs = self._estimation_model.results_dict[self._results_key].bse
         self.trials = trials
-        self.coeff_sample = self.get_mc_params()
+
+        # Generate Sampling Distribution
+        self.coeff_sample = self._draw_mc_trade_costs()
 
         ##
         # Define Results attributes
         ##
+        self.num_failed_trials = None
         self.all_country_results = None
         self.country_results = None
         self.all_country_mr_terms = None
@@ -60,11 +151,10 @@ class MonteCarloGE(object):
         self.factory_gate_prices = None
         self.all_aggregate_trade_results = None
         self.aggregate_trade_results = None
-
-        # ToDo: Complete these ones
         self.all_bilateral_trade_results = None
         self.bilateral_trade_results = None
-
+        self.all_bilateral_costs = None
+        self.bilateral_costs = None
         self.solver_diagnostics = None
 
 
@@ -75,73 +165,121 @@ class MonteCarloGE(object):
         if self.baseline_data.shape[0] == 0:
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
-        # Create sumamry of sample distrbution
-        sample_stats = self.coeff_sample.T.describe().T
+        # Create summary of sample distrbution
+        sample_stats = self.coeff_sample.copy()
+        sample_stats.set_index('index', inplace= True)
+        sample_stats = sample_stats.T.describe().T
+
+        # sample_stats = self.coeff_sample.T.describe().T
         new_col_names = ['sample_{}'.format(col) for col in sample_stats]
         sample_stats.columns = new_col_names
         main_cost_ests = pd.DataFrame({'beta_estimate': self.main_coeffs[self._mc_variables],
                                        'stderr_estimate': self.main_stderrs[self._mc_variables]})
         self.sample_stats = pd.concat([main_cost_ests, sample_stats], axis=1)
 
-    def get_mc_params(self):
-        var_samples = list()
-        # Define seeds for each variable draw
-        np.random.seed(self._seed)
-        variable_seeds = np.random.randint(0, 10000, len(self._mc_variables))
-        # Create sample for each mc variable
-        for num, var in enumerate(self._mc_variables):
-            beta = self.main_coeffs[var]
-            stderr = self.main_stderrs[var]
-            np.random.seed(variable_seeds[num])
-            var_draw = np.random.normal(beta, stderr, self.trials)
-            var_samples.append(pd.DataFrame({var: var_draw}))
-        # Combine all variable samples
-        mc_sample = pd.concat(var_samples, axis=1).T
+    def _draw_mc_trade_costs(self):
+        '''
+        Draw coefficient values from multivariate normal distribution. For Poisson MLE,
+        B-hat ~ Normal(B, (X'WX)^{-1}) where (X'WX)^{-1} is the covariance matrix. See An Introduction to Generalized
+        Linear Models (2nd Ed) Annette J. Dobson, Chapman & Hall/CRC, Boca Raton Florida, Section 5.4.
 
-        # Add rows without variation for cost variables not a part of mc
-        costs_not_mc = [var for var in self._cost_variables if var not in self._mc_variables]
-        for var in costs_not_mc:
-            mc_sample.loc[var,:] = self.main_coeffs[var]
-        return mc_sample.reset_index()
+        Returns: A dataframe of random draws of coefficients. Rows are cost variables from self._mc_variables, columns
+            are different draws with the exception of a column with corresponding cost variable names ('index')
+        '''
+        # Get results and check that all needed info is available (i.e. covariance matrix in estimation model)
+        est_results = self._estimation_model.results_dict[self._results_key]
+        if not isinstance(est_results,GLMResultsWrapper):
+            raise TypeError('MonteCarloGE requires that gme.EstimationModel be estimated with option full_results=True')
+        betas = est_results.params.values
 
-    def OneSectorGE(self,
-                    experiment_data:pd.DataFrame,
-                    expend_var_name: str = 'expenditure',
-                    output_var_name: str = 'output',
-                    sigma: float = 5,
-                    reference_importer: str = None,
-                    omr_rescale: float = 1000,
-                    imr_rescale: float = 1,
-                    mr_method: str = 'hybr',
-                    mr_max_iter: int = 1400,
-                    mr_tolerance: float = 1e-8,
-                    ge_method:str = 'hybr',
-                    ge_tolerance: float = 1e-8,
-                    ge_max_iter: int = 1000,
-                    approach: str = None,
-                    quiet: bool = True
-                    ):
+        cov = self._estimation_model.results_dict[self._results_key].cov_params()
+        distribution_alt = multivariate_normal(betas, cov, seed=self._seed)
+        draws = list()
+        for i in range(self.trials):
+            draws.append(pd.Series(distribution_alt.rvs()))
+        all_draws = pd.concat(draws, axis=1)
+        all_draws.index = est_results.params.index
+        all_draws = all_draws.loc[self._mc_variables,:]
+        return all_draws.reset_index()
+
+
+    def run_trials(self,
+                   experiment_data:pd.DataFrame,
+                   omr_rescale: float = 1,
+                   imr_rescale: float = 1,
+                   mr_method: str = 'hybr',
+                   mr_max_iter: int = 1400,
+                   mr_tolerance: float = 1e-8,
+                   ge_method:str = 'hybr',
+                   ge_tolerance: float = 1e-8,
+                   ge_max_iter: int = 1000,
+                   quiet: bool = False,
+                   result_stats:list = ['mean', 'std', 'sem'],
+                   all_results:bool = False):
+        '''
+        Conduct Monte Carlo Simulation of OneSectorGE gravity model.
+        Args:
+            experiment_data (pandas.DataFrame): A dataframe containing the counterfactual trade-cost data to use for the
+                experiment. The best approach for creating this data is to copy the baseline data
+                (MonteCarloGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
+            omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
+                are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
+                different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
+                (10^0). However, users should be careful with this choice as results, even when convergent, may not be
+                fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
+                feasible values for a given model.
+            imr_rescale (int): (optional) This value rescales the IMR values to potentially aid in conversion. However,
+                because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
+                because changing the default value, which is 1.
+            mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
+                experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+                value is 'hybr'. (See also OneSectorGE.build_baseline())
+            mr_max_iter (int): This parameter sets the maximum limit on the number of iterations conducted
+                by the solver used to solve for MR terms. The default value is 1400.
+                (See also OneSectorGE.build_baseline())
+            mr_tolerance (float): This parameter sets the convergence tolerance level for the solver used to
+                solve for MR terms. The default value is 1e-8. (See also OneSectorGE.build_baseline())
+            ge_method (str): The solver method to use for the full GE non-linear solver. See scipy.root()
+                documentation for option. Default is 'hybr'.
+            ge_tolerance (float): The tolerance for determining if the GE system of equations is solved.
+                Default is 1e-8.
+            ge_max_iter (int): The maximum number of iterations allowed for the full GE nonlinear solver.
+                Default is 1000.
+            quiet (bool): If True, suppress console printouts detailing the solver success/failures of each trial.
+                Default is False.
+            result_stats (list): A list of functions to compute in order to summarize the results across trials. The
+                default is ['mean', 'std', 'sem'], which computes the mean, standard deviation, and standard mean error
+                of the results, respectively. The model should accept any function that can be used with the
+                pandas.DataFrame.agg() function.
+            all_results (bool): If true, MonteCarloGE attributes containing individual results for all trials are
+                populated. Default is False to reduce memory use.
+
+        Returns:
+            None: No return but populates many results attributes of the MonteCarloGE model.
+
+        '''
         models = list()
+        num_failed_iterations = 0
         for trial in range(self.trials):
             print("\n* Simulating trial {} *".format(trial))
             param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col='index')
             try:
                 trial_model = OneSectorGE(self._estimation_model,
                                           year=self._year,
-                                          expend_var_name=expend_var_name,
-                                          output_var_name=output_var_name,
-                                          sigma=sigma,
-                                          results_key=self.results_key,
+                                          reference_importer=self._reference_importer,
+                                          expend_var_name=self.meta_data.expend_var_name,
+                                          output_var_name=self.meta_data.output_var_name,
+                                          sigma=self.sigma,
+                                          results_key=self._results_key,
                                           cost_variables=self._cost_variables,
                                           cost_coeff_values=param_values,
-                                          reference_importer = reference_importer,
-                                          omr_rescale = omr_rescale,
-                                          imr_rescale = imr_rescale,
-                                          mr_method = mr_method,
-                                          mr_max_iter = mr_max_iter,
-                                          mr_tolerance = mr_tolerance,
-                                          approach = approach,
+                                          # approach = approach,
                                           quiet = quiet)
+                trial_model.build_baseline(omr_rescale=omr_rescale,
+                                           imr_rescale=imr_rescale,
+                                           mr_method=mr_method,
+                                           mr_max_iter=mr_max_iter,
+                                           mr_tolerance=mr_tolerance)
                 trial_model.define_experiment(experiment_data)
                 trial_model.simulate(ge_method=ge_method,
                                      ge_tolerance=ge_tolerance,
@@ -149,25 +287,34 @@ class MonteCarloGE(object):
                 models.append(trial_model)
             except:
                 print("Failed to solve model.\n")
-        self.all_country_results, self.country_results = self._compile_results(models, 'country_results')
-        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms')
-        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures')
-        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices')
-        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results')
-        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade')
-        # ToDo: Finish compilation of results from GE model. Still need solver diagnostics
+                num_failed_iterations+=1
+
+        # Get results labels from one of the OneSectorGE models
+        self.labels = models[0].labels
+        self.num_failed_trials = num_failed_iterations
+        self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
+        self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)
+        self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures', result_stats, all_results)
+        self.all_factory_gate_prices, self.factory_gate_prices = self._compile_results(models, 'factory_gate_prices', result_stats, all_results)
+        self.all_aggregate_trade_results, self.aggregate_trade_results = self._compile_results(models, 'aggregate_trade_results', result_stats, all_results)
+        self.all_bilateral_trade_results, self.bilateral_trade_results = self._compile_results(models, 'bilateral_trade', result_stats, all_results)
+        self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, 'bilateral_costs', result_stats, all_results)
+        self._compile_diagnostics(models)
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
 
-    def _compile_results(self, models, result_type):
+
+    def _compile_results(self, models, result_type, result_stats, all_results):
         '''
         Compile results across all trials.
         :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
         :param result_type: (str) Type of results to compile. Function works with:
-            'country_results' - compiles results from model.country_mr_results
-            'mr_terms' - compiles results from model.country_mr_terms
-            'output_expenditures' - compiles results from model.output_expenditures
-            'factory_gate_prices - compiles results from model.factory_gate_prices
-            'aggregate_trade_results' - compiles results from model.aggregate_trade_results
+            'country_results' - compiles results from OneSectorGE.country_mr_results
+            'mr_terms' - compiles results from OneSectorGE.country_mr_terms
+            'output_expenditures' - compiles results from OneSectorGE.output_expenditures
+            'factory_gate_prices - compiles results from OneSectorGE.factory_gate_prices
+            'aggregate_trade_results' - compiles results from OneSectorGE.aggregate_trade_results
+            'bilateral_trade' - complies results from OneSectorGE.bilateral_trade_results
+            'bilateral_costs' - compiles results from OneSectorGE.bilateral_costs
         :return:(pd.DataFrame, pd.DataFrame) Two dataframes. The first contains all results for each trial, with
             multiindex columns labeled (trial, result type). The second provides summary stats from all trials (mean,
             std, stderr)
@@ -187,8 +334,10 @@ class MonteCarloGE(object):
                 model_results = model.aggregate_trade_results
             if result_type == 'bilateral_trade':
                 model_results = model.bilateral_trade_results
+            if result_type == 'bilateral_costs':
+                model_results = model.bilateral_costs
 
-            # Label columns via multiindex with (trial, result)
+            # Label columns via multiindex with (trial #, result label)
             multi_columns = [(num,col) for col in model_results.columns]
             model_results.columns = pd.MultiIndex.from_tuples(multi_columns)
             combined_results_list.append(model_results)
@@ -196,7 +345,7 @@ class MonteCarloGE(object):
 
         # Reshape trials to long format
         summary_results = combined_results.copy()
-        if result_type=='bilateral_trade':
+        if result_type in ['bilateral_trade','bilateral_costs']:
             # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
             summary_results = summary_results.stack(0).reset_index(level=2)
             summary_results.rename(columns={'level_2': 'trial'}, inplace=True)
@@ -209,23 +358,125 @@ class MonteCarloGE(object):
         var_list = list(summary_results.columns)
         var_list.remove('trial')
         for var in var_list:
-            agg_dict[var] = ['mean', 'std']
-        if result_type == 'bilateral_trade':
+            agg_dict[var] = result_stats
+        if result_type in ['bilateral_trade','bilateral_costs']:
             summary_results = summary_results.groupby(level=[0, 1]).agg(agg_dict)
         else:
             summary_results = summary_results.groupby(level=0).agg(agg_dict)
 
         # Compute standard error for each result type
-        for col in summary_results.columns:
-            if col[1] == 'std':
-                summary_results[(col[0], 'stderr')] = summary_results[col] / (self.trials ** 0.5)
-        if result_type=='bilateral_trade':
+        # for col in summary_results.columns:
+        #     if col[1] == 'std':
+        #         summary_results[(col[0], 'stderr')] = summary_results[col] / (self.trials ** 0.5)
+        if result_type in ['bilateral_trade','bilateral_costs']:
             summary_results = summary_results.stack(level=1).reset_index(level=2)
             summary_results.rename(columns = {'level_2':'statistic'},inplace = True)
         else:
             summary_results = summary_results.stack(level=1).reset_index(level=1)
             summary_results.rename(columns = {'level_1':'statistic'},inplace = True)
-        return combined_results, summary_results
+        if all_results:
+            return combined_results, summary_results
+        else:
+            return None, summary_results
+
+    def _compile_diagnostics(self, models):
+        '''
+        Compiles the diagnostics from each trial into a single dictionary, indexed by the trial number.
+        Args:
+            models: the list of OneSectorGE models associated with each trial
+
+        Returns: None, Populates the attribute self.solver_daignostics
+
+        '''
+        combined_diagnostics = dict()
+        for trial in range(self.trials):
+            combined_diagnostics[trial] = models[trial].solver_diagnostics
+        self.solver_diagnostics = combined_diagnostics
+
+    def export_results(self, directory:str = None, name:str = '',
+                       country_names:DataFrame = None, all_results = False):
+        '''
+        Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
+        and (3) solver diagnostics.
+        Args:
+            directory (str): (optional) Directory in which to write results files. If no directory is supplied,
+                three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral
+                results, solver diagnostics).
+            name (str): (optional) Name of the simulation to prefix to the result file names.
+            include_levels (bool): (optional) If True, includes additional columns reflecting the simulated changes in
+                levels based on observed trade flows (rather than modeled trade flows). Values are those from the
+                method calculate_levels.
+            country_names (pandas.DataFrame): (optional) Adds alternative identifiers such as names to the returned
+                results tables. The supplied DataFrame should include exactly two columns. The first column must be
+                the country identifiers used in the model. The second column must be the alternative identifiers to
+                add.
+
+        Returns:
+            None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
+                nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+                DataFrames.
+
+        Examples:
+
+
+        '''
+
+        importer_col = self.meta_data.imp_var_name
+        exporter_col = self.meta_data.exp_var_name
+
+        country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results,
+                              self.outputs_expenditures, self.country_mr_terms]
+        country_results = pd.concat(country_result_set, axis = 1)
+        # Order and select columns for inclusion, drop duplicates.
+        country_results_cols = country_results.columns
+        labs = self.labels
+        # Country results to include
+        results_cols = ['statistic'] + self.labels.country_level_labels
+        included_columns = [col for col in results_cols if col in country_results_cols]
+        country_results = country_results[included_columns]
+        country_results = country_results.loc[:, ~country_results.columns.duplicated()]
+
+        bilateral_results = self.bilateral_trade_results.reset_index()
+
+        if country_names is not None:
+            if country_names.shape[1]!=2:
+                raise ValueError("country_names should have exactly 2 columns, not {}".format(country_names.shape[1]))
+            code_col = country_names.columns[0]
+            name_col = country_names.columns[1]
+            country_names.set_index(code_col, inplace = True, drop = True)
+            country_results = country_names.merge(country_results, how = 'right', left_index = True, right_index=True)
+
+            # Add names to bilateral data
+            for side in [exporter_col, importer_col]:
+                side_names = country_names.copy()
+                side_names.reset_index(inplace = True)
+                side_names.rename(columns = {code_col:side, name_col:"{} {}".format(side,name_col)}, inplace = True)
+                bilateral_results = bilateral_results.merge(side_names, how = 'left', on = side)
+
+        # Create Dataframe with Diagnostic results
+        column_list = list()
+        diagnostics = self.solver_diagnostics
+        for trial_num, trial in diagnostics.items():
+            for results_type, results in trial.items():
+                for key, value in results.items():
+                    # Single Entry fields must be converted to list before creating DataFrame
+                    if key in ['success', 'status', 'nfev', 'message']:
+                        frame = pd.DataFrame({("trial_{}".format(trial_num), results_type, key): [value]})
+                        column_list.append(frame)
+                    # Vector-like fields Can be used as is. Several available fields are not included: 'fjac','r', and 'qtf'
+                    elif key in ['x', 'fun']:
+                        frame = pd.DataFrame({("trial_{}".format(trial_num), results_type, key): value})
+                        column_list.append(frame)
+        diag_frame = pd.concat(column_list, axis=1)
+        diag_frame = diag_frame.fillna('')
+
+        if directory is not None:
+            country_results.to_csv("{}/{}_country_results.csv".format(directory, name))
+            bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name), index=False)
+            diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index=False)
+        else:
+            return country_results, bilateral_results, diag_frame
+
 
 
 
