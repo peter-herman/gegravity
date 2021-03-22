@@ -53,7 +53,7 @@ print(est_model.results_dict['all'].summary())
 # Most of the other MonteCarloGE arguments follow those from the OneSectorGE model. See that model for details.
 monte_model = MonteCarloGE(est_model,
                            year='2006',
-                           trials=2,
+                           trials=10,
                            reference_importer='DEU',
                            sigma=5,
                            expend_var_name='E',
@@ -115,3 +115,7 @@ monte_model.export_results(directory="examples//", name = 'monte')
 i,j,k = monte_model.export_results()
 
 # Finally, all of the results can of course be exported individually using standard python or pandas procedures.
+
+
+
+
