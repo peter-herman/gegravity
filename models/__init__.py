@@ -1,38 +1,44 @@
 """
 # Documentantion
 --------------------
-gegravity is a Python package contianing tools used to estimate general equilibrium (GE) structural gravity models and simulate counterfactual experiments. The package is based on the well established version of the gravity model described by Yotov, Piermartini, Monteiro, and Larch (2016) *An Advanced Guide toTrade  Policy  Analysis:  The  Structural  Gravity  Model*. It implements the structural GE gravity model in general, robust, and easy to use manner in an effort to make GE gravity modeling more accessible for researchers and policy analysts.
+gegravity is a Python package containing tools used to estimate general equilibrium (GE) structural gravity models and simulate counterfactual experiments. The package is based on the well established version of the gravity model described by Yotov, Piermartini, Monteiro, and Larch (2016) *An Advanced Guide toTrade  Policy  Analysis:  The  Structural  Gravity  Model*. It implements the structural GE gravity model in a general, robust, and easy to use manner in an effort to make GE gravity modeling more accessible for researchers and policy analysts.
 
 The package provides several useful tools for structural gravity modeling.
 
 1. It computes theory consistent estimates of the structural multilateral resistance terms of Anderson and van Wincoop (2003) "Gravity with Gravitas" from standard econometric gravity results.
 
-2. It can be used to simulate GE effects from counterfactual experiments such as new trade agreements or other policy changes. The model can be flexibly used to study aggregate or sector level trade as well as many different types of trade costs and policies.
+2. It simulates GE effects from counterfactual experiments such as new trade agreements or changes to other trade costs. The model can be flexibly used to study aggregate or sector level trade as well as many different types of trade costs and policies.
 
-3. It conducts Monte Carlo simulations that provide a means to compute standard errors and other measures of statistical precision for the GE model results. The package's MonteCarloGE model generates a sample of trade cost parameters derived from an econometrically estimated gravity model and simulates a GE gravity model for each sample. This creates a sample distribution of GE results from which to produce various sample statistics. Ultimately, the Monte Carlo tools allow users to translate the inherent statistical imprecision in econometric gravity estimates of factors like distance or preferential trade agreements into corresponding measures of statistical accuracy in the GE results.
+3. It conducts Monte Carlo simulations that provide a means to compute standard errors and other measures of statistical precision for the GE model results.
+
+For more information about the GE gravity model, its implementation, and the varios components of the package, see the paper "gegravity: General Equilibrium Gravity Modeling in Python" at [LINK].
 
 
 ## Citation and license
-The package is publicly available and free to use. Users are asked to please cite the following:
+The package is publicly available and free to use under the MIT license. Users are asked to please cite the following document,
 
-Herman, Peter, (2021) "gegravity: General Equilibrium Gravity Modeling in Python."
+Herman, Peter (2021) "gegravity: General Equilibrium Gravity Modeling in Python."
 
 
 ## Installation
-The package can be installed via pip via the following command:
+The package can be installed via pip with the following command.
 
 >>> pip install gegravity
-## Dependencies
 
-## Examples
+
+
+## Getting started
+The following examples demonstrate how to perform a typical GE gravity analysis using the gegravity package. The code files for these examples as well as the sample data set used in them can be found at the project's github page or at the following gist locations.
+
+* **Sample data:** https://gist.github.com/peter-herman/13b056e52105008c53faa482db67ed4a
+* **Basic GE analysis script:** https://gist.github.com/peter-herman/faeea8ec032c4c2c13bcbc9c400cca9b
+* **Monte Carlo GE analysis:** https://gist.github.com/peter-herman/a2ebf3997bfd6e9cb3268298d49b64b5
+
 
 ### Prepare data inputs
 Begin by loading some needed packages
 >>> from models.OneSectorGE import OneSectorGE, CostCoeffs
 >>> import pandas as pd
-# Increase number of columns printed for a pandas DataFrame
->>> pd.set_option("display.max_columns", None)
->>> pd.set_option('display.width', 1000)
 >>> import gme as gme
 >>> import gegravity as ge
 
@@ -50,14 +56,14 @@ Next, load some input data
 
 
 
-Prepare data and econometric inputs for GE Model using the tools in the gme package. First, Define GME Estimation Data
+Prepare data and econometric inputs for the GE Model using the tools in the gme package. First, Define a gme EstimationData object.
 >>> gme_data = gme.EstimationData(grav_data, # Dataset
 ...                               imp_var_name="importer", # Importer column name
 ...                               exp_var_name="exporter", # Exporter column name
 ...                               year_var_name = "year",  # Year column name
 ...                               trade_var_name="trade")  # Trade column name
 
-Second, create and estimate a gravity model to derive trade cost parameter estimates.
+Second, create and estimate a gme EstimationModel gravity model to derive trade cost parameter estimates.
 >>> gme_model = gme.EstimationModel(gme_data, # Specify data to use
 ...                                 lhs_var="trade",                               # dependent, "left hand side" variable
 ...                                 rhs_var=["pta","contiguity","common_language", # independent variables
@@ -79,7 +85,7 @@ Estimation began at 09:27 AM  on Mar 29, 2021
 Omitted Columns: ['importer_fe_ZAF', 'importer_fe_USA']
 Estimation completed at 09:27 AM  on Mar 29, 2021
 
-Print econometric results table
+To examine the econometric estimates, we can print a table of results.
 >>> print(gme_model.results_dict['all'].summary())
                  Generalized Linear Model Regression Results
 ==============================================================================
@@ -107,7 +113,7 @@ international      -3.4224      0.215    -15.940      0.000      -3.844      -3.
 ### Conduct a basic GE analysis
 
 
-Define a GE model using the OneSectorGE class, which is the package's primary model.
+With the data entered into the gme EstimationStructure and cost estimates derrived, we can create the GE model. Define the GE model using the OneSectorGE class, which is the package's primary model.
 >>> ge_model = ge.OneSectorGE(gme_model,                   # gme gravity model
 ...                        year = "2006",               # Year to use for model
 ...                        expend_var_name = "E",       # Expenditure column name
@@ -124,13 +130,13 @@ Define a GE model using the OneSectorGE class, which is the package's primary mo
 The following commands are not required to define or solve the GE model but can help diagnose issues that arise if
 the model fails to solve.
 
-**Examine input parameters:** The first thing that can be done is examine the parameters that are constructed for the model solvers. we can test if the model system of equations is computable from the supplied data and parameters
+**Examine input parameters:** The first thing that we can do is examine the parameters that are constructed for the model solvers. In particular, we can test if the model's system of equations is computable from the supplied data and parameters.
 >>> test_diagnostics = ge_model.test_baseline_mr_function()
 # See what is returned:
 >>> print(test_diagnostics.keys())
 dict_keys(['initial values', 'mr_params', 'function_value'])
 
-Check the values of the model parameters computed from the baseline data, which should be numeric with no missing values
+Check the values of the model parameters computed from the baseline data, which should be numeric with no missing values.
 >>> input_params = test_diagnostics['mr_params']
 # Check one set of parameters, for example:
 >>> print(input_params['cost_exp_shr'])
@@ -141,7 +147,7 @@ Check the values of the model parameters computed from the baseline data, which 
   3.96578076e-05 1.09631645e-04 4.44143262e-05 1.40691044e-05
 (truncated for brevity)
 
-**Find a OMR rescale factor:** The second thing that can be tested is the scaling of the outward multilateral resistance (OMR) terms, which are some of the variables solved for by each solver routine. Rescaling the OMR terms can help when the magnitude of the OMRs differ significantly from the other variables being solved for. It rescales them withing the sovlver, which can correct many solver issues. The following method can be used to test multiple differewnt potentioal scales and identify ones that result in convergence.
+**Find a OMR rescale factor:** The second thing that can be tested is the scaling of the outward multilateral resistance (OMR) terms, which are some of the variables solved for using non-linear solvers as part of the baseline and counterfactual model construction. Rescaling the OMR terms can help when the magnitude of the OMRs differ significantly from the other variables being solved for. It rescales them within the sovlvers, which can improve convergence. The following method can be used to test multiple different potential scales and identify ones that result in convergence.
 
 
 >>> rescale_eval = ge_model.check_omr_rescale(omr_rescale_range=3)
@@ -165,7 +171,7 @@ outward multilateral resistance (OMR) terms (2.918).
 #### Solve baseline and counterfactual experiment GE model
 
 
-Begin by solving the baseline model.
+Having found a rescale factor that successfully solves the model, we can construct the actual baseline model. Once complete, we can access the theoretical multilateral resistance terms of the model.
 >>> ge_model.build_baseline(omr_rescale=100)
 # Examine the solutions for the baseline multilateral resistances
 >>> print(ge_model.baseline_mr.head())
@@ -177,17 +183,17 @@ BEL          2.925592      1.050865
 BRA          3.590866      1.292782
 CAN          3.313605      1.338893
 
-Next, define the counterfactual experiment. Begin by creating a copy of the baseline data.
+From this point, we can try a counterfactual experiment. For this example, let us consider a hypothetical experiment in which Canada (CAN) and Japan (JPN) sign a preferential trade agreement (pta). Begin by creating a copy of the baseline data. Here, it is important that we create a "deep" copy so as to avoid modifying the baseline data too.
 >>> exp_data = ge_model.baseline_data.copy()
 
-Modify the copied data to reflect a counterfactual experiment in which Canada (CAN) and Japan (JPN) sign a preferential trade agreement (pta)
+Next, we modify the copied data to reflect the hypothetical policy change.
 >>> exp_data.loc[(exp_data["importer"] == "CAN") & (exp_data["exporter"] == "JPN"), "pta"] = 1
 >>> exp_data.loc[(exp_data["importer"] == "JPN") & (exp_data["exporter"] == "CAN"), "pta"] = 1
 
-Define the experiment within the GE model
+Now, define the experiment by suppling the counterfactual data to the GE model.
 >>> ge_model.define_experiment(exp_data)
 
-It thin point, we can examine the baseline and the newly created counterfactual trade costs
+At this point, we can examine the baseline and the newly created counterfactual trade costs.
 >>> print(ge_model.bilateral_costs.head())
                    baseline trade cost  experiment trade cost  trade cost change (%)
 exporter importer
@@ -197,25 +203,17 @@ AUS      AUS                  0.072546               0.072546                   
          BRA                  0.000931               0.000931                    0.0
          CAN                  0.000902               0.000902                    0.0
 
-With the experiment defined, the counterfactual model can be estimated.
+With the experiment defined, the counterfactual model can be estimated. As the model solves, some diagnostic information will print to the console indicating if the first and second stages of the solution were successful.
 >>> ge_model.simulate()
 
-Examine the counterfactual trade flows predicted by the model.
->>> print(ge_model.bilateral_trade_results.head())
-                   baseline modeled trade  experiment trade  trade change (percent)
-exporter importer
-AUS      AUS                216157.106997     216199.213723                0.019480
-         AUT                   683.873129        683.730549               -0.020849
-         BEL                  1586.476404       1586.023933               -0.028520
-         BRA                  2794.995080       2794.072041               -0.033025
-         CAN                  2891.501312       2821.979450               -2.404352
+
 
 
 #### Access and Export Results
 
-With the model estimated, we can retrieve many of the different sets of model results. For example:
+With the model estimated, we can retrieve many of the different sets of model results that are produced. The following are some of the more prominent collections of results.
 
-* A collection of many of the key country-level results (prices, total imports/exports, GDP, welfare, etc.)
+**Country results:** A collection of many of the key country-level results (prices, total imports/exports, GDP, welfare, etc.)
 >>> country_results = ge_model.country_results
 # Print the first few rows of country-level estimated change in factory prices, GDP, and foreign exports
 print(country_results[['factory gate price change (percent)', 'GDP change (percent)',
@@ -228,16 +226,24 @@ BEL                                -0.002154             -0.002516              
 BRA                                -0.005570             -0.005659                         -0.080171
 CAN                                -0.133574              0.435343                          1.634825
 
-* The bilateral trade results
+** Bilateral trade results:** Baseline and counterfactual trade between each pair of countries.
 >>> bilateral_results = ge_model.bilateral_trade_results
+>>> print(bilateral_results.head())
+                   baseline modeled trade  experiment trade  trade change (percent)
+exporter importer
+AUS      AUS                216157.106997     216199.213723                0.019480
+         AUT                   683.873129        683.730549               -0.020849
+         BEL                  1586.476404       1586.023933               -0.028520
+         BRA                  2794.995080       2794.072041               -0.033025
+         CAN                  2891.501312       2821.979450               -2.404352
 
-* A wider selection of aggregate, country-level trade results
+**Aggregate Trade:** Total imports, exports, intranational trade, output, and shipments for each country.
 >>> agg_trade = ge_model.aggregate_trade_results
 
-* country multilateral resistance (MR) terms
+**Multilateral Resistances:** Country multilateral resistance (MR) terms
 >>> mr_terms = ge_model.country_mr_terms
 
-* Get the solver diaganoistics, which is a dictionary containing many types of solver diagnostic info
+**Solver Diagnostics** A dictionary containing many types of solver diagnostic info.
 >>> solver_diagnostics = ge_model.solver_diagnostics
 
 
@@ -249,7 +255,7 @@ It is also possible to export the results to a collection of spreadsheet (.csv) 
 #### Post estimation analysis
 There are several tools that allow for post-estimation analysis. These can help to better understand the effects of the analysis or to example particular countries of interest.
 
-For example, we can examine how the counterfactual experiment affected Canadian imports from NAFTA members USA and Mexico
+For example, we can examine how the counterfactual experiment affected Canadian imports from NAFTA members USA and Mexico.
 >>> nafta_share = ge_model.trade_share(importers = ['CAN'],exporters = ['USA','MEX'])
 >>> print(nafta_share)
                             description baseline modeled trade experiment trade change (percentage point) change (%)
@@ -258,7 +264,7 @@ For example, we can examine how the counterfactual experiment affected Canadian 
 
 
 
-Calculate counterfactual experiment trade based on observed levels and estimated changes in trade
+We can calculate counterfactual trade values based on observed levels and the estimated changes in trade.
 >>> levels = ge_model.calculate_levels()
 >>> print(levels.head())
          baseline observed foreign exports  experiment observed foreign exports  baseline observed foreign imports  experiment observed foreign imports  baseline observed intranational trade  experiment observed intranational trade
@@ -269,7 +275,7 @@ BEL                                  258238                        258139.077301
 BRA                                   61501                         61451.693962                              56294                         56256.521333                                 465995                            465969.574790
 CAN                                  256829                        261027.705514                             266512                        270678.983401                                 223583                            219107.825989
 
-Calculate trade weighted shocks to see which countries or country-pairs were most affected by the counterfactual experiment. Start with bilateral level shocks
+Finally, we can calculate trade weighted shocks to see which countries or country-pairs were most/least affected by the counterfactual experiment. Start with bilateral level shocks
 >>> bilat_cost_shock = ge_model.trade_weighted_shock(how = 'bilateral')
 >>> print(bilat_cost_shock.head())
   exporter importer  baseline modeled trade  trade cost change (%)  weighted_cost_change
@@ -279,7 +285,9 @@ Calculate trade weighted shocks to see which countries or country-pairs were mos
 3      AUS      BRA             2794.995080                    0.0                   0.0
 4      AUS      CAN             2891.501312                    0.0                   0.0
 
-Next, at country-level, which summarizes the bilateral shocks
+In this experiment, only Canada--Japan trade should be affected so all other shocks are zero.
+
+Alternatively, we can also do this at country-level, which summarizes the bilateral shocks.
 >>> country_cost_shock  = ge_model.trade_weighted_shock(how='country', aggregations = ['mean', 'sum', 'max'])
 >>> print(country_cost_shock.head())
                     mean       sum       max      mean      sum      max
@@ -290,12 +298,12 @@ BEL             0.000000  0.000000  0.000000  0.000000      0.0      0.0
 BRA             0.000000  0.000000  0.000000  0.000000      0.0      0.0
 CAN             0.010171  0.305121  0.305121  0.033333      1.0      1.0
 
-
+The maximum shock possible is 1 so we can see Canada's imports from Japan were the largest affected trade flow and likely the most influential factor underlying the counterfactual results.
 
 
 #### Create model with alternative cost estimates
 
-It is possible to supply cost estimates that were not derived using the gme.Estimation model.To do so, prepare a DataFrame with the desired cost parameter values.
+It is possible to supply cost estimates that were not derived using the gme.Estimation model. For example, this may be desireable if you'd like to use estimates derived with high dimensional fixed effects from a different package. To do so, prepare a DataFrame with the desired cost parameter values.
 >>> coeff_data = [{'var':"lndist", 'coeff':-0.4, 'ste':0.05},
 ...               {'var':"contiguity", 'coeff':0.9, 'ste':0.10},
 ...               {'var':"pta", 'coeff':0.5, 'ste':0.02},

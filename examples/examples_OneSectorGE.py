@@ -197,7 +197,7 @@ coeff_data = [{'var':"lndist", 'coeff':-0.4, 'ste':0.05},
 coeff_df = pd.DataFrame(coeff_data)
 print(coeff_df)
 
-# Create a CostCoeff object from thos values
+# Create a CostCoeff object from those values
 cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var', coeff_col = 'coeff', stderr_col = 'ste')
 
 # Define a new OneSector GE model using those cost parameters
