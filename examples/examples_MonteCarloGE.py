@@ -93,7 +93,7 @@ monte_model.run_trials(experiment_data=exp_data,
 # The MonteCarloGE model populates with the same set of results attributes as the OneSectorGE model. For example, we can
 # retrieve to main country level results:
 country_results = monte_model.country_results
-
+print(country_results.head(8))
 
 # We can also check to see if any trials failed to solve.
 print(monte_model.num_failed_trials)

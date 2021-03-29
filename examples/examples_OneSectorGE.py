@@ -104,7 +104,7 @@ print(rescale_eval)
 ##
 ge_model.build_baseline(omr_rescale=100)
 # Examine the solutions for the baselin multilateral resistances
-print(ge_model.baseline_mr.head())
+print(ge_model.baseline_mr.head(12))
 
 ##
 # Define the counterfactual experiment
@@ -112,8 +112,8 @@ print(ge_model.baseline_mr.head())
 # Create a copy of the baseline data
 exp_data = ge_model.baseline_data.copy()
 
-# Modify the copied data to reflect a counterfactual experiment in which Canada (CAN) and Japan sign a preferential
-# trade agreement (pta)
+# Modify the copied data to reflect a counterfactual experiment in which Canada (CAN) and Japan (JPN) sign a
+# preferential trade agreement (pta)
 exp_data.loc[(exp_data["importer"] == "CAN") & (exp_data["exporter"] == "JPN"), "pta"] = 1
 exp_data.loc[(exp_data["importer"] == "JPN") & (exp_data["exporter"] == "CAN"), "pta"] = 1
 # Define the experiment within the GE model
@@ -201,7 +201,7 @@ print(coeff_df)
 cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var', coeff_col = 'coeff', stderr_col = 'ste')
 
 # Define a new OneSector GE model using those cost parameters
-alternate_costs = ge_model = OneSectorGE(gme_model, year = "2006",
+alternate_costs = OneSectorGE(gme_model, year = "2006",
                        expend_var_name = "E",  # Expenditure column name
                        output_var_name = "Y",  # Output column name
                        reference_importer = "DEU",  # Reference importer
