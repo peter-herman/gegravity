@@ -1,5 +1,5 @@
 """
-# Documentantion
+# Documentation
 --------------------
 gegravity is a Python package containing tools used to estimate general equilibrium (GE) structural gravity models and simulate counterfactual experiments. The package is based on the well established version of the gravity model described by Yotov, Piermartini, Monteiro, and Larch (2016) *An Advanced Guide to Trade  Policy  Analysis:  The  Structural  Gravity  Model*. It implements the structural GE gravity model in a general, robust, and easy to use manner in an effort to make GE gravity modeling more accessible for researchers and policy analysts.
 
@@ -11,7 +11,7 @@ The package provides several useful tools for structural gravity modeling.
 
 3. It conducts Monte Carlo simulations that provide a means to compute standard errors and other measures of statistical precision for the GE model results.
 
-For more information about the GE gravity model, its implementation, and the varios components of the package, see the paper "gegravity: General Equilibrium Gravity Modeling in Python" at [LINK].
+For more information about the GE gravity model, its implementation, and the various components of the package, see the companion paper "gegravity: General Equilibrium Gravity Modeling in Python".
 
 
 ## Citation and license
