@@ -6,7 +6,7 @@ __Description__ = """A demonstration of the OneSectorGE model and module"""
 # ---
 # Load Packages
 # ---
-from models.OneSectorGE import OneSectorGE, CostCoeffs
+from gegravity.OneSectorGE import OneSectorGE, CostCoeffs
 import pandas as pd
 # Increase number of columns printed for a pandas DataFrame
 pd.set_option("display.max_columns", None)

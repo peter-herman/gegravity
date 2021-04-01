@@ -9,7 +9,7 @@ available at https://vi.unctad.org/tpa/web/vol2/vol2home.html'''
 
 import pandas as pd
 import gme as gme
-from models.OneSectorGE import OneSectorGE
+from gegravity.OneSectorGE import OneSectorGE
 
 
 # -----
