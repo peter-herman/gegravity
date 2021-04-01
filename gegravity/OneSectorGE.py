@@ -61,18 +61,18 @@ class OneSectorGE(object):
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
         Attributes:
-            aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See models.ResultsLabels for
+            aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See gegravity.ResultsLabels for
                 column details. Populated by OneSectorGE.simulate().
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
             baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
                 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
                 values B.
-            bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See models.ResultsLabels for
+            bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See gegravity.ResultsLabels for
                 column details. Populated by OneSectorGE.simulate().
             country_mr_terms (pandas.DataFrame): Baseline and counterfactual inward and outward multilateral resistance
-                estimates. See models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                estimates. See gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_results (pandas.DataFrame): A collection of the main country-level simulation results. See
-                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
             bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs. Populated by
@@ -87,7 +87,7 @@ class OneSectorGE(object):
             factory_gate_prices (pandas.DataFrame): Counterfactual prices (baseline prices are all normalized to 1).
                 Populated by OneSectorGE.simulate().
             outputs_expenditures (pandas.DataFrame): Baseline and counterfactual expenditure and output values. See
-                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             sigma (int): The elasticity of substitution parameter value
             solver_diagnostics (dict): A dictionary of solver diagnostics for the three solution routines: baseline
                 multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual

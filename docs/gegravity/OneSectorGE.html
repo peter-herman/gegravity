@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
-<title>models.OneSectorGE API documentation</title>
+<title>gegravity.OneSectorGE API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -20,7 +20,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>models.OneSectorGE</code></h1>
+<h1 class="title">Module <code>gegravity.OneSectorGE</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -90,18 +90,18 @@ class OneSectorGE(object):
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
         Attributes:
-            aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See models.ResultsLabels for
+            aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See gegravity.ResultsLabels for
                 column details. Populated by OneSectorGE.simulate().
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
             baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
                 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
                 values B.
-            bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See models.ResultsLabels for
+            bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See gegravity.ResultsLabels for
                 column details. Populated by OneSectorGE.simulate().
             country_mr_terms (pandas.DataFrame): Baseline and counterfactual inward and outward multilateral resistance
-                estimates. See models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                estimates. See gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_results (pandas.DataFrame): A collection of the main country-level simulation results. See
-                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
             bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs. Populated by
@@ -116,7 +116,7 @@ class OneSectorGE(object):
             factory_gate_prices (pandas.DataFrame): Counterfactual prices (baseline prices are all normalized to 1).
                 Populated by OneSectorGE.simulate().
             outputs_expenditures (pandas.DataFrame): Baseline and counterfactual expenditure and output values. See
-                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             sigma (int): The elasticity of substitution parameter value
             solver_diagnostics (dict): A dictionary of solver diagnostics for the three solution routines: baseline
                 multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
@@ -2240,7 +2240,7 @@ class ResultsLabels(object):
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="models.OneSectorGE.CostCoeffs"><code class="flex name class">
+<dt id="gegravity.OneSectorGE.CostCoeffs"><code class="flex name class">
 <span>class <span class="ident">CostCoeffs</span></span>
 <span>(</span><span>estimates: pandas.core.frame.DataFrame, identifier_col: str, coeff_col: str, stderr_col: str = None)</span>
 </code></dt>
@@ -2260,7 +2260,7 @@ The column name for the standard error estimates for each variable. This column 
 required for the MonteCarloGE model and may be omitted for the OneSectorGE model.</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code><a title="models.OneSectorGE.CostCoeffs" href="#models.OneSectorGE.CostCoeffs">CostCoeffs</a></code></dt>
+<dt><code><a title="gegravity.OneSectorGE.CostCoeffs" href="#gegravity.OneSectorGE.CostCoeffs">CostCoeffs</a></code></dt>
 <dd>An instance of a ParameterValues object.</dd>
 </dl>
 <h2 id="examples">Examples</h2>
@@ -2365,7 +2365,7 @@ Name: coeff, dtype: float64
         return repr(self._table)</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.Country"><code class="flex name class">
+<dt id="gegravity.OneSectorGE.Country"><code class="flex name class">
 <span>class <span class="ident">Country</span></span>
 <span>(</span><span>identifier: str = None, year: str = None, baseline_output: float = None, baseline_expenditure: float = None, baseline_importer_fe: float = None, baseline_exporter_fe: float = None, reference_expenditure: float = None)</span>
 </code></dt>
@@ -2734,7 +2734,7 @@ Yotov, (2016).</dd>
                     self.terms_of_trade_change)</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.Economy"><code class="flex name class">
+<dt id="gegravity.OneSectorGE.Economy"><code class="flex name class">
 <span>class <span class="ident">Economy</span></span>
 <span>(</span><span>sigma: float = 4)</span>
 </code></dt>
@@ -2808,7 +2808,7 @@ Yotov, (2016).</dd>
                     self.output_change)</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE"><code class="flex name class">
+<dt id="gegravity.OneSectorGE.OneSectorGE"><code class="flex name class">
 <span>class <span class="ident">OneSectorGE</span></span>
 <span>(</span><span>estimation_model: gme.estimate.EstimationModel.EstimationModel, year: str, reference_importer: str, expend_var_name: str, output_var_name: str, sigma: float, results_key: str = 'all', cost_variables: List[str] = None, cost_coeff_values=None, quiet: bool = False)</span>
 </code></dt>
@@ -2837,7 +2837,7 @@ False in GME model), this key is 'all', which is the default.</dd>
 <dt><strong><code>cost_variables</code></strong> :&ensp;<code>List[str]</code></dt>
 <dd>(optional) A list of variables to use to compute bilateral trade costs. By
 default, all included non-fixed effect variables are used.</dd>
-<dt><strong><code>cost_coeff_values</code></strong> :&ensp;<code><a title="models.OneSectorGE.CostCoeffs" href="#models.OneSectorGE.CostCoeffs">CostCoeffs</a></code></dt>
+<dt><strong><code>cost_coeff_values</code></strong> :&ensp;<code><a title="gegravity.OneSectorGE.CostCoeffs" href="#gegravity.OneSectorGE.CostCoeffs">CostCoeffs</a></code></dt>
 <dd>(optional) A set of parameter values or estimates to use for constructing
 trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.</dd>
@@ -2847,7 +2847,7 @@ gme.SlimResults. If no values are provided, the estimates in the EstimationModel
 <h2 id="attributes">Attributes</h2>
 <dl>
 <dt><strong><code>aggregate_trade_results</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Country-level, aggregate results. See models.ResultsLabels for
+<dd>Country-level, aggregate results. See gegravity.ResultsLabels for
 column details. Populated by OneSectorGE.simulate().</dd>
 <dt><strong><code>baseline_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>Baseline data supplied to model in gme.EstimationModel.</dd>
@@ -2856,21 +2856,21 @@ column details. Populated by OneSectorGE.simulate().</dd>
 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
 values B.</dd>
 <dt><strong><code>bilateral_trade_results</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Bilateral trade results. See models.ResultsLabels for
+<dd>Bilateral trade results. See gegravity.ResultsLabels for
 column details. Populated by OneSectorGE.simulate().</dd>
 <dt><strong><code>country_mr_terms</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>Baseline and counterfactual inward and outward multilateral resistance
-estimates. See models.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
+estimates. See gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
 <dt><strong><code>country_results</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>A collection of the main country-level simulation results. See
-models.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
-<dt><strong><code>country_set</code></strong> :&ensp;<code>dict[<a title="models.OneSectorGE.Country" href="#models.OneSectorGE.Country">Country</a>]</code></dt>
+gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
+<dt><strong><code>country_set</code></strong> :&ensp;<code>dict[<a title="gegravity.OneSectorGE.Country" href="#gegravity.OneSectorGE.Country">Country</a>]</code></dt>
 <dd>A dictionary containing a Country object for each country in the model, keyed
 by their respective identifiers.</dd>
 <dt><strong><code>bilateral_costs</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>The baseline and experiment trade costs. Populated by
 OneSectorGE.define_experiment().</dd>
-<dt><strong><code>economy</code></strong> :&ensp;<code><a title="models.OneSectorGE.Economy" href="#models.OneSectorGE.Economy">Economy</a></code></dt>
+<dt><strong><code>economy</code></strong> :&ensp;<code><a title="gegravity.OneSectorGE.Economy" href="#gegravity.OneSectorGE.Economy">Economy</a></code></dt>
 <dd>The model's Economy object.</dd>
 <dt><strong><code>experiment_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>The counterfactual experiment data. Populated by
@@ -2885,7 +2885,7 @@ OneSectorGE.define_experiment().</dd>
 Populated by OneSectorGE.simulate().</dd>
 <dt><strong><code>outputs_expenditures</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>Baseline and counterfactual expenditure and output values. See
-models.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
+gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
 <dt><strong><code>sigma</code></strong> :&ensp;<code>int</code></dt>
 <dd>The elasticity of substitution parameter value</dd>
 <dt><strong><code>solver_diagnostics</code></strong> :&ensp;<code>dict</code></dt>
@@ -2985,18 +2985,18 @@ Estimation completed at 11:47 AM  on Mar 16, 2021
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
         Attributes:
-            aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See models.ResultsLabels for
+            aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See gegravity.ResultsLabels for
                 column details. Populated by OneSectorGE.simulate().
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
             baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
                 (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
                 values B.
-            bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See models.ResultsLabels for
+            bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See gegravity.ResultsLabels for
                 column details. Populated by OneSectorGE.simulate().
             country_mr_terms (pandas.DataFrame): Baseline and counterfactual inward and outward multilateral resistance
-                estimates. See models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                estimates. See gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_results (pandas.DataFrame): A collection of the main country-level simulation results. See
-                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
                 by their respective identifiers.
             bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs. Populated by
@@ -3011,7 +3011,7 @@ Estimation completed at 11:47 AM  on Mar 16, 2021
             factory_gate_prices (pandas.DataFrame): Counterfactual prices (baseline prices are all normalized to 1).
                 Populated by OneSectorGE.simulate().
             outputs_expenditures (pandas.DataFrame): Baseline and counterfactual expenditure and output values. See
-                models.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+                gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
             sigma (int): The elasticity of substitution parameter value
             solver_diagnostics (dict): A dictionary of solver diagnostics for the three solution routines: baseline
                 multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
@@ -4512,7 +4512,7 @@ Estimation completed at 11:47 AM  on Mar 16, 2021
 </details>
 <h3>Methods</h3>
 <dl>
-<dt id="models.OneSectorGE.OneSectorGE.build_baseline"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.build_baseline"><code class="name flex">
 <span>def <span class="ident">build_baseline</span></span>(<span>self, omr_rescale: float = 1, imr_rescale: float = 1, mr_method: str = 'hybr', mr_max_iter: int = 1400, mr_tolerance: float = 1e-08)</span>
 </code></dt>
 <dd>
@@ -4642,7 +4642,7 @@ CAN          3.313605      1.338893
     self._baseline_built = True</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.calculate_levels"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.calculate_levels"><code class="name flex">
 <span>def <span class="ident">calculate_levels</span></span>(<span>self, how: str = 'country')</span>
 </code></dt>
 <dd>
@@ -4777,7 +4777,7 @@ CAN                                  256829                        261027.705536
         return bilat_trade</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.check_omr_rescale"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.check_omr_rescale"><code class="name flex">
 <span>def <span class="ident">check_omr_rescale</span></span>(<span>self, omr_rescale_range: int = 10, mr_method: str = 'hybr', mr_max_iter: int = 1400, mr_tolerance: float = 1e-08, countries: List[str] = [])</span>
 </code></dt>
 <dd>
@@ -4951,7 +4951,7 @@ OMR term (2.918).</p></div>
     return findings_table</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.define_experiment"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.define_experiment"><code class="name flex">
 <span>def <span class="ident">define_experiment</span></span>(<span>self, experiment_data: pandas.core.frame.DataFrame)</span>
 </code></dt>
 <dd>
@@ -5053,7 +5053,7 @@ AUS      AUS                  0.072546               0.072546                   
     self._experiment_defined = True</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.export_results"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.export_results"><code class="name flex">
 <span>def <span class="ident">export_results</span></span>(<span>self, directory: str = None, name: str = '', include_levels: bool = False, country_names: pandas.core.frame.DataFrame = None)</span>
 </code></dt>
 <dd>
@@ -5218,7 +5218,7 @@ DataFrames.</dd>
         return country_results, bilateral_results, diag_frame</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.simulate"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.simulate"><code class="name flex">
 <span>def <span class="ident">simulate</span></span>(<span>self, ge_method: str = 'hybr', ge_tolerance: float = 1e-08, ge_max_iter: int = 1000)</span>
 </code></dt>
 <dd>
@@ -5322,7 +5322,7 @@ AUS      AUS                216157.106891     216199.213687                0.019
     self._simulated = True</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.test_baseline_mr_function"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.test_baseline_mr_function"><code class="name flex">
 <span>def <span class="ident">test_baseline_mr_function</span></span>(<span>self, inputs_only: bool = False)</span>
 </code></dt>
 <dd>
@@ -5418,7 +5418,7 @@ cannot be computed and raise errors:</p>
     return test_diagnostics</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.trade_share"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.trade_share"><code class="name flex">
 <span>def <span class="ident">trade_share</span></span>(<span>self, importers: List[str], exporters: List[str])</span>
 </code></dt>
 <dd>
@@ -5504,7 +5504,7 @@ United States and Mexico's exports declines by 2.18 percent (0.04 precentage poi
     return both</code></pre>
 </details>
 </dd>
-<dt id="models.OneSectorGE.OneSectorGE.trade_weighted_shock"><code class="name flex">
+<dt id="gegravity.OneSectorGE.OneSectorGE.trade_weighted_shock"><code class="name flex">
 <span>def <span class="ident">trade_weighted_shock</span></span>(<span>self, how: str = 'country', aggregations: list = ['mean', 'sum', 'max'])</span>
 </code></dt>
 <dd>
@@ -5635,7 +5635,7 @@ given the maximum possible shock is 1).</p></div>
 </dd>
 </dl>
 </dd>
-<dt id="models.OneSectorGE.ResultsLabels"><code class="flex name class">
+<dt id="gegravity.OneSectorGE.ResultsLabels"><code class="flex name class">
 <span>class <span class="ident">ResultsLabels</span></span>
 </code></dt>
 <dd>
@@ -5909,36 +5909,36 @@ resistance terms (π'_i).</p>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="models" href="index.html">models</a></code></li>
+<li><code><a title="gegravity" href="index.html">gegravity</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="models.OneSectorGE.CostCoeffs" href="#models.OneSectorGE.CostCoeffs">CostCoeffs</a></code></h4>
+<h4><code><a title="gegravity.OneSectorGE.CostCoeffs" href="#gegravity.OneSectorGE.CostCoeffs">CostCoeffs</a></code></h4>
 </li>
 <li>
-<h4><code><a title="models.OneSectorGE.Country" href="#models.OneSectorGE.Country">Country</a></code></h4>
+<h4><code><a title="gegravity.OneSectorGE.Country" href="#gegravity.OneSectorGE.Country">Country</a></code></h4>
 </li>
 <li>
-<h4><code><a title="models.OneSectorGE.Economy" href="#models.OneSectorGE.Economy">Economy</a></code></h4>
+<h4><code><a title="gegravity.OneSectorGE.Economy" href="#gegravity.OneSectorGE.Economy">Economy</a></code></h4>
 </li>
 <li>
-<h4><code><a title="models.OneSectorGE.OneSectorGE" href="#models.OneSectorGE.OneSectorGE">OneSectorGE</a></code></h4>
+<h4><code><a title="gegravity.OneSectorGE.OneSectorGE" href="#gegravity.OneSectorGE.OneSectorGE">OneSectorGE</a></code></h4>
 <ul class="">
-<li><code><a title="models.OneSectorGE.OneSectorGE.build_baseline" href="#models.OneSectorGE.OneSectorGE.build_baseline">build_baseline</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.calculate_levels" href="#models.OneSectorGE.OneSectorGE.calculate_levels">calculate_levels</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.check_omr_rescale" href="#models.OneSectorGE.OneSectorGE.check_omr_rescale">check_omr_rescale</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.define_experiment" href="#models.OneSectorGE.OneSectorGE.define_experiment">define_experiment</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.export_results" href="#models.OneSectorGE.OneSectorGE.export_results">export_results</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.simulate" href="#models.OneSectorGE.OneSectorGE.simulate">simulate</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.test_baseline_mr_function" href="#models.OneSectorGE.OneSectorGE.test_baseline_mr_function">test_baseline_mr_function</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.trade_share" href="#models.OneSectorGE.OneSectorGE.trade_share">trade_share</a></code></li>
-<li><code><a title="models.OneSectorGE.OneSectorGE.trade_weighted_shock" href="#models.OneSectorGE.OneSectorGE.trade_weighted_shock">trade_weighted_shock</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.build_baseline" href="#gegravity.OneSectorGE.OneSectorGE.build_baseline">build_baseline</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.calculate_levels" href="#gegravity.OneSectorGE.OneSectorGE.calculate_levels">calculate_levels</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.check_omr_rescale" href="#gegravity.OneSectorGE.OneSectorGE.check_omr_rescale">check_omr_rescale</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.define_experiment" href="#gegravity.OneSectorGE.OneSectorGE.define_experiment">define_experiment</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.export_results" href="#gegravity.OneSectorGE.OneSectorGE.export_results">export_results</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.simulate" href="#gegravity.OneSectorGE.OneSectorGE.simulate">simulate</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.test_baseline_mr_function" href="#gegravity.OneSectorGE.OneSectorGE.test_baseline_mr_function">test_baseline_mr_function</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.trade_share" href="#gegravity.OneSectorGE.OneSectorGE.trade_share">trade_share</a></code></li>
+<li><code><a title="gegravity.OneSectorGE.OneSectorGE.trade_weighted_shock" href="#gegravity.OneSectorGE.OneSectorGE.trade_weighted_shock">trade_weighted_shock</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="models.OneSectorGE.ResultsLabels" href="#models.OneSectorGE.ResultsLabels">ResultsLabels</a></code></h4>
+<h4><code><a title="gegravity.OneSectorGE.ResultsLabels" href="#gegravity.OneSectorGE.ResultsLabels">ResultsLabels</a></code></h4>
 </li>
 </ul>
 </li>

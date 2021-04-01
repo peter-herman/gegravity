@@ -37,7 +37,7 @@ The following examples demonstrate how to perform a typical GE gravity analysis 
 
 ### Prepare data inputs
 Begin by loading some needed packages
->>> from models.OneSectorGE import OneSectorGE, CostCoeffs
+>>> from gegravity.OneSectorGE import OneSectorGE, CostCoeffs
 >>> import pandas as pd
 >>> import gme as gme
 >>> import gegravity as ge

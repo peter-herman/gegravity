@@ -1,7 +1,7 @@
 __Author__ = "Peter Herman"
 __Project__ = "gegravity"
 __Created__ = "May 05, 2020"
-__Description__ = '''A method for Generating Monte Carlo GE models using the distributions of parameter estimates from 
+__Description__ = '''A method for Generating Monte Carlo GE gegravity using the distributions of parameter estimates from 
 the empirical model '''
 __all__ = ['MonteCarloGE']
 
@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
-from models.OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
+from gegravity.OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
 from scipy.stats import multivariate_normal
 from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
 from typing import List
@@ -289,7 +289,7 @@ class MonteCarloGE(object):
                 print("Failed to solve model.\n")
                 num_failed_iterations+=1
 
-        # Get results labels from one of the OneSectorGE models
+        # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
         self.num_failed_trials = num_failed_iterations
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
@@ -306,7 +306,7 @@ class MonteCarloGE(object):
     def _compile_results(self, models, result_type, result_stats, all_results):
         '''
         Compile results across all trials.
-        :param models: (List[OneSectorGE]) A list of solved OneSectorGE models.
+        :param models: (List[OneSectorGE]) A list of solved OneSectorGE gegravity.
         :param result_type: (str) Type of results to compile. Function works with:
             'country_results' - compiles results from OneSectorGE.country_mr_results
             'mr_terms' - compiles results from OneSectorGE.country_mr_terms
@@ -383,7 +383,7 @@ class MonteCarloGE(object):
         '''
         Compiles the diagnostics from each trial into a single dictionary, indexed by the trial number.
         Args:
-            models: the list of OneSectorGE models associated with each trial
+            models: the list of OneSectorGE gegravity associated with each trial
 
         Returns: None, Populates the attribute self.solver_daignostics
 

@@ -10,8 +10,8 @@ __Description__ = '''A demonstartion of the MonteCarloGE model/module'''
 import pandas as pd
 from gme.construct_data.EstimationData import EstimationData
 from gme.estimate.EstimationModel import EstimationModel
-from models.OneSectorGE import OneSectorGE
-from models.MonteCarloGE import MonteCarloGE
+from gegravity.OneSectorGE import OneSectorGE
+from gegravity.MonteCarloGE import MonteCarloGE
 import numpy as np
 
 
@@ -49,7 +49,7 @@ print(est_model.results_dict['all'].summary())
 # ----
 
 # Here we demonstrate a small Monte Carlo experiment using 10 trials. The model will randomly draw 10 sets of cost
-# coefficients from their joint normal distribution and simulate 10 OneSectorGE models corresponding to each draw.
+# coefficients from their joint normal distribution and simulate 10 OneSectorGE gegravity corresponding to each draw.
 # Most of the other MonteCarloGE arguments follow those from the OneSectorGE model. See that model for details.
 monte_model = MonteCarloGE(est_model,
                            year='2006',
@@ -111,7 +111,7 @@ print(monte_model.num_failed_trials)
 # Finally to export the results to a series of .csv files.
 monte_model.export_results(directory="examples//", name = 'monte')
 
-# Alternatively, you can return this outpur in python for further manipulation.
+# Alternatively, you can return this output in python for further manipulation.
 i,j,k = monte_model.export_results()
 
 # Finally, all of the results can of course be exported individually using standard python or pandas procedures.
