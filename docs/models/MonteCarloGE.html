@@ -36,6 +36,7 @@ __all__ = [&#39;MonteCarloGE&#39;]
 
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
 from models.OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
 from scipy.stats import multivariate_normal
@@ -90,7 +91,8 @@ class MonteCarloGE(object):
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
             trials (int): The number of trial simulations of the model.
             sample_stats (pandas.DataFrame): A dataframe depicting both the initially supplied estimate values for each
-                cost variable as well as descriptive statistics for the randomly drawn values across all trials.
+                cost variable (&#39;beta_estimate&#39; and &#39;stderr_estimate&#39;) as well as descriptive statistics for the randomly
+                drawn values across all trials.
             sigma (int): The elasticity of substitution parameter value.
             ---
             **Attributes containing results populated after MonteCarloGE.run_trials()**:\n\n
@@ -226,7 +228,7 @@ class MonteCarloGE(object):
             draws.append(pd.Series(distribution_alt.rvs()))
         all_draws = pd.concat(draws, axis=1)
         all_draws.index = est_results.params.index
-        all_draws = all_draws.loc[[&#39;LN_DIST&#39;, &#39;CNTG&#39;, &#39;BRDR&#39;],:]
+        all_draws = all_draws.loc[self._mc_variables,:]
         return all_draws.reset_index()
 
 
@@ -315,6 +317,9 @@ class MonteCarloGE(object):
             except:
                 print(&#34;Failed to solve model.\n&#34;)
                 num_failed_iterations+=1
+
+        # Get results labels from one of the OneSectorGE models
+        self.labels = models[0].labels
         self.num_failed_trials = num_failed_iterations
         self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;, result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;, result_stats, all_results)
@@ -414,8 +419,92 @@ class MonteCarloGE(object):
         &#39;&#39;&#39;
         combined_diagnostics = dict()
         for trial in range(self.trials):
-            combined_diagnostics[0] = models[trial].solver_diagnostics
-        self.solver_diagnostics = combined_diagnostics</code></pre>
+            combined_diagnostics[trial] = models[trial].solver_diagnostics
+        self.solver_diagnostics = combined_diagnostics
+
+    def export_results(self, directory:str = None, name:str = &#39;&#39;,
+                       country_names:DataFrame = None, all_results = False):
+        &#39;&#39;&#39;
+        Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
+        and (3) solver diagnostics.
+        Args:
+            directory (str): (optional) Directory in which to write results files. If no directory is supplied,
+                three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral
+                results, solver diagnostics).
+            name (str): (optional) Name of the simulation to prefix to the result file names.
+            include_levels (bool): (optional) If True, includes additional columns reflecting the simulated changes in
+                levels based on observed trade flows (rather than modeled trade flows). Values are those from the
+                method calculate_levels.
+            country_names (pandas.DataFrame): (optional) Adds alternative identifiers such as names to the returned
+                results tables. The supplied DataFrame should include exactly two columns. The first column must be
+                the country identifiers used in the model. The second column must be the alternative identifiers to
+                add.
+
+        Returns:
+            None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
+                nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+                DataFrames.
+
+        Examples:
+
+
+        &#39;&#39;&#39;
+
+        importer_col = self.meta_data.imp_var_name
+        exporter_col = self.meta_data.exp_var_name
+
+        country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results,
+                              self.outputs_expenditures, self.country_mr_terms]
+        country_results = pd.concat(country_result_set, axis = 1)
+        # Order and select columns for inclusion, drop duplicates.
+        country_results_cols = country_results.columns
+        labs = self.labels
+        # Country results to include
+        results_cols = [&#39;statistic&#39;] + self.labels.country_level_labels
+        included_columns = [col for col in results_cols if col in country_results_cols]
+        country_results = country_results[included_columns]
+        country_results = country_results.loc[:, ~country_results.columns.duplicated()]
+
+        bilateral_results = self.bilateral_trade_results.reset_index()
+
+        if country_names is not None:
+            if country_names.shape[1]!=2:
+                raise ValueError(&#34;country_names should have exactly 2 columns, not {}&#34;.format(country_names.shape[1]))
+            code_col = country_names.columns[0]
+            name_col = country_names.columns[1]
+            country_names.set_index(code_col, inplace = True, drop = True)
+            country_results = country_names.merge(country_results, how = &#39;right&#39;, left_index = True, right_index=True)
+
+            # Add names to bilateral data
+            for side in [exporter_col, importer_col]:
+                side_names = country_names.copy()
+                side_names.reset_index(inplace = True)
+                side_names.rename(columns = {code_col:side, name_col:&#34;{} {}&#34;.format(side,name_col)}, inplace = True)
+                bilateral_results = bilateral_results.merge(side_names, how = &#39;left&#39;, on = side)
+
+        # Create Dataframe with Diagnostic results
+        column_list = list()
+        diagnostics = self.solver_diagnostics
+        for trial_num, trial in diagnostics.items():
+            for results_type, results in trial.items():
+                for key, value in results.items():
+                    # Single Entry fields must be converted to list before creating DataFrame
+                    if key in [&#39;success&#39;, &#39;status&#39;, &#39;nfev&#39;, &#39;message&#39;]:
+                        frame = pd.DataFrame({(&#34;trial_{}&#34;.format(trial_num), results_type, key): [value]})
+                        column_list.append(frame)
+                    # Vector-like fields Can be used as is. Several available fields are not included: &#39;fjac&#39;,&#39;r&#39;, and &#39;qtf&#39;
+                    elif key in [&#39;x&#39;, &#39;fun&#39;]:
+                        frame = pd.DataFrame({(&#34;trial_{}&#34;.format(trial_num), results_type, key): value})
+                        column_list.append(frame)
+        diag_frame = pd.concat(column_list, axis=1)
+        diag_frame = diag_frame.fillna(&#39;&#39;)
+
+        if directory is not None:
+            country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
+            bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
+            diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
+        else:
+            return country_results, bilateral_results, diag_frame</code></pre>
 </details>
 </section>
 <section>
@@ -485,7 +574,8 @@ column corresponds to a different trial.</dd>
 <dd>The number of trial simulations of the model.</dd>
 <dt><strong><code>sample_stats</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>A dataframe depicting both the initially supplied estimate values for each
-cost variable as well as descriptive statistics for the randomly drawn values across all trials.</dd>
+cost variable ('beta_estimate' and 'stderr_estimate') as well as descriptive statistics for the randomly
+drawn values across all trials.</dd>
 <dt><strong><code>sigma</code></strong> :&ensp;<code>int</code></dt>
 <dd>The elasticity of substitution parameter value.</dd>
 </dl>
@@ -605,7 +695,8 @@ ResultsLabels for description of results.</dd>
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
             trials (int): The number of trial simulations of the model.
             sample_stats (pandas.DataFrame): A dataframe depicting both the initially supplied estimate values for each
-                cost variable as well as descriptive statistics for the randomly drawn values across all trials.
+                cost variable (&#39;beta_estimate&#39; and &#39;stderr_estimate&#39;) as well as descriptive statistics for the randomly
+                drawn values across all trials.
             sigma (int): The elasticity of substitution parameter value.
             ---
             **Attributes containing results populated after MonteCarloGE.run_trials()**:\n\n
@@ -741,7 +832,7 @@ ResultsLabels for description of results.</dd>
             draws.append(pd.Series(distribution_alt.rvs()))
         all_draws = pd.concat(draws, axis=1)
         all_draws.index = est_results.params.index
-        all_draws = all_draws.loc[[&#39;LN_DIST&#39;, &#39;CNTG&#39;, &#39;BRDR&#39;],:]
+        all_draws = all_draws.loc[self._mc_variables,:]
         return all_draws.reset_index()
 
 
@@ -830,6 +921,9 @@ ResultsLabels for description of results.</dd>
             except:
                 print(&#34;Failed to solve model.\n&#34;)
                 num_failed_iterations+=1
+
+        # Get results labels from one of the OneSectorGE models
+        self.labels = models[0].labels
         self.num_failed_trials = num_failed_iterations
         self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;, result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;, result_stats, all_results)
@@ -929,11 +1023,216 @@ ResultsLabels for description of results.</dd>
         &#39;&#39;&#39;
         combined_diagnostics = dict()
         for trial in range(self.trials):
-            combined_diagnostics[0] = models[trial].solver_diagnostics
-        self.solver_diagnostics = combined_diagnostics</code></pre>
+            combined_diagnostics[trial] = models[trial].solver_diagnostics
+        self.solver_diagnostics = combined_diagnostics
+
+    def export_results(self, directory:str = None, name:str = &#39;&#39;,
+                       country_names:DataFrame = None, all_results = False):
+        &#39;&#39;&#39;
+        Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
+        and (3) solver diagnostics.
+        Args:
+            directory (str): (optional) Directory in which to write results files. If no directory is supplied,
+                three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral
+                results, solver diagnostics).
+            name (str): (optional) Name of the simulation to prefix to the result file names.
+            include_levels (bool): (optional) If True, includes additional columns reflecting the simulated changes in
+                levels based on observed trade flows (rather than modeled trade flows). Values are those from the
+                method calculate_levels.
+            country_names (pandas.DataFrame): (optional) Adds alternative identifiers such as names to the returned
+                results tables. The supplied DataFrame should include exactly two columns. The first column must be
+                the country identifiers used in the model. The second column must be the alternative identifiers to
+                add.
+
+        Returns:
+            None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
+                nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+                DataFrames.
+
+        Examples:
+
+
+        &#39;&#39;&#39;
+
+        importer_col = self.meta_data.imp_var_name
+        exporter_col = self.meta_data.exp_var_name
+
+        country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results,
+                              self.outputs_expenditures, self.country_mr_terms]
+        country_results = pd.concat(country_result_set, axis = 1)
+        # Order and select columns for inclusion, drop duplicates.
+        country_results_cols = country_results.columns
+        labs = self.labels
+        # Country results to include
+        results_cols = [&#39;statistic&#39;] + self.labels.country_level_labels
+        included_columns = [col for col in results_cols if col in country_results_cols]
+        country_results = country_results[included_columns]
+        country_results = country_results.loc[:, ~country_results.columns.duplicated()]
+
+        bilateral_results = self.bilateral_trade_results.reset_index()
+
+        if country_names is not None:
+            if country_names.shape[1]!=2:
+                raise ValueError(&#34;country_names should have exactly 2 columns, not {}&#34;.format(country_names.shape[1]))
+            code_col = country_names.columns[0]
+            name_col = country_names.columns[1]
+            country_names.set_index(code_col, inplace = True, drop = True)
+            country_results = country_names.merge(country_results, how = &#39;right&#39;, left_index = True, right_index=True)
+
+            # Add names to bilateral data
+            for side in [exporter_col, importer_col]:
+                side_names = country_names.copy()
+                side_names.reset_index(inplace = True)
+                side_names.rename(columns = {code_col:side, name_col:&#34;{} {}&#34;.format(side,name_col)}, inplace = True)
+                bilateral_results = bilateral_results.merge(side_names, how = &#39;left&#39;, on = side)
+
+        # Create Dataframe with Diagnostic results
+        column_list = list()
+        diagnostics = self.solver_diagnostics
+        for trial_num, trial in diagnostics.items():
+            for results_type, results in trial.items():
+                for key, value in results.items():
+                    # Single Entry fields must be converted to list before creating DataFrame
+                    if key in [&#39;success&#39;, &#39;status&#39;, &#39;nfev&#39;, &#39;message&#39;]:
+                        frame = pd.DataFrame({(&#34;trial_{}&#34;.format(trial_num), results_type, key): [value]})
+                        column_list.append(frame)
+                    # Vector-like fields Can be used as is. Several available fields are not included: &#39;fjac&#39;,&#39;r&#39;, and &#39;qtf&#39;
+                    elif key in [&#39;x&#39;, &#39;fun&#39;]:
+                        frame = pd.DataFrame({(&#34;trial_{}&#34;.format(trial_num), results_type, key): value})
+                        column_list.append(frame)
+        diag_frame = pd.concat(column_list, axis=1)
+        diag_frame = diag_frame.fillna(&#39;&#39;)
+
+        if directory is not None:
+            country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
+            bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
+            diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
+        else:
+            return country_results, bilateral_results, diag_frame</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
+<dt id="models.MonteCarloGE.MonteCarloGE.export_results"><code class="name flex">
+<span>def <span class="ident">export_results</span></span>(<span>self, directory: str = None, name: str = '', country_names: pandas.core.frame.DataFrame = None, all_results=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
+and (3) solver diagnostics.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>directory</code></strong> :&ensp;<code>str</code></dt>
+<dd>(optional) Directory in which to write results files. If no directory is supplied,
+three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral
+results, solver diagnostics).</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>(optional) Name of the simulation to prefix to the result file names.</dd>
+<dt><strong><code>include_levels</code></strong> :&ensp;<code>bool</code></dt>
+<dd>(optional) If True, includes additional columns reflecting the simulated changes in
+levels based on observed trade flows (rather than modeled trade flows). Values are those from the
+method calculate_levels.</dd>
+<dt><strong><code>country_names</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
+<dd>(optional) Adds alternative identifiers such as names to the returned
+results tables. The supplied DataFrame should include exactly two columns. The first column must be
+the country identifiers used in the model. The second column must be the alternative identifiers to
+add.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>None</code> or <code>Tuple[DataFrame, DataFrame, DataFrame]</code></dt>
+<dd>If a directory argument is supplied, the method returns
+nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+DataFrames.</dd>
+</dl>
+<p>Examples:</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def export_results(self, directory:str = None, name:str = &#39;&#39;,
+                   country_names:DataFrame = None, all_results = False):
+    &#39;&#39;&#39;
+    Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
+    and (3) solver diagnostics.
+    Args:
+        directory (str): (optional) Directory in which to write results files. If no directory is supplied,
+            three compiled dataframes are returned as a tuple in the order (Country-level results, bilateral
+            results, solver diagnostics).
+        name (str): (optional) Name of the simulation to prefix to the result file names.
+        include_levels (bool): (optional) If True, includes additional columns reflecting the simulated changes in
+            levels based on observed trade flows (rather than modeled trade flows). Values are those from the
+            method calculate_levels.
+        country_names (pandas.DataFrame): (optional) Adds alternative identifiers such as names to the returned
+            results tables. The supplied DataFrame should include exactly two columns. The first column must be
+            the country identifiers used in the model. The second column must be the alternative identifiers to
+            add.
+
+    Returns:
+        None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
+            nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
+            DataFrames.
+
+    Examples:
+
+
+    &#39;&#39;&#39;
+
+    importer_col = self.meta_data.imp_var_name
+    exporter_col = self.meta_data.exp_var_name
+
+    country_result_set = [self.country_results, self.factory_gate_prices, self.aggregate_trade_results,
+                          self.outputs_expenditures, self.country_mr_terms]
+    country_results = pd.concat(country_result_set, axis = 1)
+    # Order and select columns for inclusion, drop duplicates.
+    country_results_cols = country_results.columns
+    labs = self.labels
+    # Country results to include
+    results_cols = [&#39;statistic&#39;] + self.labels.country_level_labels
+    included_columns = [col for col in results_cols if col in country_results_cols]
+    country_results = country_results[included_columns]
+    country_results = country_results.loc[:, ~country_results.columns.duplicated()]
+
+    bilateral_results = self.bilateral_trade_results.reset_index()
+
+    if country_names is not None:
+        if country_names.shape[1]!=2:
+            raise ValueError(&#34;country_names should have exactly 2 columns, not {}&#34;.format(country_names.shape[1]))
+        code_col = country_names.columns[0]
+        name_col = country_names.columns[1]
+        country_names.set_index(code_col, inplace = True, drop = True)
+        country_results = country_names.merge(country_results, how = &#39;right&#39;, left_index = True, right_index=True)
+
+        # Add names to bilateral data
+        for side in [exporter_col, importer_col]:
+            side_names = country_names.copy()
+            side_names.reset_index(inplace = True)
+            side_names.rename(columns = {code_col:side, name_col:&#34;{} {}&#34;.format(side,name_col)}, inplace = True)
+            bilateral_results = bilateral_results.merge(side_names, how = &#39;left&#39;, on = side)
+
+    # Create Dataframe with Diagnostic results
+    column_list = list()
+    diagnostics = self.solver_diagnostics
+    for trial_num, trial in diagnostics.items():
+        for results_type, results in trial.items():
+            for key, value in results.items():
+                # Single Entry fields must be converted to list before creating DataFrame
+                if key in [&#39;success&#39;, &#39;status&#39;, &#39;nfev&#39;, &#39;message&#39;]:
+                    frame = pd.DataFrame({(&#34;trial_{}&#34;.format(trial_num), results_type, key): [value]})
+                    column_list.append(frame)
+                # Vector-like fields Can be used as is. Several available fields are not included: &#39;fjac&#39;,&#39;r&#39;, and &#39;qtf&#39;
+                elif key in [&#39;x&#39;, &#39;fun&#39;]:
+                    frame = pd.DataFrame({(&#34;trial_{}&#34;.format(trial_num), results_type, key): value})
+                    column_list.append(frame)
+    diag_frame = pd.concat(column_list, axis=1)
+    diag_frame = diag_frame.fillna(&#39;&#39;)
+
+    if directory is not None:
+        country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
+        bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
+        diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
+    else:
+        return country_results, bilateral_results, diag_frame</code></pre>
+</details>
+</dd>
 <dt id="models.MonteCarloGE.MonteCarloGE.run_trials"><code class="name flex">
 <span>def <span class="ident">run_trials</span></span>(<span>self, experiment_data: pandas.core.frame.DataFrame, omr_rescale: float = 1, imr_rescale: float = 1, mr_method: str = 'hybr', mr_max_iter: int = 1400, mr_tolerance: float = 1e-08, ge_method: str = 'hybr', ge_tolerance: float = 1e-08, ge_max_iter: int = 1000, quiet: bool = False, result_stats: list = ['mean', 'std', 'sem'], all_results: bool = False)</span>
 </code></dt>
@@ -1082,6 +1381,9 @@ populated. Default is False to reduce memory use.</dd>
         except:
             print(&#34;Failed to solve model.\n&#34;)
             num_failed_iterations+=1
+
+    # Get results labels from one of the OneSectorGE models
+    self.labels = models[0].labels
     self.num_failed_trials = num_failed_iterations
     self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;, result_stats, all_results)
     self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;, result_stats, all_results)
@@ -1114,6 +1416,7 @@ populated. Default is False to reduce memory use.</dd>
 <li>
 <h4><code><a title="models.MonteCarloGE.MonteCarloGE" href="#models.MonteCarloGE.MonteCarloGE">MonteCarloGE</a></code></h4>
 <ul class="">
+<li><code><a title="models.MonteCarloGE.MonteCarloGE.export_results" href="#models.MonteCarloGE.MonteCarloGE.export_results">export_results</a></code></li>
 <li><code><a title="models.MonteCarloGE.MonteCarloGE.run_trials" href="#models.MonteCarloGE.MonteCarloGE.run_trials">run_trials</a></code></li>
 </ul>
 </li>

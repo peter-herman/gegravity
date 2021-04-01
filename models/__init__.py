@@ -1,7 +1,7 @@
 """
 # Documentantion
 --------------------
-gegravity is a Python package containing tools used to estimate general equilibrium (GE) structural gravity models and simulate counterfactual experiments. The package is based on the well established version of the gravity model described by Yotov, Piermartini, Monteiro, and Larch (2016) *An Advanced Guide toTrade  Policy  Analysis:  The  Structural  Gravity  Model*. It implements the structural GE gravity model in a general, robust, and easy to use manner in an effort to make GE gravity modeling more accessible for researchers and policy analysts.
+gegravity is a Python package containing tools used to estimate general equilibrium (GE) structural gravity models and simulate counterfactual experiments. The package is based on the well established version of the gravity model described by Yotov, Piermartini, Monteiro, and Larch (2016) *An Advanced Guide to Trade  Policy  Analysis:  The  Structural  Gravity  Model*. It implements the structural GE gravity model in a general, robust, and easy to use manner in an effort to make GE gravity modeling more accessible for researchers and policy analysts.
 
 The package provides several useful tools for structural gravity modeling.
 
@@ -27,7 +27,7 @@ The package can be installed via pip with the following command.
 
 
 
-## Getting started
+## Example
 The following examples demonstrate how to perform a typical GE gravity analysis using the gegravity package. The code files for these examples as well as the sample data set used in them can be found at the project's github page or at the following gist locations.
 
 * **Sample data:** https://gist.github.com/peter-herman/13b056e52105008c53faa482db67ed4a
@@ -334,25 +334,25 @@ Finally, we can define a new OneSector GE model using those alternative cost par
 
 
 
-### MonteCarloGE analysis
-This example demonstrates a basic Monte Carlo GE analysis. It uses the same general as the previous example.
+### Monte Carlo analysis
+This example demonstrates a basic Monte Carlo GE analysis. It closely follows the previous example in terms of inputs and the counterfactual experiment.
 
 
 
 Begin by loading some baseline data.
 >>> raw_data = pd.read_csv("https://gist.githubusercontent.com/peter-herman/13b056e52105008c53faa482db67ed4a/raw/83898713b8c695fc4c293eaa78eaf44f8e880a85/sample_gravity_data.csv")
 
-Define the cost variables to use in analysis.
+Define the cost variables to use in the analysis.
 >>> cost_variables = ["pta", "contiguity", "common_language", "lndist", "international"]
 
-Define the gme EstimationData.
+Define the gme EstimationData object.
 >>> est_data = gme.EstimationData(raw_data,
 ...                               imp_var_name='importer',
 ...                               exp_var_name='exporter',
 ...                               year_var_name='year',
 ...                               trade_var_name='trade')
 
-Define and estimate the gme EstimationModel. Note that the argument full_results is set to True, which is required for MonteCarloGE. This produces a coefficient variance/covariance matrix for use in the MonteCarloGE model.
+Define and estimate the gme EstimationModel. Note that the argument full_results is set to True, which is required for MonteCarloGE. This argument insures that the model retains the estimated variance/covariance matrix, which is used by the MonteCarloGE model to randomly draw trade cost estimates.
 >>> est_model = gme.EstimationModel(estimation_data=est_data,
 ...                                 lhs_var='trade',
 ...                                 rhs_var=cost_variables,
@@ -364,7 +364,8 @@ Define and estimate the gme EstimationModel. Note that the argument full_results
 
 
 
-With the econometric model estimated, we can define the MonteCarloGE model. In this example, we'll perform a small Monte Carlo experiment using 10 trials. The model will randomly draw 10 sets of cost coefficients from their joint normal distribution and simulate 10 OneSectorGE models corresponding to each draw. Most of the other MonteCarloGE arguments follow those from the OneSectorGE model. See that model for details.
+With the econometric model estimated, we can define the MonteCarloGE model. In this example, we'll perform a small Monte Carlo experiment using 10 trials. The model will randomly draw 10 sets of cost coefficients from their joint normal distribution and simulate 10 OneSectorGE models corresponding to each draw. Most of the other MonteCarloGE arguments follow those from the OneSectorGE model. The two main exceptions are the "trials" and "seed" arguements. "trials" sets the number of Monte Carlo simulations to perform and "seed" sets the seed for the random draw. Setting a seed allows for repeatable/reproducible simulations.
+
 >>> monte_model = ge.MonteCarloGE(est_model,
 ...                               year='2006',
 ...                               trials=10,
@@ -376,9 +377,8 @@ With the econometric model estimated, we can define the MonteCarloGE model. In t
 ...                               results_key='all',
 ...                               seed=0)
 
-The seed argument sets the seed for the random draw. Setting a seed allows for repeatable/reproducible simulations.
 
-We can now examine the random parameter draws for each of the 10 trials.
+When the model is defined, it creates the 10 draws of cost coefficients. We can examine those random draws in the following way.
 >>> print(monte_model.coeff_sample)
              index         0         1         2         3         4         5         6         7         8         9
 0              pta  0.481542  0.353868  0.378325  0.472573  0.501786  0.348512  0.428324  0.393075  0.541573  0.484753
@@ -387,7 +387,8 @@ We can now examine the random parameter draws for each of the 10 trials.
 3           lndist -0.537955 -0.362250 -0.418252 -0.438092 -0.330030 -0.376829 -0.417805 -0.308843 -0.328604 -0.335478
 4    international -2.995594 -3.509961 -3.332177 -3.176423 -3.626659 -3.309972 -3.375912 -3.513574 -3.539888 -3.592729
 
-Similarly, we can examine summary information about the random draws
+Similarly, we can examine summary information about the random draws. The first two columns report the point estimates from the econometric model (est_model) while the remaining report summary information about the Monte Carlo sample.
+
 >>> print(monte_model.sample_stats)
                  beta_estimate  stderr_estimate  sample_count  sample_mean  sample_std  sample_min  sample_25%  sample_50%  sample_75%  sample_max
 index
@@ -398,19 +399,18 @@ lndist               -0.389862         0.072951          10.0    -0.385414    0.
 international        -3.412584         0.215004          10.0    -3.397289    0.199950   -3.626659   -3.533309   -3.442937   -3.315523   -2.995594
 
 
-Next, we can prepare the counterfactual experiment. As before, we'll consider a hypothetical Canada--Japan trdae agreement.
+Next, we can prepare the counterfactual experiment. As before, we'll consider a hypothetical Canada--Japan trade agreement.
 >>> exp_data = monte_model.baseline_data.copy()
 >>> exp_data.loc[(exp_data["importer"] == "CAN") & (exp_data["exporter"] == "JPN"), "pta"] = 1
 >>> exp_data.loc[(exp_data["importer"] == "JPN") & (exp_data["exporter"] == "CAN"), "pta"] = 1
 
-Run the trials by supplying the counterfactual experiment.
+We can conduct the Monte Carlo analysis and simulate the trials by supplying the counterfactual experiment and using the following method. As before, most inputs follow from the OneSectroGE class. The two most notable exceptions are "results_stats" and "all_results", which determine what types of information are returned after running the model. "result_stats" determines the types of summary results that are produced across the different trials. For example, the list supplied below will produce the mean, standard deviation, standard error, and median values for each type of result, respectively. "all_results" determines if the model results for each individual trieal are retained and returned after the summary statistics are computed. If True, all that information is retained. Setting it to False disposes of these results after summary stats are computed and frees up any memory needed to store them, which can be sizable for models with a large number of trials and/or a large number of countries.
 >>> monte_model.run_trials(experiment_data=exp_data,
 ...                        omr_rescale=100,
 ...                        result_stats = ['mean', 'std', 'sem', 'median'],
 ...                        all_results = True)
-The argument result_stats determines the types of summary results that are produced across the different trials. For example, the supplied list will produce the mean, standard deviation, standard error, and median values for each type of result, respectively. To return all individual results across all trials in addition to the summary stats, set the all_results argument to True. Setting it to False disposes of these results after summary stats are computed and frees up that memory.
 
-After the model finishes solving all ten triels, we can examine the MonteCarloGE results. The MonteCarloGE model populates with the same set of results attributes as the OneSectorGE model. For example, we can retrieve to main country level results.
+After the model finishes solving all ten trials, we can examine the MonteCarloGE results. The MonteCarloGE model populates with the same set of results attributes as the OneSectorGE model. For example, we can retrieve to main country level results.
 >>> country_results = monte_model.country_results
 >>> print(country_results.head())
         statistic  GDP change (percent)  expenditure change (percent)  factory gate price change (percent)  foreign exports change (percent)  foreign imports change (percent)  imr change (percent)  intranational trade change (percent)  omr change (percent)  output change (percent)  terms of trade change (percent)  welfare statistic
@@ -429,9 +429,9 @@ We can also check to see if any trials failed to solve.
 >>> print(monte_model.num_failed_trials)
 0
 
-In this case, it is zero. However, it is possible that certain draws of coefficients may not yield a solution. In many cases, however, these issues can be resolved by adjusting the omr_rescale_factor/ For example, using omr_rescale=10 will likely result in some trials failing to solve, depending on the seed.
+In this case, it is zero. However, it is possible that certain draws of coefficients may not yield a solution. In many cases, these issues can be resolved by adjusting the omr_rescale_factor. For example, using omr_"rescale=10" in this example tends to result in some trials failing to solve, depending on the seed.
 
-If the set of all results was selected via all_results=True, these results can be accessed from attributes labeled using the standard label with 'all_' as a prefix. For example: the 'country_results' will populate in the attribute monte_model.all_country_results
+If the set of all results was selected via "all_results=True", these results can be accessed from attributes labeled using the standard label with "all_" as a prefix. For example, the the "country_results" for each trial will populate in the attribute "monte_model.all_country_results".
 >>> all_country_results = monte_model.all_country_results
 
 Finally we can export the summary results to a series of .csv files.
