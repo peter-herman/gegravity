@@ -10,10 +10,7 @@ __Description__ = '''A demonstartion of the MonteCarloGE model/module'''
 import pandas as pd
 from gme.construct_data.EstimationData import EstimationData
 from gme.estimate.EstimationModel import EstimationModel
-from gegravity.OneSectorGE import OneSectorGE
-from gegravity.MonteCarloGE import MonteCarloGE
-import numpy as np
-
+from src.gegravity.MonteCarloGE import MonteCarloGE
 
 # ---
 # Prepare model data and economteric inputs
