@@ -10,7 +10,7 @@ The package provides several useful tools for structural gravity modeling.
 
 3. It conducts Monte Carlo simulations that provide a means to compute standard errors and other measures of statistical precision for the GE model results.
 
-For more information about the GE gravity model, its implementation, and the various components of the package, see the paper "gegravity: General Equilibrium Gravity Modeling in Python" as well as the technical documentation at https://peter-herman.github.io/gegravity/.
+For more information about the GE gravity model, its implementation, and the various components of the package, see the companion paper "gegravity: General Equilibrium Gravity Modeling in Python" as well as the technical documentation at https://peter-herman.github.io/gegravity/.
 
 
 ## Citation and license
