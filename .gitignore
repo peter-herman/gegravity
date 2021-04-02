@@ -4,6 +4,10 @@
 testing/
 economic_analysis_tools/
 Yotov et al (2016) files/
+dist/
+build/
+
+
 # Images and graphical
 *.pdf
 *.png
