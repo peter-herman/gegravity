@@ -98,7 +98,8 @@ class OneSectorGE(object):
 
             Create and estimate the GME model baseline model.
 
-            >>> import gegravity as ge
+
+import gegravity as ge
             >>> import pandas as pd
             >>> import gme as gme
 
@@ -1973,53 +1974,51 @@ class CostCoeffs(object):
                  identifier_col: str,
                  coeff_col:str,
                  stderr_col:str = None):
-                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
         '''
-        Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
-        source of gravity estimates.
-        Args:
-         estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-             following non-optional columns.
-         identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-             correspond to the cost variables that you will use for trade costs in the simulation. This column is
-             required.
-         coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-             should be numeric and are required.
-         stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-             required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+                         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
+                         source of gravity estimates.
+                         Args:
+                          estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+                              following non-optional columns.
+                          identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+                              correspond to the cost variables that you will use for trade costs in the simulation. This column is
+                              required.
+                          coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+                              should be numeric and are required.
+                          stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+                              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
 
-        Returns:
-            CostCoeffs: An instance of a ParameterValues object.
+                         Returns:
+                             CostCoeffs: An instance of a ParameterValues object.
 
-        Examples:
-            Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
-            agreements.
-            >>> import pandas as pd
-            >>> import gegravity as ge
-            >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
-            ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
-            ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
-            >>> coeff_df = pd.DataFrame(coeff_data)
-            >>> print(coeff_df)
-                    var  coeff   ste
-            0  distance   -1.0  0.05
-            1    contig    0.8  0.10
-            2  distance   -1.0  0.05
+                         Examples:
+                             Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
+                             agreements.
 
-            Now, we can construct the CostCoeffs object from this data.
-            >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
-            ...                          coeff_col = 'coeff', stderr_col = 'ste')
-            >>> print(cost_params.params)
-            var
-            distance   -1.0
-            contig      0.8
-            distance   -1.0
-            Name: coeff, dtype: float64
+import gegravity as ge            >>> import pandas as pd
+                             >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
+                             ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
+                             ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
+                             >>> coeff_df = pd.DataFrame(coeff_data)
+                             >>> print(coeff_df)
+                                     var  coeff   ste
+                             0  distance   -1.0  0.05
+                             1    contig    0.8  0.10
+                             2  distance   -1.0  0.05
 
-            And supply them to a OneSectorGE model via the argument
-            >>> OneSectorGE(cost_coeff_values=cost_params)
-        '''
+                             Now, we can construct the CostCoeffs object from this data.
+                             >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
+                             ...                          coeff_col = 'coeff', stderr_col = 'ste')
+                             >>> print(cost_params.params)
+                             var
+                             distance   -1.0
+                             contig      0.8
+                             distance   -1.0
+                             Name: coeff, dtype: float64
+
+                             And supply them to a OneSectorGE model via the argument
+                             >>> OneSectorGE(cost_coeff_values=cost_params)
+                         '''
         estimates = estimates.set_index(identifier_col)
         self._table = estimates
         # Coefficient  Estimates
@@ -2030,8 +2029,12 @@ class CostCoeffs(object):
         else:
             self.bse = None
 
-        # self.imp_fe_prefix = imp_fe_prefix
-        # self.exp_fe_prefix = exp_fe_prefix
+            # self.imp_fe_prefix = imp_fe_prefix
+            # self.exp_fe_prefix = exp_fe_prefix
+                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
+                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
+
+
 
     def __repr__(self):
         return repr(self._table)

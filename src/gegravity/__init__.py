@@ -1,3 +1,6 @@
+from .OneSectorGE import *
+from .MonteCarloGE import *
+
 """
 # Documentation
 --------------------
@@ -37,11 +40,9 @@ The following examples demonstrate how to perform a typical GE gravity analysis 
 
 ### Prepare data inputs
 Begin by loading some needed packages
->>> from gegravity.OneSectorGE import OneSectorGE, CostCoeffs
+>>> from src import gegravity as ge from src.gegravity import OneSectorGE, CostCoeffs
 >>> import pandas as pd
 >>> import gme as gme
->>> import gegravity as ge
-
 
 Next, load some input data
 >>> gravity_data_location = "https://gist.githubusercontent.com/peter-herman/13b056e52105008c53faa482db67ed4a/raw/83898713b8c695fc4c293eaa78eaf44f8e880a85/sample_gravity_data.csv"
