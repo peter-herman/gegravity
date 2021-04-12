@@ -45,10 +45,10 @@ Model</em>. It implements the structural GE gravity model in a general, robust, 
 <p>It conducts Monte Carlo simulations that provide a means to compute standard errors and other measures of statistical precision for the GE model results.</p>
 </li>
 </ol>
-<p>For more information about the GE gravity model, its implementation, and the various components of the package, see the paper "gegravity: General Equilibrium Gravity Modeling in Python" at [LINK].</p>
+<p>For more information about the GE gravity model, its implementation, and the various components of the package, see the companion paper <a href="https://usitc.gov/sites/default/files/publications/332/working_papers/herman_2021_gegravity_modeling_in_python.pdf">"gegravity: General Equilibrium Gravity Modeling in Python"</a>.</p>
 <h2 id="citation-and-license">Citation and license</h2>
-<p>The package is publicly available and free to use under the MIT license. Users are asked to please cite the following document,</p>
-<p>Herman, Peter (2021) "gegravity: General Equilibrium Gravity Modeling in Python."</p>
+<p>The package is publicly available and free to use under the MIT license. Users are asked to please cite the following,</p>
+<p>Herman, Peter (2021) "gegravity: General Equilibrium Gravity Modeling in Python." USITC Economics Working Paper 2021-04-B. </p>
 <h2 id="installation">Installation</h2>
 <p>The package can be installed via pip with the following command.</p>
 <pre><code class="language-python-repl">&gt;&gt;&gt; pip install gegravity
@@ -62,10 +62,9 @@ Model</em>. It implements the structural GE gravity model in a general, robust, 
 </ul>
 <h3 id="prepare-data-inputs">Prepare data inputs</h3>
 <p>Begin by loading some needed packages</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; from gegravity.OneSectorGE import OneSectorGE, CostCoeffs
+<pre><code class="language-python-repl">&gt;&gt;&gt; import gegravity as ge
 &gt;&gt;&gt; import pandas as pd
 &gt;&gt;&gt; import gme as gme
-&gt;&gt;&gt; import gegravity as ge
 </code></pre>
 <p>Next, load some input data</p>
 <pre><code class="language-python-repl">&gt;&gt;&gt; gravity_data_location = &quot;https://gist.githubusercontent.com/peter-herman/13b056e52105008c53faa482db67ed4a/raw/83898713b8c695fc4c293eaa78eaf44f8e880a85/sample_gravity_data.csv&quot;
@@ -424,13 +423,13 @@ The package provides several useful tools for structural gravity modeling.
 
 3. It conducts Monte Carlo simulations that provide a means to compute standard errors and other measures of statistical precision for the GE model results.
 
-For more information about the GE gravity model, its implementation, and the various components of the package, see the paper &#34;gegravity: General Equilibrium Gravity Modeling in Python&#34; at [LINK].
+For more information about the GE gravity model, its implementation, and the various components of the package, see the companion paper [&#34;gegravity: General Equilibrium Gravity Modeling in Python&#34;](https://usitc.gov/sites/default/files/publications/332/working_papers/herman_2021_gegravity_modeling_in_python.pdf).
 
 
 ## Citation and license
-The package is publicly available and free to use under the MIT license. Users are asked to please cite the following document,
+The package is publicly available and free to use under the MIT license. Users are asked to please cite the following,
 
-Herman, Peter (2021) &#34;gegravity: General Equilibrium Gravity Modeling in Python.&#34;
+Herman, Peter (2021) &#34;gegravity: General Equilibrium Gravity Modeling in Python.&#34; USITC Economics Working Paper 2021-04-B. 
 
 
 ## Installation
@@ -450,11 +449,9 @@ The following examples demonstrate how to perform a typical GE gravity analysis 
 
 ### Prepare data inputs
 Begin by loading some needed packages
-&gt;&gt;&gt; from gegravity.OneSectorGE import OneSectorGE, CostCoeffs
+&gt;&gt;&gt; import gegravity as ge
 &gt;&gt;&gt; import pandas as pd
 &gt;&gt;&gt; import gme as gme
-&gt;&gt;&gt; import gegravity as ge
-
 
 Next, load some input data
 &gt;&gt;&gt; gravity_data_location = &#34;https://gist.githubusercontent.com/peter-herman/13b056e52105008c53faa482db67ed4a/raw/83898713b8c695fc4c293eaa78eaf44f8e880a85/sample_gravity_data.csv&#34;
@@ -851,7 +848,9 @@ Finally we can export the summary results to a series of .csv files.
 &gt;&gt;&gt; monte_model.export_results(directory=&#34;examples//&#34;, name = &#39;monte&#39;)
 
 
-&#34;&#34;&#34;</code></pre>
+&#34;&#34;&#34;
+from .OneSectorGE import *
+from .MonteCarloGE import *</code></pre>
 </details>
 </section>
 <section>
