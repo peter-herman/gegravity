@@ -127,7 +127,8 @@ class OneSectorGE(object):
 
             Create and estimate the GME model baseline model.
 
-            &gt;&gt;&gt; import gegravity as ge
+
+import gegravity as ge
             &gt;&gt;&gt; import pandas as pd
             &gt;&gt;&gt; import gme as gme
 
@@ -2002,53 +2003,51 @@ class CostCoeffs(object):
                  identifier_col: str,
                  coeff_col:str,
                  stderr_col:str = None):
-                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
         &#39;&#39;&#39;
-        Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
-        source of gravity estimates.
-        Args:
-         estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-             following non-optional columns.
-         identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-             correspond to the cost variables that you will use for trade costs in the simulation. This column is
-             required.
-         coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-             should be numeric and are required.
-         stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-             required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+                         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
+                         source of gravity estimates.
+                         Args:
+                          estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+                              following non-optional columns.
+                          identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+                              correspond to the cost variables that you will use for trade costs in the simulation. This column is
+                              required.
+                          coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+                              should be numeric and are required.
+                          stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+                              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
 
-        Returns:
-            CostCoeffs: An instance of a ParameterValues object.
+                         Returns:
+                             CostCoeffs: An instance of a ParameterValues object.
 
-        Examples:
-            Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
-            agreements.
-            &gt;&gt;&gt; import pandas as pd
-            &gt;&gt;&gt; import gegravity as ge
-            &gt;&gt;&gt; coeff_data = [{&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05},
-            ...               {&#39;var&#39;:&#39;contig&#39;, &#39;coeff&#39;:0.8, &#39;ste&#39;:0.10},
-            ...               {&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05}]
-            &gt;&gt;&gt; coeff_df = pd.DataFrame(coeff_data)
-            &gt;&gt;&gt; print(coeff_df)
-                    var  coeff   ste
-            0  distance   -1.0  0.05
-            1    contig    0.8  0.10
-            2  distance   -1.0  0.05
+                         Examples:
+                             Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
+                             agreements.
 
-            Now, we can construct the CostCoeffs object from this data.
-            &gt;&gt;&gt; cost_params = CostCoeffs(estimates = coeff_df, identifier_col = &#39;var&#39;,
-            ...                          coeff_col = &#39;coeff&#39;, stderr_col = &#39;ste&#39;)
-            &gt;&gt;&gt; print(cost_params.params)
-            var
-            distance   -1.0
-            contig      0.8
-            distance   -1.0
-            Name: coeff, dtype: float64
+import gegravity as ge            &gt;&gt;&gt; import pandas as pd
+                             &gt;&gt;&gt; coeff_data = [{&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05},
+                             ...               {&#39;var&#39;:&#39;contig&#39;, &#39;coeff&#39;:0.8, &#39;ste&#39;:0.10},
+                             ...               {&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05}]
+                             &gt;&gt;&gt; coeff_df = pd.DataFrame(coeff_data)
+                             &gt;&gt;&gt; print(coeff_df)
+                                     var  coeff   ste
+                             0  distance   -1.0  0.05
+                             1    contig    0.8  0.10
+                             2  distance   -1.0  0.05
 
-            And supply them to a OneSectorGE model via the argument
-            &gt;&gt;&gt; OneSectorGE(cost_coeff_values=cost_params)
-        &#39;&#39;&#39;
+                             Now, we can construct the CostCoeffs object from this data.
+                             &gt;&gt;&gt; cost_params = CostCoeffs(estimates = coeff_df, identifier_col = &#39;var&#39;,
+                             ...                          coeff_col = &#39;coeff&#39;, stderr_col = &#39;ste&#39;)
+                             &gt;&gt;&gt; print(cost_params.params)
+                             var
+                             distance   -1.0
+                             contig      0.8
+                             distance   -1.0
+                             Name: coeff, dtype: float64
+
+                             And supply them to a OneSectorGE model via the argument
+                             &gt;&gt;&gt; OneSectorGE(cost_coeff_values=cost_params)
+                         &#39;&#39;&#39;
         estimates = estimates.set_index(identifier_col)
         self._table = estimates
         # Coefficient  Estimates
@@ -2059,8 +2058,12 @@ class CostCoeffs(object):
         else:
             self.bse = None
 
-        # self.imp_fe_prefix = imp_fe_prefix
-        # self.exp_fe_prefix = exp_fe_prefix
+            # self.imp_fe_prefix = imp_fe_prefix
+            # self.exp_fe_prefix = exp_fe_prefix
+                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
+                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
+
+
 
     def __repr__(self):
         return repr(self._table)
@@ -2258,38 +2261,49 @@ should be numeric and are required.
 stderr_col (str):
 The column name for the standard error estimates for each variable. This column is only
 required for the MonteCarloGE model and may be omitted for the OneSectorGE model.</p>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code><a title="gegravity.OneSectorGE.CostCoeffs" href="#gegravity.OneSectorGE.CostCoeffs">CostCoeffs</a></code></dt>
-<dd>An instance of a ParameterValues object.</dd>
-</dl>
-<h2 id="examples">Examples</h2>
-<p>Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
-agreements.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; import pandas as pd
-&gt;&gt;&gt; import gegravity as ge
+<pre><code>                     Returns:
+                         CostCoeffs: An instance of a ParameterValues object.
+
+                     Examples:
+                         Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
+                         agreements.
+</code></pre>
+<p>import gegravity as ge
+&gt;&gt;&gt; import pandas as pd
 &gt;&gt;&gt; coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
-...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
-...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
+&hellip;
+{'var':'contig', 'coeff':0.8, 'ste':0.10},
+&hellip;
+{'var':'distance', 'coeff':-1, 'ste':0.05}]
 &gt;&gt;&gt; coeff_df = pd.DataFrame(coeff_data)
 &gt;&gt;&gt; print(coeff_df)
-        var  coeff   ste
-0  distance   -1.0  0.05
-1    contig    0.8  0.10
-2  distance   -1.0  0.05
-</code></pre>
-<p>Now, we can construct the CostCoeffs object from this data.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
-...                          coeff_col = 'coeff', stderr_col = 'ste')
-&gt;&gt;&gt; print(cost_params.params)
 var
-distance   -1.0
-contig      0.8
-distance   -1.0
-Name: coeff, dtype: float64
-</code></pre>
-<p>And supply them to a OneSectorGE model via the argument</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; OneSectorGE(cost_coeff_values=cost_params)
+coeff
+ste
+0
+distance
+-1.0
+0.05
+1
+contig
+0.8
+0.10
+2
+distance
+-1.0
+0.05</p>
+<pre><code>                         Now, we can construct the CostCoeffs object from this data.
+                         &gt;&gt;&gt; cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
+                         ...                          coeff_col = 'coeff', stderr_col = 'ste')
+                         &gt;&gt;&gt; print(cost_params.params)
+                         var
+                         distance   -1.0
+                         contig      0.8
+                         distance   -1.0
+                         Name: coeff, dtype: float64
+
+                         And supply them to a OneSectorGE model via the argument
+                         &gt;&gt;&gt; OneSectorGE(cost_coeff_values=cost_params)
 </code></pre></div>
 <details class="source">
 <summary>
@@ -2301,53 +2315,51 @@ Name: coeff, dtype: float64
                  identifier_col: str,
                  coeff_col:str,
                  stderr_col:str = None):
-                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
         &#39;&#39;&#39;
-        Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
-        source of gravity estimates.
-        Args:
-         estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-             following non-optional columns.
-         identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-             correspond to the cost variables that you will use for trade costs in the simulation. This column is
-             required.
-         coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-             should be numeric and are required.
-         stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-             required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+                         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
+                         source of gravity estimates.
+                         Args:
+                          estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+                              following non-optional columns.
+                          identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+                              correspond to the cost variables that you will use for trade costs in the simulation. This column is
+                              required.
+                          coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+                              should be numeric and are required.
+                          stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+                              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
 
-        Returns:
-            CostCoeffs: An instance of a ParameterValues object.
+                         Returns:
+                             CostCoeffs: An instance of a ParameterValues object.
 
-        Examples:
-            Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
-            agreements.
-            &gt;&gt;&gt; import pandas as pd
-            &gt;&gt;&gt; import gegravity as ge
-            &gt;&gt;&gt; coeff_data = [{&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05},
-            ...               {&#39;var&#39;:&#39;contig&#39;, &#39;coeff&#39;:0.8, &#39;ste&#39;:0.10},
-            ...               {&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05}]
-            &gt;&gt;&gt; coeff_df = pd.DataFrame(coeff_data)
-            &gt;&gt;&gt; print(coeff_df)
-                    var  coeff   ste
-            0  distance   -1.0  0.05
-            1    contig    0.8  0.10
-            2  distance   -1.0  0.05
+                         Examples:
+                             Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
+                             agreements.
 
-            Now, we can construct the CostCoeffs object from this data.
-            &gt;&gt;&gt; cost_params = CostCoeffs(estimates = coeff_df, identifier_col = &#39;var&#39;,
-            ...                          coeff_col = &#39;coeff&#39;, stderr_col = &#39;ste&#39;)
-            &gt;&gt;&gt; print(cost_params.params)
-            var
-            distance   -1.0
-            contig      0.8
-            distance   -1.0
-            Name: coeff, dtype: float64
+import gegravity as ge            &gt;&gt;&gt; import pandas as pd
+                             &gt;&gt;&gt; coeff_data = [{&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05},
+                             ...               {&#39;var&#39;:&#39;contig&#39;, &#39;coeff&#39;:0.8, &#39;ste&#39;:0.10},
+                             ...               {&#39;var&#39;:&#39;distance&#39;, &#39;coeff&#39;:-1, &#39;ste&#39;:0.05}]
+                             &gt;&gt;&gt; coeff_df = pd.DataFrame(coeff_data)
+                             &gt;&gt;&gt; print(coeff_df)
+                                     var  coeff   ste
+                             0  distance   -1.0  0.05
+                             1    contig    0.8  0.10
+                             2  distance   -1.0  0.05
 
-            And supply them to a OneSectorGE model via the argument
-            &gt;&gt;&gt; OneSectorGE(cost_coeff_values=cost_params)
-        &#39;&#39;&#39;
+                             Now, we can construct the CostCoeffs object from this data.
+                             &gt;&gt;&gt; cost_params = CostCoeffs(estimates = coeff_df, identifier_col = &#39;var&#39;,
+                             ...                          coeff_col = &#39;coeff&#39;, stderr_col = &#39;ste&#39;)
+                             &gt;&gt;&gt; print(cost_params.params)
+                             var
+                             distance   -1.0
+                             contig      0.8
+                             distance   -1.0
+                             Name: coeff, dtype: float64
+
+                             And supply them to a OneSectorGE model via the argument
+                             &gt;&gt;&gt; OneSectorGE(cost_coeff_values=cost_params)
+                         &#39;&#39;&#39;
         estimates = estimates.set_index(identifier_col)
         self._table = estimates
         # Coefficient  Estimates
@@ -2358,8 +2370,12 @@ Name: coeff, dtype: float64
         else:
             self.bse = None
 
-        # self.imp_fe_prefix = imp_fe_prefix
-        # self.exp_fe_prefix = exp_fe_prefix
+            # self.imp_fe_prefix = imp_fe_prefix
+            # self.exp_fe_prefix = exp_fe_prefix
+                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
+                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
+
+
 
     def __repr__(self):
         return repr(self._table)</code></pre>
@@ -2813,138 +2829,111 @@ Yotov, (2016).</dd>
 <span>(</span><span>estimation_model: gme.estimate.EstimationModel.EstimationModel, year: str, reference_importer: str, expend_var_name: str, output_var_name: str, sigma: float, results_key: str = 'all', cost_variables: List[str] = None, cost_coeff_values=None, quiet: bool = False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Define a general equilibrium (GE) gravity model.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>estimation_model</code></strong> :&ensp;<code>gme.EstimationModel</code></dt>
-<dd>A GME Estimation model</dd>
-<dt><strong><code>year</code></strong> :&ensp;<code>str</code></dt>
-<dd>The year to be used for the model. Works best if estimation_model year column has been cast as
-string too.</dd>
-<dt><strong><code>reference_importer</code></strong> :&ensp;<code>str</code></dt>
-<dd>Identifier for the country to be used as the reference importer (inward
-multilateral resistance normalized to 1 and other multilateral resistances solved relative to it).</dd>
-<dt><strong><code>expend_var_name</code></strong> :&ensp;<code>str</code></dt>
-<dd>Column name of variable containing expenditure data in estimation_model.</dd>
-<dt><strong><code>output_var_name</code></strong> :&ensp;<code>str</code></dt>
-<dd>Column name of variable containing output data in estimation_model.</dd>
-<dt><strong><code>sigma</code></strong> :&ensp;<code>float</code></dt>
-<dd>Elasticity of substitution.</dd>
-<dt><strong><code>results_key</code></strong> :&ensp;<code>str</code></dt>
-<dd>(optional) If using parameter estimates from estimation_model, this is the key (i.e.
+<div class="desc"><p>Define a general equilibrium (GE) gravity model.
+Args:
+estimation_model (gme.EstimationModel): A GME Estimation model
+year (str): The year to be used for the model. Works best if estimation_model year column has been cast as
+string too.
+reference_importer (str): Identifier for the country to be used as the reference importer (inward
+multilateral resistance normalized to 1 and other multilateral resistances solved relative to it).
+expend_var_name (str): Column name of variable containing expenditure data in estimation_model.
+output_var_name (str): Column name of variable containing output data in estimation_model.
+sigma (float): Elasticity of substitution.
+results_key (str): (optional) If using parameter estimates from estimation_model, this is the key (i.e.
 sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
-False in GME model), this key is 'all', which is the default.</dd>
-<dt><strong><code>cost_variables</code></strong> :&ensp;<code>List[str]</code></dt>
-<dd>(optional) A list of variables to use to compute bilateral trade costs. By
-default, all included non-fixed effect variables are used.</dd>
-<dt><strong><code>cost_coeff_values</code></strong> :&ensp;<code><a title="gegravity.OneSectorGE.CostCoeffs" href="#gegravity.OneSectorGE.CostCoeffs">CostCoeffs</a></code></dt>
-<dd>(optional) A set of parameter values or estimates to use for constructing
+False in GME model), this key is 'all', which is the default.
+cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
+default, all included non-fixed effect variables are used.
+cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
 trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
-gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.</dd>
-<dt><strong><code>quiet</code></strong> :&ensp;<code>bool</code></dt>
-<dd>(optional) If True, suppresses all console feedback from model during simulation. Default is False.</dd>
-</dl>
-<h2 id="attributes">Attributes</h2>
-<dl>
-<dt><strong><code>aggregate_trade_results</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Country-level, aggregate results. See gegravity.ResultsLabels for
-column details. Populated by OneSectorGE.simulate().</dd>
-<dt><strong><code>baseline_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Baseline data supplied to model in gme.EstimationModel.</dd>
-<dt><strong><code>baseline_trade_costs</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>The constructed baseline trade costs for each bilateral pair
-(t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
-values B.</dd>
-<dt><strong><code>bilateral_trade_results</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Bilateral trade results. See gegravity.ResultsLabels for
-column details. Populated by OneSectorGE.simulate().</dd>
-<dt><strong><code>country_mr_terms</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Baseline and counterfactual inward and outward multilateral resistance
-estimates. See gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
-<dt><strong><code>country_results</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>A collection of the main country-level simulation results. See
-gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
-<dt><strong><code>country_set</code></strong> :&ensp;<code>dict[<a title="gegravity.OneSectorGE.Country" href="#gegravity.OneSectorGE.Country">Country</a>]</code></dt>
-<dd>A dictionary containing a Country object for each country in the model, keyed
-by their respective identifiers.</dd>
-<dt><strong><code>bilateral_costs</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>The baseline and experiment trade costs. Populated by
-OneSectorGE.define_experiment().</dd>
-<dt><strong><code>economy</code></strong> :&ensp;<code><a title="gegravity.OneSectorGE.Economy" href="#gegravity.OneSectorGE.Economy">Economy</a></code></dt>
-<dd>The model's Economy object.</dd>
-<dt><strong><code>experiment_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>The counterfactual experiment data. Populated by
-OneSectorGE.define_experiment().</dd>
-<dt><strong><code>experiment_trade_costs</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>The constructed experiment trade costs for each bilateral pair
-(t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
-values B. Populated by
-OneSectorGE.define_experiment().</dd>
-<dt><strong><code>factory_gate_prices</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Counterfactual prices (baseline prices are all normalized to 1).
-Populated by OneSectorGE.simulate().</dd>
-<dt><strong><code>outputs_expenditures</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
-<dd>Baseline and counterfactual expenditure and output values. See
-gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().</dd>
-<dt><strong><code>sigma</code></strong> :&ensp;<code>int</code></dt>
-<dd>The elasticity of substitution parameter value</dd>
-<dt><strong><code>solver_diagnostics</code></strong> :&ensp;<code>dict</code></dt>
-<dd>A dictionary of solver diagnostics for the three solution routines: baseline
-multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
-effects) and the full GE model. Each element contains a dictionary of various diagnostic info from
-scipy.optimize.root.</dd>
-</dl>
-<h2 id="examples">Examples</h2>
-<p>Create and estimate the GME model baseline model.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; import gegravity as ge
+gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
+quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.</p>
+<pre><code>    Attributes:
+        aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See gegravity.ResultsLabels for
+            column details. Populated by OneSectorGE.simulate().
+        baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
+        baseline_trade_costs (pandas.DataFrame): The constructed baseline trade costs for each bilateral pair
+            (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
+            values B.
+        bilateral_trade_results (pandas.DataFrame): Bilateral trade results. See gegravity.ResultsLabels for
+            column details. Populated by OneSectorGE.simulate().
+        country_mr_terms (pandas.DataFrame): Baseline and counterfactual inward and outward multilateral resistance
+            estimates. See gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+        country_results (pandas.DataFrame): A collection of the main country-level simulation results. See
+            gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+        country_set (dict[Country]): A dictionary containing a Country object for each country in the model, keyed
+            by their respective identifiers.
+        bilateral_costs (pandas.DataFrame): The baseline and experiment trade costs. Populated by
+            OneSectorGE.define_experiment().
+        economy (Economy): The model's Economy object.
+        experiment_data (pandas.DataFrame): The counterfactual experiment data. Populated by
+            OneSectorGE.define_experiment().
+        experiment_trade_costs (pandas.DataFrame): The constructed experiment trade costs for each bilateral pair
+            (t_{ij}^{1-sigma}). Calculated as exp{sum_k (B^k*x^k_ij)} for all cost variables x^k and estimate
+            values B. Populated by
+            OneSectorGE.define_experiment().
+        factory_gate_prices (pandas.DataFrame): Counterfactual prices (baseline prices are all normalized to 1).
+            Populated by OneSectorGE.simulate().
+        outputs_expenditures (pandas.DataFrame): Baseline and counterfactual expenditure and output values. See
+            gegravity.ResultsLabels for column details. Populated by OneSectorGE.simulate().
+        sigma (int): The elasticity of substitution parameter value
+        solver_diagnostics (dict): A dictionary of solver diagnostics for the three solution routines: baseline
+            multilateral resistances, conditional multilateral resistances (partial equilibrium counterfactual
+            effects) and the full GE model. Each element contains a dictionary of various diagnostic info from
+            scipy.optimize.root.
+
+    Examples:
+
+        Create and estimate the GME model baseline model.
+</code></pre>
+<p>import gegravity as ge
 &gt;&gt;&gt; import pandas as pd
-&gt;&gt;&gt; import gme as gme
-</code></pre>
-<p>Load the data.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; grav_data = pd.read_csv(ssample_data_set.dlm
-&gt;&gt;&gt; grav_data.head()
-  exporter importer  year  trade        Y       E  pta  contiguity  common_language  lndist  international
-0      GBR      AUS  2006   4310   925638  362227    0           0                1  9.7126              1
-1      FIN      AUS  2006    514   142759  362227    0           0                0  9.5997              1
-2      USA      AUS  2006  16619  5019964  362227    1           0                1  9.5963              1
-3      IND      AUS  2006    763   548517  362227    0           0                1  9.1455              1
-4      SGP      AUS  2006   8756   329817  362227    1           0                1  8.6732              1
-</code></pre>
-<p>Define the gme estimation data.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; gme_data = gme.EstimationData(grav_data,
-...                               imp_var_name=&quot;importer&quot;,
-...                               exp_var_name=&quot;exporter&quot;,
-...                               year_var_name = &quot;year&quot;,
-...                               trade_var_name=&quot;trade&quot;)
-</code></pre>
-<p>Define the gme ravity model.</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; gme_model = gme.EstimationModel(gme_data,
-...                                 lhs_var=&quot;trade&quot;,
-...                                 rhs_var=[&quot;pta&quot;,&quot;contiguity&quot;,&quot;common_language&quot;,
-...                                          &quot;lndist&quot;,&quot;international&quot;],
-...                                 fixed_effects=[[&quot;exporter&quot;],[&quot;importer&quot;]])
-</code></pre>
-<p>Estimate parameters of the model</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; gme_model.estimate()
-select specification variables: ['pta', 'contiguity', 'common_language', 'lndist', 'international', 'trade', 'importer', 'exporter', 'year'], Observations excluded by user: {'rows': 0, 'columns': 2}
-drop_intratrade: no, Observations excluded by user: {'rows': 0, 'columns': 0}
-drop_imp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
-drop_exp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
-keep_imp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
-keep_exp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
-drop_years: none, Observations excluded by user: {'rows': 0, 'columns': 0}
-keep_years: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
-drop_missing: yes, Observations excluded by user: {'rows': 0, 'columns': 0}
-Estimation began at 11:47 AM  on Mar 16, 2021
-Omitted Columns: ['importer_fe_ZAF', 'importer_fe_USA']
-Estimation completed at 11:47 AM  on Mar 16, 2021
-</code></pre>
-<p>Define the gegravity OneSectorGE general equilibrium gravity model</p>
-<pre><code class="language-python-repl">&gt;&gt;&gt; ge_model = ge.OneSectorGE(gme_model, year = &quot;2006&quot;,
-...                           expend_var_name = &quot;E&quot;,
-...                           output_var_name = &quot;Y&quot;,
-...                           reference_importer = &quot;DEU&quot;,
-...                           sigma = 5)
+&gt;&gt;&gt; import gme as gme</p>
+<pre><code>        Load the data.
+        &gt;&gt;&gt; grav_data = pd.read_csv(ssample_data_set.dlm
+        &gt;&gt;&gt; grav_data.head()
+          exporter importer  year  trade        Y       E  pta  contiguity  common_language  lndist  international
+        0      GBR      AUS  2006   4310   925638  362227    0           0                1  9.7126              1
+        1      FIN      AUS  2006    514   142759  362227    0           0                0  9.5997              1
+        2      USA      AUS  2006  16619  5019964  362227    1           0                1  9.5963              1
+        3      IND      AUS  2006    763   548517  362227    0           0                1  9.1455              1
+        4      SGP      AUS  2006   8756   329817  362227    1           0                1  8.6732              1
+
+        Define the gme estimation data.
+        &gt;&gt;&gt; gme_data = gme.EstimationData(grav_data,
+        ...                               imp_var_name="importer",
+        ...                               exp_var_name="exporter",
+        ...                               year_var_name = "year",
+        ...                               trade_var_name="trade")
+
+        Define the gme ravity model.
+        &gt;&gt;&gt; gme_model = gme.EstimationModel(gme_data,
+        ...                                 lhs_var="trade",
+        ...                                 rhs_var=["pta","contiguity","common_language",
+        ...                                          "lndist","international"],
+        ...                                 fixed_effects=[["exporter"],["importer"]])
+
+        Estimate parameters of the model
+        &gt;&gt;&gt; gme_model.estimate()
+        select specification variables: ['pta', 'contiguity', 'common_language', 'lndist', 'international', 'trade', 'importer', 'exporter', 'year'], Observations excluded by user: {'rows': 0, 'columns': 2}
+        drop_intratrade: no, Observations excluded by user: {'rows': 0, 'columns': 0}
+        drop_imp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
+        drop_exp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
+        keep_imp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
+        keep_exp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
+        drop_years: none, Observations excluded by user: {'rows': 0, 'columns': 0}
+        keep_years: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
+        drop_missing: yes, Observations excluded by user: {'rows': 0, 'columns': 0}
+        Estimation began at 11:47 AM  on Mar 16, 2021
+        Omitted Columns: ['importer_fe_ZAF', 'importer_fe_USA']
+        Estimation completed at 11:47 AM  on Mar 16, 2021
+
+        Define the gegravity OneSectorGE general equilibrium gravity model
+        &gt;&gt;&gt; ge_model = ge.OneSectorGE(gme_model, year = "2006",
+        ...                           expend_var_name = "E",
+        ...                           output_var_name = "Y",
+        ...                           reference_importer = "DEU",
+        ...                           sigma = 5)
 </code></pre></div>
 <details class="source">
 <summary>
@@ -3022,7 +3011,8 @@ Estimation completed at 11:47 AM  on Mar 16, 2021
 
             Create and estimate the GME model baseline model.
 
-            &gt;&gt;&gt; import gegravity as ge
+
+import gegravity as ge
             &gt;&gt;&gt; import pandas as pd
             &gt;&gt;&gt; import gme as gme
 

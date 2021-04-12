@@ -1,5 +1,5 @@
 from .OneSectorGE import *
-from .MonteCarloGE import *
+from .MonteCarloGE import * # move these to after comments to produce documentation. Not sure if that affects packaging.
 
 """
 # Documentation
@@ -14,13 +14,13 @@ The package provides several useful tools for structural gravity modeling.
 
 3. It conducts Monte Carlo simulations that provide a means to compute standard errors and other measures of statistical precision for the GE model results.
 
-For more information about the GE gravity model, its implementation, and the various components of the package, see the companion paper "gegravity: General Equilibrium Gravity Modeling in Python".
+For more information about the GE gravity model, its implementation, and the various components of the package, see the companion paper ["gegravity: General Equilibrium Gravity Modeling in Python"](https://usitc.gov/sites/default/files/publications/332/working_papers/herman_2021_gegravity_modeling_in_python.pdf).
 
 
 ## Citation and license
-The package is publicly available and free to use under the MIT license. Users are asked to please cite the following document,
+The package is publicly available and free to use under the MIT license. Users are asked to please cite the following,
 
-Herman, Peter (2021) "gegravity: General Equilibrium Gravity Modeling in Python."
+Herman, Peter (2021) "gegravity: General Equilibrium Gravity Modeling in Python." USITC Economics Working Paper 2021-04-B. 
 
 
 ## Installation
