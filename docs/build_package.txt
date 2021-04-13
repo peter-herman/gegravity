@@ -1,3 +1,5 @@
+# https://packaging.python.org/tutorials/packaging-projects/
+
 # Create and upload package
 f:
 cd Research/gegravity
