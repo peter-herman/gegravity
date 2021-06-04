@@ -24,6 +24,7 @@ python -m build
 python -m twine upload --repository testpypi dist/*
 ```
 # create venv and install package
+```
 e:
 cd python_venvs
 python -m venv gegravity
@@ -32,5 +33,5 @@ pip install pandas
 pip install scipy
 pip install gme
 python -m pip install --index-url https://test.pypi.org/simple/ --no-deps gegravity-peter-herman
-
+```
 
