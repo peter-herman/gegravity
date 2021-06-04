@@ -441,10 +441,15 @@ import gegravity as ge
                             self.meta_data.exp_var_name,
                             self.meta_data.year_var_name]
         weighted_costs = data_set[obs_id].copy()
+
+        # Get X matrix of cost variables and beta estimates
         X = data_set[self.cost_variables].values
         beta = self.cost_coeffs[self.cost_variables].values
+        # Compute t_{ij}^{1-\sigma} = exp(X*B)
         combined_costs = np.matmul(X, beta)
         combined_costs = np.exp(combined_costs)
+
+        # Recombine with identifiers
         combined_costs = pd.DataFrame(combined_costs, columns = ['trade_cost'])
         weighted_costs = pd.concat([weighted_costs,combined_costs], axis = 1)
 
