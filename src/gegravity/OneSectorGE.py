@@ -436,18 +436,18 @@ import gegravity as ge
         :param data_set: (DataFrame) The trade cost data to base trade costs on (either baseline or experimental)
         :return: (DataFrame) DataFrame of bilateral trade costs (t^{1-sigma})
         '''
+
         obs_id = [self.meta_data.imp_var_name,
-                  self.meta_data.exp_var_name,
-                  self.meta_data.year_var_name]
-        weighted_costs = data_set[obs_id + self.cost_variables].copy()
-        weighted_list = []
-        # Cumulatively add each variable in the list of cost variables.
-        for variable in self.cost_variables:
-            weighted_costs[('cost_weighted_' + variable)] = self.cost_coeffs[variable] * \
-                                                            weighted_costs[[variable]]
-            weighted_list = weighted_list + [('cost_weighted_' + variable)]
-        # Generate cost measure t^{1-sigma}
-        weighted_costs['trade_cost'] = np.exp(weighted_costs[weighted_list].sum(axis=1))
+                            self.meta_data.exp_var_name,
+                            self.meta_data.year_var_name]
+        weighted_costs = data_set[obs_id].copy()
+        X = data_set[self.cost_variables].values
+        beta = self.cost_coeffs[self.cost_variables].values
+        combined_costs = np.matmul(X, beta)
+        combined_costs = np.exp(combined_costs)
+        combined_costs = pd.DataFrame(combined_costs, columns = ['trade_cost'])
+        weighted_costs = pd.concat([weighted_costs,combined_costs], axis = 1)
+
         # Run some checks for completeness
         if weighted_costs.isna().any().any():
             warn("\n Calculated trade costs contain missing (nan) values. Check parameter values and trade cost variables in baseline or experiment data.")
