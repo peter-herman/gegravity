@@ -2073,8 +2073,7 @@ class ResultsLabels(object):
             gate price (p_i) divided by inward multilateral resistance (P_i). Measures changes in output prices relative
             to consumption prices. Increases imply greater purchasing power (income growth relative to consumption
             costs), decreases imply lower purchasing power.
-        \n **GDP change (percent)**: Percent change in GDP, which is calculated as output (Y_i) divided by factory gate
-            prices (p_i)
+        \n **GDP change (percent)**: Percent change in GDP, which is calculated as output (Y_i) divided by inward multilateral resistances (P_i)
         \n **welfare statistic**: Welfare statistic form Arkolakis et al. (2012) and Yotov et al. (2016). Defined as
             (E_i/P_i)/(E'_i/P'_i) where E_i denotes expenditure, P_i denotes inward multilateral resistance, and ' denotes
             the experiment estimates.
