@@ -114,7 +114,7 @@ class MonteCarloGE(object):
 
         # Store some inputs in model object
         self._estimation_model = estimation_model
-        self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
+        self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer

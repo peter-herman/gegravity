@@ -37,7 +37,7 @@ gme_data = gme.EstimationData(source_data, exp_var_name='exporter', imp_var_name
                               trade_var_name='trade')
 
 gme_model = gme.EstimationModel(gme_data, lhs_var='trade', rhs_var=grav_vars,
-                                fixed_effects=[['exporter'],['importer']], omit_fixed_effect=[['importer']])
+                                fixed_effects=[['exporter'],['importer']])
 gme_model.estimate()
 gme_model.results_dict['all'].summary()
 

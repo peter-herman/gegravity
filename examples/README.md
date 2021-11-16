@@ -8,7 +8,7 @@ The sample data was derived from two sources.
 
 1. The trade, output, and expenditure data was derrived from a sample dataset accompanying Yotov, Piermartini, Monteiro, and Larch's (2016) *An Advanced Guide toTrade  Policy  Analysis:  The  Structural  Gravity  Model* (Online  Revised  Version).  WorldTrade Organization and the United Nations Conference on Trade and Development. The source data ("1_TradeWithoutBorder.dta") is available at https://vi.unctad.org/tpa/web/vol2/vol2home.html.
 
-2. The trade cost proxies were sourced from the Dynamic Gravity Dataset of Gurevis and Herman (2018) "he dynamic gravity dataset:  1948-2016," Office of Economics Working Paper 2018-02-A, U.S. International Trade Commission.
+2. The trade cost proxies were sourced from the Dynamic Gravity Dataset of Gurevich and Herman (2018) "The dynamic gravity dataset:  1948-2016," Office of Economics Working Paper 2018-02-A, U.S. International Trade Commission.
 
 ## Variable Definitions
 

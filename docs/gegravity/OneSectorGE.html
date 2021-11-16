@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.10.0" />
 <title>gegravity.OneSectorGE API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -190,7 +190,7 @@ import gegravity as ge
         # except:
         #     print(&#39;reference_importer OK&#39;)
         self.labels = ResultsLabels()
-        self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
+        self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
         if cost_coeff_values is None:
             self._estimation_results = self._estimation_model.results_dict[results_key]
@@ -465,18 +465,23 @@ import gegravity as ge
         :param data_set: (DataFrame) The trade cost data to base trade costs on (either baseline or experimental)
         :return: (DataFrame) DataFrame of bilateral trade costs (t^{1-sigma})
         &#39;&#39;&#39;
+
         obs_id = [self.meta_data.imp_var_name,
-                  self.meta_data.exp_var_name,
-                  self.meta_data.year_var_name]
-        weighted_costs = data_set[obs_id + self.cost_variables].copy()
-        weighted_list = []
-        # Cumulatively add each variable in the list of cost variables.
-        for variable in self.cost_variables:
-            weighted_costs[(&#39;cost_weighted_&#39; + variable)] = self.cost_coeffs[variable] * \
-                                                            weighted_costs[[variable]]
-            weighted_list = weighted_list + [(&#39;cost_weighted_&#39; + variable)]
-        # Generate cost measure t^{1-sigma}
-        weighted_costs[&#39;trade_cost&#39;] = np.exp(weighted_costs[weighted_list].sum(axis=1))
+                            self.meta_data.exp_var_name,
+                            self.meta_data.year_var_name]
+        weighted_costs = data_set[obs_id].copy()
+
+        # Get X matrix of cost variables and beta estimates
+        X = data_set[self.cost_variables].values
+        beta = self.cost_coeffs[self.cost_variables].values
+        # Compute t_{ij}^{1-\sigma} = exp(X*B)
+        combined_costs = np.matmul(X, beta)
+        combined_costs = np.exp(combined_costs)
+
+        # Recombine with identifiers
+        combined_costs = pd.DataFrame(combined_costs, columns = [&#39;trade_cost&#39;])
+        weighted_costs = pd.concat([weighted_costs,combined_costs], axis = 1)
+
         # Run some checks for completeness
         if weighted_costs.isna().any().any():
             warn(&#34;\n Calculated trade costs contain missing (nan) values. Check parameter values and trade cost variables in baseline or experiment data.&#34;)
@@ -2097,8 +2102,7 @@ class ResultsLabels(object):
             gate price (p_i) divided by inward multilateral resistance (P_i). Measures changes in output prices relative
             to consumption prices. Increases imply greater purchasing power (income growth relative to consumption
             costs), decreases imply lower purchasing power.
-        \n **GDP change (percent)**: Percent change in GDP, which is calculated as output (Y_i) divided by factory gate
-            prices (p_i)
+        \n **GDP change (percent)**: Percent change in GDP, which is calculated as output (Y_i) divided by inward multilateral resistances (P_i)
         \n **welfare statistic**: Welfare statistic form Arkolakis et al. (2012) and Yotov et al. (2016). Defined as
             (E_i/P_i)/(E&#39;_i/P&#39;_i) where E_i denotes expenditure, P_i denotes inward multilateral resistance, and &#39; denotes
             the experiment estimates.
@@ -3074,7 +3078,7 @@ import gegravity as ge
         # except:
         #     print(&#39;reference_importer OK&#39;)
         self.labels = ResultsLabels()
-        self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
+        self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
         self._estimation_model = estimation_model
         if cost_coeff_values is None:
             self._estimation_results = self._estimation_model.results_dict[results_key]
@@ -3349,18 +3353,23 @@ import gegravity as ge
         :param data_set: (DataFrame) The trade cost data to base trade costs on (either baseline or experimental)
         :return: (DataFrame) DataFrame of bilateral trade costs (t^{1-sigma})
         &#39;&#39;&#39;
+
         obs_id = [self.meta_data.imp_var_name,
-                  self.meta_data.exp_var_name,
-                  self.meta_data.year_var_name]
-        weighted_costs = data_set[obs_id + self.cost_variables].copy()
-        weighted_list = []
-        # Cumulatively add each variable in the list of cost variables.
-        for variable in self.cost_variables:
-            weighted_costs[(&#39;cost_weighted_&#39; + variable)] = self.cost_coeffs[variable] * \
-                                                            weighted_costs[[variable]]
-            weighted_list = weighted_list + [(&#39;cost_weighted_&#39; + variable)]
-        # Generate cost measure t^{1-sigma}
-        weighted_costs[&#39;trade_cost&#39;] = np.exp(weighted_costs[weighted_list].sum(axis=1))
+                            self.meta_data.exp_var_name,
+                            self.meta_data.year_var_name]
+        weighted_costs = data_set[obs_id].copy()
+
+        # Get X matrix of cost variables and beta estimates
+        X = data_set[self.cost_variables].values
+        beta = self.cost_coeffs[self.cost_variables].values
+        # Compute t_{ij}^{1-\sigma} = exp(X*B)
+        combined_costs = np.matmul(X, beta)
+        combined_costs = np.exp(combined_costs)
+
+        # Recombine with identifiers
+        combined_costs = pd.DataFrame(combined_costs, columns = [&#39;trade_cost&#39;])
+        weighted_costs = pd.concat([weighted_costs,combined_costs], axis = 1)
+
         # Run some checks for completeness
         if weighted_costs.isna().any().any():
             warn(&#34;\n Calculated trade costs contain missing (nan) values. Check parameter values and trade cost variables in baseline or experiment data.&#34;)
@@ -4629,7 +4638,9 @@ CAN          3.313605      1.338893
 
     # Calculate baseline factory gate prices
     self._calculate_baseline_factory_gate_params()
-    self._baseline_built = True</code></pre>
+    self._baseline_built = True
+
+    # ToDo: run some checks the ensure the baseline is solved (e.g. the betas solve the factory gat price equations)</code></pre>
 </details>
 </dd>
 <dt id="gegravity.OneSectorGE.OneSectorGE.calculate_levels"><code class="name flex">
@@ -5659,8 +5670,7 @@ au_{ij}</p>
 gate price (p_i) divided by inward multilateral resistance (P_i). Measures changes in output prices relative
 to consumption prices. Increases imply greater purchasing power (income growth relative to consumption
 costs), decreases imply lower purchasing power.</p>
-<p><strong>GDP change (percent)</strong>: Percent change in GDP, which is calculated as output (Y_i) divided by factory gate
-prices (p_i)</p>
+<p><strong>GDP change (percent)</strong>: Percent change in GDP, which is calculated as output (Y_i) divided by inward multilateral resistances (P_i)</p>
 <p><strong>welfare statistic</strong>: Welfare statistic form Arkolakis et al. (2012) and Yotov et al. (2016). Defined as
 (E_i/P_i)/(E'_i/P'_i) where E_i denotes expenditure, P_i denotes inward multilateral resistance, and ' denotes
 the experiment estimates.</p>
@@ -5751,8 +5761,7 @@ resistance terms (π'_i).</p>
             gate price (p_i) divided by inward multilateral resistance (P_i). Measures changes in output prices relative
             to consumption prices. Increases imply greater purchasing power (income growth relative to consumption
             costs), decreases imply lower purchasing power.
-        \n **GDP change (percent)**: Percent change in GDP, which is calculated as output (Y_i) divided by factory gate
-            prices (p_i)
+        \n **GDP change (percent)**: Percent change in GDP, which is calculated as output (Y_i) divided by inward multilateral resistances (P_i)
         \n **welfare statistic**: Welfare statistic form Arkolakis et al. (2012) and Yotov et al. (2016). Defined as
             (E_i/P_i)/(E&#39;_i/P&#39;_i) where E_i denotes expenditure, P_i denotes inward multilateral resistance, and &#39; denotes
             the experiment estimates.
@@ -5936,7 +5945,7 @@ resistance terms (π'_i).</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>

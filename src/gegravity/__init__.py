@@ -23,6 +23,10 @@ The package is publicly available and free to use under the MIT license. Users a
 Herman, Peter (2021) "gegravity: General Equilibrium Gravity Modeling in Python." USITC Economics Working Paper 2021-04-B. 
 
 
+## Updates
+* **Version 0.2** (Nov. 2021): Improved OneSectorGE speed and fixed compatibility issues with the gme v1.3 package update.
+* **Version 0.1** (Apr. 2021): Initial release.
+
 ## Installation
 The package can be installed via pip with the following command.
 
