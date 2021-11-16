@@ -16,7 +16,7 @@ from src.gegravity.MonteCarloGE import MonteCarloGE
 # Prepare model data and economteric inputs
 # ---
 # Load sample data.
-raw_data = pd.read_csv("D:\work\Peter_Herman\projects\gegravity\examples\sample_data_set.dlm")
+raw_data = pd.read_csv("examples\sample_data_set.dlm")
 
 # Define cost variables to use in analysis.
 cost_variables = ["pta", "contiguity", "common_language", "lndist", "international"]
@@ -34,8 +34,7 @@ est_data = EstimationData(raw_data,
 est_model = EstimationModel(estimation_data=est_data,
                             lhs_var='trade',
                             rhs_var=cost_variables,
-                            fixed_effects=[['importer'], ['exporter']],
-                            omit_fixed_effect=[['importer']], retain_modified_data=True,
+                            fixed_effects=[['importer'], ['exporter']], retain_modified_data=True,
                             full_results=True)
 est_model.estimate()
 print(est_model.results_dict['all'].summary())

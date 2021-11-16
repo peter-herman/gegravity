@@ -161,7 +161,15 @@ import gegravity as ge
         # except:
         #     print('reference_importer OK')
         self.labels = ResultsLabels()
-        self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
+
+        # Extract GME Meta data
+        #   If GME 1.2, meta data stored in attribute EstimationData._meta_data
+        if hasattr(estimation_model.estimation_data, '_meta_data'):
+            self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
+        #   If GME 1.3+, meta data stored in attribute EstimationData.meta_data
+        elif hasattr(estimation_model.estimation_data, 'meta_data'):
+            self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+
         self._estimation_model = estimation_model
         if cost_coeff_values is None:
             self._estimation_results = self._estimation_model.results_dict[results_key]
