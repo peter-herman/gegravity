@@ -230,10 +230,13 @@ import gegravity as ge
             self.cost_coeffs = self._estimation_results.params[self.cost_variables]
 
 
-        # prep baseline data
+        # Prep baseline data (convert year to string in order to ensure type matching, sort data and reset index values
+        #   to ensure concatenation works as expected later on.)
         _baseline_data = estimation_model.estimation_data.data_frame.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
+        self.baseline_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
+        self.baseline_data.reset_index(inplace = True)
         if self.baseline_data.shape[0] == 0:
             raise ValueError("There are no observations corresponding to the supplied 'year'. If problem persists, try casting year as str.")
 
@@ -693,7 +696,7 @@ import gegravity as ge
         if not self._baseline_built:
             raise ValueError("Baseline must be built first (i.e. ge_model.build_baseline() method")
         self.experiment_data = experiment_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name])
-
+        self.experiment_data.reset_index(inplace = True)
         # Recode reference importer
         exper_recode = experiment_data.copy()
         exper_recode.loc[exper_recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
