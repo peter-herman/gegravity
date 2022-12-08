@@ -871,15 +871,16 @@ import gegravity as ge
         for country in self.country_set.keys():
             country_obj = self.country_set[country]
             country_obj.experiment_output_share = country_obj.experiment_output / total_output
-            results_table = results_table.append({
-                self.labels.identifier: country,
-                self.labels.baseline_output: country_obj.baseline_output,
-                self.labels.experiment_output: country_obj.experiment_output,
-                self.labels.output_change: country_obj.output_change,
-                self.labels.baseline_expenditure: country_obj.baseline_expenditure,
-                self.labels.experiment_expenditure: country_obj.experiment_expenditure,
-                self.labels.expenditure_change: country_obj.expenditure_change},
-                                                 ignore_index=True)
+            new_row = pd.DataFrame({
+                    self.labels.identifier: country,
+                    self.labels.baseline_output: country_obj.baseline_output,
+                    self.labels.experiment_output: country_obj.experiment_output,
+                    self.labels.output_change: country_obj.output_change,
+                    self.labels.baseline_expenditure: country_obj.baseline_expenditure,
+                    self.labels.experiment_expenditure: country_obj.experiment_expenditure,
+                    self.labels.expenditure_change: country_obj.expenditure_change}, index = [country])
+            results_table = pd.concat([results_table, new_row], axis = 0)
+
         # Store some economy-wide values to economy object
         self.economy.experiment_total_output = total_output
         self.economy.output_change = 100 * (total_output - self.economy.baseline_total_output) \
