@@ -16,6 +16,7 @@
 5. Create/update setup.cfg, which should sit in the same directory as src. 
 
 # Create and upload package (see https://packaging.python.org/en/latest/tutorials/packaging-projects/)
+To test, use the test pypi server. In setup.cfg, replace package name with "name = gegravity-peter-herman"
 ```
 f:
 cd Research/gegravity
@@ -23,6 +24,14 @@ cd Research/gegravity
 python -m build
 python -m twine upload --repository testpypi dist/*
 ```
+When ready to upload to pypi, return package name to just the name then:
+
+```
+python -m build
+python -m twine upload dist/*
+```
+
+
 # create venv and install package
 ```
 e:

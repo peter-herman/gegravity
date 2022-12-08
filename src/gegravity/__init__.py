@@ -24,7 +24,7 @@ Herman, Peter (2021) "gegravity: General Equilibrium Gravity Modeling in Python.
 
 
 ## Updates
-* **Version 0.2** (Dec. 2022): Improved OneSectorGE speed and fixed compatibility issues with the gme v1.3 package update.
+* **Version 0.2** (Dec. 2022): Improved OneSectorGE speed and updated compatibility with dependencies.
 * **Version 0.1** (Apr. 2021): Initial release.
 
 ## Installation
