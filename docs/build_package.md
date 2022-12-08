@@ -13,9 +13,9 @@
       fakeclass". Alternatively, they could use "import gegravity.fakemodule as gef", which would make gef.fakeclass available.
     * To load the contents of the module when the whole package is loaded, import statements should be added to the higher 
       level "src/gegravity/__init__.py" too. For example, add "from .fakemodule.fakescript import *"
+5. Create/update setup.cfg, which should sit in the same directory as src. 
 
-
-# Create and upload package
+# Create and upload package (see https://packaging.python.org/en/latest/tutorials/packaging-projects/)
 ```
 f:
 cd Research/gegravity
@@ -35,3 +35,8 @@ pip install gme
 python -m pip install --index-url https://test.pypi.org/simple/ --no-deps gegravity-peter-herman
 ```
 
+Or
+```
+conda create --prefix file_path\venv_name python=3.8
+pip install gme==1.3
+```
