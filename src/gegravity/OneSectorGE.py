@@ -156,6 +156,25 @@ import gegravity as ge
         if not isinstance(year, str):
             raise TypeError('year should be a string')
 
+        if isinstance(estimation_model, EstimationModel):
+            is_gme = True
+        elif isinstance(estimation_model, BaselineModel):
+            is_gme = False
+        else:
+            raise TypeError("estimation_model argument must be a gme.EstimationModel or BaselineModel class.")
+
+        # For BaselineModel input, if and expend_var_name or output_var_name are provided for OneSectorGE, use it.
+        # Otherwise use the one supplied to the BaselineModel
+        if not is_gme:
+            if expend_var_name != None:
+                use_expend_var_name = expend_var_name
+            else:
+                use_expend_var_name = estimation_model.expend_var_name
+            if output_var_name != None:
+                use_output_var_name = output_var_name
+            else:
+                use_output_var_name = estimation_model.output_var_name
+
         # Check reference country (does not currently work)
         # try:
         #     omitted_fe = estimation_model.results_dict[results_key].params[('importer_fe_'+reference_importer)]
@@ -165,18 +184,18 @@ import gegravity as ge
         self.labels = ResultsLabels()
 
         # Extract GME Meta data
-        #   If GME 1.2, meta data stored in attribute EstimationData._meta_data
-        if hasattr(estimation_model.estimation_data, '_meta_data'):
-            self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
-        #   If GME 1.3+, meta data stored in attribute EstimationData.meta_data
-        elif hasattr(estimation_model.estimation_data, 'meta_data'):
-            self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        if is_gme:
+            #   If GME 1.2, meta data stored in attribute EstimationData._meta_data
+            if hasattr(estimation_model.estimation_data, '_meta_data'):
+                self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
+            #   If GME 1.3+, meta data stored in attribute EstimationData.meta_data
+            elif hasattr(estimation_model.estimation_data, 'meta_data'):
+                self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        elif not is_gme:
+            self.meta_data = _GEMetaData(estimation_model.meta_data, use_expend_var_name, use_output_var_name)
+
 
         self._estimation_model = estimation_model
-        if cost_coeff_values is None:
-            self._estimation_results = estimation_model.results_dict[results_key]
-        else:
-            self._estimation_results = None
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
@@ -221,7 +240,23 @@ import gegravity as ge
         if self.meta_data.trade_var_name is None:
             raise ValueError('\n Missing Input: Please insure trade_var_name is set in EstimationData object.')
 
-        if cost_variables is None:
+        # Check for inputs needed if not using gme estimated model
+        if not is_gme and (cost_variables is None):
+            raise ValueError("cost_variables must be provided if using BaselineModel input.")
+        if not is_gme and (cost_coeff_values is None):
+            raise ValueError("cost_coeff_values must be provided if using BaselineModel input.")
+
+
+
+        # Set cost_coeff_values to those from gme estimated model if gme model provided and values not
+        # otherwise supplied
+        if is_gme and (cost_coeff_values is None):
+                self._estimation_results = estimation_model.results_dict[results_key]
+        else:
+            self._estimation_results = None
+
+        # Use GME RHS variables if GME model and vars not otherwise supplied
+        if is_gme and (cost_variables is None):
             self.cost_variables = self._estimation_model.specification.rhs_var
         else:
             self.cost_variables = cost_variables
@@ -234,7 +269,10 @@ import gegravity as ge
 
         # Prep baseline data (convert year to string in order to ensure type matching, sort data and reset index values
         #   to ensure concatenation works as expected later on.)
-        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        if is_gme:
+            _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        elif not is_gme:
+            _baseline_data = self._estimation_model.baseline_data.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         self.baseline_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
