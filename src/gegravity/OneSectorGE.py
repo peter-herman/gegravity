@@ -7,11 +7,12 @@ __Description__ = """A single sector or aggregate full GE model based on Larch a
 
 # ToDo: Finish OneSectorGE attributes list, add attributes for Country and Economy classes.
 
-from typing import List
+from typing import List, Union
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
+from src.gegravity.BaselineModel import BaselineModel
 from scipy.optimize import root
 from numpy import multiply, median
 from warnings import warn
@@ -28,17 +29,18 @@ Convergence Tips:
 
 class OneSectorGE(object):
     def __init__(self,
-                 estimation_model: EstimationModel,
-                 year: str,
-                 reference_importer: str,
-                 expend_var_name: str,
-                 output_var_name: str,
-                 sigma: float,
+                 estimation_model: Union[EstimationModel, BaselineModel] = None,
+                 year: str = None,
+                 reference_importer: str = None,
+                 expend_var_name: str = None,
+                 output_var_name: str = None,
+                 sigma: float = None,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
                  cost_coeff_values = None,
                  #approach: str = None,
                  quiet:bool = False):
+        #ToDo: Update Documentation (estimation model type)
         '''
         Define a general equilibrium (GE) gravity model.
         Args:
@@ -172,7 +174,7 @@ import gegravity as ge
 
         self._estimation_model = estimation_model
         if cost_coeff_values is None:
-            self._estimation_results = self._estimation_model.results_dict[results_key]
+            self._estimation_results = estimation_model.results_dict[results_key]
         else:
             self._estimation_results = None
         self._year = str(year)
@@ -232,7 +234,7 @@ import gegravity as ge
 
         # Prep baseline data (convert year to string in order to ensure type matching, sort data and reset index values
         #   to ensure concatenation works as expected later on.)
-        _baseline_data = estimation_model.estimation_data.data_frame.copy()
+        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         self.baseline_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
