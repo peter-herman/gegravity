@@ -15,19 +15,40 @@ class BaselineModel(object):
                  exp_var_name: str = 'exporter',
                  year_var_name: str = 'year',
                  trade_var_name: str = None,
-                 sector_var_name: str = None,
                  expend_var_name: str = None,
-                 output_var_name: str = None,):
-                 # cost_coeff_values: CostCoeffs = None):
+                 output_var_name: str = None,
+                 country_fixed_effects: DataFrame = None,
+                 ):
+        '''
+        Create the baseline data input for the OneSectorGE model.
+        Args:
+            baseline_data: (pandas DataFrame) A pandas dataframe containing bilateral data used for the model. Data
+                should include importer, exporter, and year identifiers; trade values; total output and expenditure
+                values for each exporter and importer, respectively; and all trade cost variables, including any fixed
+                effects to be used to compute trade costs. Fixed effects should be included as corresponding dummy
+                variables.
+            imp_var_name: (str) Name of the column containing the importer identifiers.
+            exp_var_name: (str) Name of the column containing the exporter identifiers.
+            year_var_name: (str) Name of the column containing the year identifiers.
+            trade_var_name: (str) Name o the column containing bilateral trade values.
+            expend_var_name: (str) Name of the column containing importer total expenditure values.
+            output_var_name: (str) Name of the column containing exporter total output values.
+            country_fixed_effects: (pandas DataFrame) Optional, estimated exporter and importer fixed effects. DataFrame
+                must contain three columns: country identifier, exporter fixed effect, and importer fixed effect. The
+                country identifier must appear in the first column. The fixed effects columns must be named with
+                exp_var_name and imp_var_name, respectively. [Note: this argument currently serves no practical function
+                but may in the future.]
+        '''
         self.baseline_data = baseline_data
         self.meta_data = _MetaData(imp_var_name=imp_var_name,
                                    exp_var_name=exp_var_name,
                                    year_var_name=year_var_name,
                                    trade_var_name=trade_var_name,
-                                   sector_var_name=sector_var_name,
+                                   sector_var_name=None,
                                    expend_var_name=expend_var_name,
                                    output_var_name=output_var_name)
-        self.specification =
+        self.specification = Specification(lhs_var = trade_var_name, rhs_var=None)
+        self.country_fixed_effects = country_fixed_effects
 
 # ToDo: Needed:
 # ToDo: estimation_model.estimation_data._meta_data,
@@ -100,12 +121,10 @@ class Specification(object):
                  # cluster_on: str=None,
                  # verbose:bool = True
                  ):
-        if lhs_var is None:
-            raise ValueError('lhs_var (left hand side variable) must be specified.')
 
         # self.spec_name = spec_name
-        # self.lhs_var = lhs_var
-        # self.rhs_var = rhs_var
+        self.lhs_var = lhs_var
+        self.rhs_var = rhs_var
         # self.sector_by_sector = sector_by_sector
         # self.drop_imp_exp = drop_imp_exp
         # self.drop_imp = drop_imp
