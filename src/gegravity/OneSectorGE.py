@@ -156,6 +156,25 @@ import gegravity as ge
         if not isinstance(year, str):
             raise TypeError('year should be a string')
 
+        if isinstance(estimation_model, EstimationModel):
+            self._is_gme = True
+        elif isinstance(estimation_model, BaselineModel):
+            self._is_gme = False
+        else:
+            raise TypeError("estimation_model argument must be a gme.EstimationModel or BaselineModel class.")
+
+        # For BaselineModel input, if and expend_var_name or output_var_name are provided for OneSectorGE, use it.
+        # Otherwise use the one supplied to the BaselineModel
+        if not self._is_gme:
+            if expend_var_name != None:
+                use_expend_var_name = expend_var_name
+            else:
+                use_expend_var_name = estimation_model.expend_var_name
+            if output_var_name != None:
+                use_output_var_name = output_var_name
+            else:
+                use_output_var_name = estimation_model.output_var_name
+
         # Check reference country (does not currently work)
         # try:
         #     omitted_fe = estimation_model.results_dict[results_key].params[('importer_fe_'+reference_importer)]
@@ -165,18 +184,18 @@ import gegravity as ge
         self.labels = ResultsLabels()
 
         # Extract GME Meta data
-        #   If GME 1.2, meta data stored in attribute EstimationData._meta_data
-        if hasattr(estimation_model.estimation_data, '_meta_data'):
-            self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
-        #   If GME 1.3+, meta data stored in attribute EstimationData.meta_data
-        elif hasattr(estimation_model.estimation_data, 'meta_data'):
-            self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        if self._is_gme:
+            #   If GME 1.2, meta data stored in attribute EstimationData._meta_data
+            if hasattr(estimation_model.estimation_data, '_meta_data'):
+                self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
+            #   If GME 1.3+, meta data stored in attribute EstimationData.meta_data
+            elif hasattr(estimation_model.estimation_data, 'meta_data'):
+                self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        elif not self._is_gme:
+            self.meta_data = _GEMetaData(estimation_model.meta_data, use_expend_var_name, use_output_var_name)
+
 
         self._estimation_model = estimation_model
-        if cost_coeff_values is None:
-            self._estimation_results = estimation_model.results_dict[results_key]
-        else:
-            self._estimation_results = None
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
@@ -221,7 +240,23 @@ import gegravity as ge
         if self.meta_data.trade_var_name is None:
             raise ValueError('\n Missing Input: Please insure trade_var_name is set in EstimationData object.')
 
-        if cost_variables is None:
+        # Check for inputs needed if not using gme estimated model
+        if not self._is_gme and (cost_variables is None):
+            raise ValueError("cost_variables must be provided if using BaselineModel input.")
+        if not self._is_gme and (cost_coeff_values is None):
+            raise ValueError("cost_coeff_values must be provided if using BaselineModel input.")
+
+
+
+        # Set cost_coeff_values to those from gme estimated model if gme model provided and values not
+        # otherwise supplied
+        if self._is_gme and (cost_coeff_values is None):
+                self._estimation_results = estimation_model.results_dict[results_key]
+        else:
+            self._estimation_results = None
+
+        # Use GME RHS variables if GME model and vars not otherwise supplied
+        if self._is_gme and (cost_variables is None):
             self.cost_variables = self._estimation_model.specification.rhs_var
         else:
             self.cost_variables = cost_variables
@@ -234,7 +269,10 @@ import gegravity as ge
 
         # Prep baseline data (convert year to string in order to ensure type matching, sort data and reset index values
         #   to ensure concatenation works as expected later on.)
-        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        if self._is_gme:
+            _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        elif not self._is_gme:
+            _baseline_data = self._estimation_model.baseline_data.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         self.baseline_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
@@ -315,8 +353,9 @@ import gegravity as ge
 
         # Solve for the baseline multilateral resistance terms
         if self.approach == 'GEPPML':
+            # ToDo: this was never completed and may not work well with non-GME option
             if self._estimation_results is None:
-                raise ValueError("GEPPML approach requires that the gme.EstimationModel be estimated and use importer and exporter fixed effects.")
+                raise ValueError("GEPPML approach requires that the model be defined using an gme.EstimationModel that is estimated and uses importer and exporter fixed effects.")
             self._calculate_GEPPML_multilateral_resistance(version='baseline')
         else:
             self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
@@ -374,48 +413,58 @@ import gegravity as ge
         country_set = {}
 
         # Identify appropriate fixed effect naming convention and define function for creating them
-        fe_specification = self._estimation_model.specification.fixed_effects
-        # Importer FEs
-        if [self.meta_data.imp_var_name] in fe_specification:
-            def imp_fe_identifier(country_id):
-                return "_".join([self.meta_data.imp_var_name,
-                                 'fe', (country_id)])
-        elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
-            def imp_fe_identifier(country_id):
-                return "_".join([self.meta_data.imp_var_name, self.meta_data.year_var_name,
-                                 'fe', (country_id + self._year)])
-        # else:
-        #     raise ValueError("Fixed Effect Specification must feature {} or {}".format([self.meta_data.imp_var_name],
-        #                                                                                [self.meta_data.imp_var_name,
-        #                                                                                 self.meta_data.year_var_name]))
+        if self._is_gme:
+            fe_specification = self._estimation_model.specification.fixed_effects
+            # Importer FEs
+            if [self.meta_data.imp_var_name] in fe_specification:
+                def imp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.imp_var_name,
+                                     'fe', (country_id)])
+            elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
+                def imp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.imp_var_name, self.meta_data.year_var_name,
+                                     'fe', (country_id + self._year)])
 
-        # Exporter FEs
-        if [self.meta_data.exp_var_name] in fe_specification:
-            def exp_fe_identifier(country_id):
-                return "_".join([self.meta_data.exp_var_name,
-                                 'fe', (country_id)])
-        elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
-            def exp_fe_identifier(country_id):
-                return "_".join([self.meta_data.exp_var_name, self.meta_data.year_var_name,
-                                 'fe', (country_id + self._year)])
-        # else:
-        #     raise ValueError(
-        #         "Fixed Effect Specification must feature {} or {}".format([self.meta_data.exp_var_name],
-        #                                                                   [self.meta_data.exp_var_name,
-        #                                                                    self.meta_data.year_var_name]))
+            # Exporter FEs
+            if [self.meta_data.exp_var_name] in fe_specification:
+                def exp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.exp_var_name,
+                                     'fe', (country_id)])
+            elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
+                def exp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.exp_var_name, self.meta_data.year_var_name,
+                                     'fe', (country_id + self._year)])
+
 
         for row in range(country_data.shape[0]):
             country_id = country_data.loc[row, self.meta_data.imp_var_name]
 
-            # Get fixed effects if estimated
-            try:
-                bsln_imp_fe = self._estimation_results.params[imp_fe_identifier(country_id)]
-            except:
-                bsln_imp_fe = 'no estimate'
-            try:
-                bsln_exp_fe = self._estimation_results.params[exp_fe_identifier(country_id)]
-            except:
-                bsln_exp_fe = 'no estimate'
+            # For GME input: Get fixed effects if estimated
+            if self._is_gme:
+                try:
+                    bsln_imp_fe = self._estimation_results.params[imp_fe_identifier(country_id)]
+                except:
+                    bsln_imp_fe = 'no estimate'
+                try:
+                    bsln_exp_fe = self._estimation_results.params[exp_fe_identifier(country_id)]
+                except:
+                    bsln_exp_fe = 'no estimate'
+            # For BaselineModel input: get fixed effects if supplied
+            elif not self._is_gme:
+                try:
+                    fe_country_identifier = self._estimation_model.country_fixed_effects.columns[0]
+                    bsln_imp_fe = self._estimation_model.country_fixed_effects.loc[
+                        self._estimation_model.country_fixed_effects[fe_country_identifier]==country_id,
+                        self.meta_data.imp_var_name]
+                except:
+                    bsln_imp_fe = 'no estimate'
+                try:
+                    fe_country_identifier = self._estimation_model.country_fixed_effects.columns[0]
+                    bsln_exp_fe = self._estimation_model.country_fixed_effects.loc[
+                        self._estimation_model.country_fixed_effects[fe_country_identifier]==country_id,
+                        self.meta_data.exp_var_name]
+                except:
+                    bsln_exp_fe = 'no estimate'
 
             # Build country
             try:
