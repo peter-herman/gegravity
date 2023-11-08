@@ -2075,9 +2075,9 @@ class ResultsLabels(object):
         \n**baseline observed trade**: Observed trade values. (Not necessarily equivalent to modeled values.)
         \n**experiment observed trade**: Estiamted counterfactual trade values based on predicted change and observed
         baseline values. (Not necessarily equivalent to modeled values.)
-        \n**baseline trade cost**: Baseline estimated trade costs (\tau_{ij})
-        \n**experiment trade cost**: Counterfactual experiment trade costs (\tau'_{ij})
-        \n**trade cost change (%)**: Change in trade costs 100*(\tau'_{ij} - \tau_{ij})/\tau_{ij}
+        \n**baseline trade cost**: Baseline estimated trade costs (t_{ij}^{1-sigma})
+        \n**experiment trade cost**: Counterfactual experiment trade costs (t'_{ij}^{1-sigma})
+        \n**trade cost change (%)**: Change in trade costs 100*(t'_{ij}^{1-sigma} - t_{ij}^{1-sigma})/t_{ij}^{1-sigma}
 
     # Country level Results
         \n **country**: Country identifier.
