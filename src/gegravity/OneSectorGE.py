@@ -220,7 +220,12 @@ import gegravity as ge
             raise ValueError('\n Missing Input: Please insure trade_var_name is set in EstimationData object.')
 
         if cost_variables is None:
+            # raise warning if no cost variables are included
+            warn('\n No cost variables specified. All non-fixed effect variables will be used to construct trade costs.')
             self.cost_variables = self._estimation_model.specification.rhs_var
+            # raise error if no cost variables are included
+            if len(self.cost_variables) == 0:
+                raise ValueError('\n Missing Input: Please include at least one variable in rhs_var of EstimationModel.')
         else:
             self.cost_variables = cost_variables
 
