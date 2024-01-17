@@ -8,7 +8,7 @@ from typing import List
 # from src.gegravity.OneSectorGE import _GEMetaData
 
 
-class BaselineModel(object):
+class BaselineData(object):
     def __init__(self,
                  baseline_data:DataFrame,
                  imp_var_name: str = 'importer',

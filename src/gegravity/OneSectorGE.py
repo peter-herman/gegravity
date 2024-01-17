@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
-from src.gegravity.BaselineModel import BaselineModel
+from src.gegravity.BaselineData import BaselineData
 from scipy.optimize import root
 from numpy import multiply, median
 from warnings import warn
@@ -29,7 +29,7 @@ Convergence Tips:
 
 class OneSectorGE(object):
     def __init__(self,
-                 estimation_model: Union[EstimationModel, BaselineModel] = None,
+                 estimation_model: Union[EstimationModel, BaselineData] = None,
                  year: str = None,
                  reference_importer: str = None,
                  expend_var_name: str = None,
@@ -158,29 +158,23 @@ import gegravity as ge
 
         if isinstance(estimation_model, EstimationModel):
             self._is_gme = True
-        elif isinstance(estimation_model, BaselineModel):
+        elif isinstance(estimation_model, BaselineData):
             self._is_gme = False
         else:
-            raise TypeError("estimation_model argument must be a gme.EstimationModel or BaselineModel class.")
+            raise TypeError("estimation_model argument must be a gme.EstimationModel or BaselineData class.")
 
-        # For BaselineModel input, if and expend_var_name or output_var_name are provided for OneSectorGE, use it.
-        # Otherwise use the one supplied to the BaselineModel
+        # For BaselineData input, if and expend_var_name or output_var_name are provided for OneSectorGE, use it.
+        # Otherwise use the one supplied to the BaselineData
         if not self._is_gme:
             if expend_var_name != None:
                 use_expend_var_name = expend_var_name
             else:
-                use_expend_var_name = estimation_model.expend_var_name
+                use_expend_var_name = estimation_model.meta_data.expend_var_name
             if output_var_name != None:
                 use_output_var_name = output_var_name
             else:
-                use_output_var_name = estimation_model.output_var_name
+                use_output_var_name = estimation_model.meta_data.output_var_name
 
-        # Check reference country (does not currently work)
-        # try:
-        #     omitted_fe = estimation_model.results_dict[results_key].params[('importer_fe_'+reference_importer)]
-        #     raise ValueError('reference_importer should be the excluded importer fixed effect')
-        # except:
-        #     print('reference_importer OK')
         self.labels = ResultsLabels()
 
         # Extract GME Meta data
@@ -242,9 +236,9 @@ import gegravity as ge
 
         # Check for inputs needed if not using gme estimated model
         if not self._is_gme and (cost_variables is None):
-            raise ValueError("cost_variables must be provided if using BaselineModel input.")
+            raise ValueError("cost_variables must be provided if using BaselineData input.")
         if not self._is_gme and (cost_coeff_values is None):
-            raise ValueError("cost_coeff_values must be provided if using BaselineModel input.")
+            raise ValueError("cost_coeff_values must be provided if using BaselineData input.")
 
 
 
@@ -407,7 +401,7 @@ import gegravity as ge
 
         reference_expenditure = float(
             country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer_recode,
-                             self.meta_data.expend_var_name])
+                             self.meta_data.expend_var_name].values[0])
 
         # Convert DataFrame to a dictionary of country objects
         country_set = {}
@@ -527,8 +521,8 @@ import gegravity as ge
         # cost_output_share: t_{ij}^{1-\sigma} * Y_i / Y
         # cost_expend_share: t_{ij}^{1-\sigma} * E_j / Y
         cost_params = trade_costs.copy()
-        cost_params['cost_output_share'] = -9999
-        cost_params['cost_expend_share'] = -9999
+        cost_params['cost_output_share'] = -9999.99
+        cost_params['cost_expend_share'] = -9999.99
         # Build actual values
         for row in cost_params.index:
             importer_key = cost_params.loc[row, self.meta_data.imp_var_name]
@@ -621,6 +615,9 @@ import gegravity as ge
                     self.country_set[country]._baseline_imr_ratio = mrs.loc[country, 'imrs']  # 1 / P^{1-sigma}
                     self.country_set[country]._baseline_omr_ratio = mrs.loc[country, 'omrs']  # 1 / π^{1-sigma}
                     sigma_inverse = 1 / (1 - self.sigma)
+                    # Check for invalid/problematic imr_ratios
+                    if (self.country_set[country]._baseline_imr_ratio<0) | (self.country_set[country]._baseline_omr_ratio<0):
+                        raise ValueError("IMR or OMR values problematic for {} and possibly other countries, try a different omr_rescale factor.".format(country))
                     self.country_set[country].baseline_imr = 1 / (self.country_set[country]._baseline_imr_ratio ** sigma_inverse)
                     self.country_set[country].baseline_omr = 1 / (self.country_set[country]._baseline_omr_ratio ** sigma_inverse)
 
@@ -919,6 +916,7 @@ import gegravity as ge
             total_output += country_obj.experiment_output
 
         # The second time looping through gets things that are dependent on total output/expenditure
+        country_results_list = list()
         for country in self.country_set.keys():
             country_obj = self.country_set[country]
             country_obj.experiment_output_share = country_obj.experiment_output / total_output
@@ -930,7 +928,8 @@ import gegravity as ge
                     self.labels.baseline_expenditure: country_obj.baseline_expenditure,
                     self.labels.experiment_expenditure: country_obj.experiment_expenditure,
                     self.labels.expenditure_change: country_obj.expenditure_change}, index = [country])
-            results_table = pd.concat([results_table, new_row], axis = 0)
+            country_results_list.append(new_row)
+        results_table = pd.concat(country_results_list, axis = 0)
 
         # Store some economy-wide values to economy object
         self.economy.experiment_total_output = total_output
