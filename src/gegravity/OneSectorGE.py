@@ -44,7 +44,8 @@ class OneSectorGE(object):
         '''
         Define a general equilibrium (GE) gravity model.
         Args:
-            estimation_model (gme.EstimationModel): A GME Estimation model
+            estimation_model (gme.EstimationModel or BaselineData): A GME Estimation model or gegravity BaselineData
+                class object containing the baseline model data (trade flows, cost variables, outputs, expenditures).
             year (str): The year to be used for the model. Works best if estimation_model year column has been cast as
                 string too.
             reference_importer (str): Identifier for the country to be used as the reference importer (inward
@@ -2040,7 +2041,8 @@ class CostCoeffs(object):
                  estimates:DataFrame,
                  identifier_col: str,
                  coeff_col:str,
-                 stderr_col:str = None):
+                 stderr_col:str = None,
+                 covar_matrix:DataFrame = None):
         '''
                          Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
                          source of gravity estimates.
@@ -2054,15 +2056,16 @@ class CostCoeffs(object):
                               should be numeric and are required.
                           stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
                               required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+                          covar_matrix (DataFrame): A covariance matrix for the gravity coefficient estimates.
 
                          Returns:
-                             CostCoeffs: An instance of a ParameterValues object.
+                             CostCoeffs: An instance of a CostCoeffs object.
 
                          Examples:
                              Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
                              agreements.
-
-import gegravity as ge            >>> import pandas as pd
+                             >>> import gegravity as ge
+                             >>> import pandas as pd
                              >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
                              ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
                              ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
@@ -2086,7 +2089,8 @@ import gegravity as ge            >>> import pandas as pd
                              And supply them to a OneSectorGE model via the argument
                              >>> OneSectorGE(cost_coeff_values=cost_params)
                          '''
-        estimates = estimates.set_index(identifier_col)
+        self._identifier_col = identifier_col
+        estimates = estimates.set_index(self._identifier_col)
         self._table = estimates
         # Coefficient  Estimates
         self.params = estimates[coeff_col].copy()
@@ -2096,12 +2100,13 @@ import gegravity as ge            >>> import pandas as pd
         else:
             self.bse = None
 
-            # self.imp_fe_prefix = imp_fe_prefix
-            # self.exp_fe_prefix = exp_fe_prefix
-                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
+        self.covar = covar_matrix
 
-
+        if self.covar is not None:
+            # Check dimensions of cost estimates and covariance matrix
+            if (self._table.shape[0], self._table.shape[0]) != self.covar.shape:
+                raise ValueError("Dimensions of estimates ({}) and covar_matrix ({}) do not match.".format(
+                    self._table.shape[0], self.covar.shape))
 
     def __repr__(self):
         return repr(self._table)

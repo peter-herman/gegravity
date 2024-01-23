@@ -10,13 +10,14 @@ import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
 from .OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
+from .BaselineData import BaselineData
 from scipy.stats import multivariate_normal
 from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
 from typing import List
 
 class MonteCarloGE(object):
     def __init__(self,
-                 estimation_model: EstimationModel,
+                 baseline: BaselineData,
                  year:str,
                  trials: int,
                  expend_var_name: str,
@@ -25,14 +26,13 @@ class MonteCarloGE(object):
                  reference_importer: str,
                  cost_variables: list,
                  mc_variables: list = None,
-                 results_key: str = 'all',
-                 seed: int = 0):
+                 cost_coeff_values=None,
+                 seed: int = 0,
+                 allow_singular_covar:bool = False):
         '''
         Define a Monte Carlo GE model.
         Args:
-            estimation_model (gme.EstimationModel): A GME EstimationModel that must have been estimated with the option
-                full_results = True (MonteCarlo simulation requires additional info from estimation compared to
-                OneSectorGE).
+            baseline (BaselineData): Baseline data defined using the gegravity BaselineData class structure.
             year (str): The year to be used for the baseline model. Works best if estimation_model year column has been
                 cast as string.
             trials (int): The number of trial simulations to conduct.
@@ -47,12 +47,14 @@ class MonteCarloGE(object):
                 experiment. Coefficients for the variables in this list are randomly drawn based on their estimated mean
                  and variance/covariance. Those excluded use their gravity estimated values only. By default, the model
                 uses all cost variables (or those supplied to cost_variables argument) are
-            results_key (str): (optional) If using parameter estimates from estimation_model, this is the key (i.e.
-                sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
-                False in GME model), this key is 'all', which is the default.
+            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
+                gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             seed (int): (optional) The seed to use for the random draws of cost coefficients in order to provide
                 unchanging, consistent draws across runs. By default, the seed is randomly determined each time the
                 model is constructed.
+            allow_singular_covar (bool): If true, allow the covariance matrix to be singular when drawing coefficient
+                values from multivariate normal distribution. Default is False.
 
         Attributes:
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
@@ -113,12 +115,14 @@ class MonteCarloGE(object):
 
 
         # Store some inputs in model object
-        self._estimation_model = estimation_model
-        self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        self._estimation_model = baseline
+        self.meta_data = _GEMetaData(baseline.meta_data, expend_var_name, output_var_name)
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
         self._cost_variables = cost_variables
+        self._cost_coeffs = cost_coeff_values
+        self._allow_singular = allow_singular_covar
         if mc_variables is None:
             self._mc_variables = self._cost_variables
         else:
@@ -127,15 +131,18 @@ class MonteCarloGE(object):
             self._seed = np.random.randint(0,10000)
         else:
             self._seed = seed
-        self._results_key = results_key
 
         # Define Parameter values
-        self.main_coeffs = self._estimation_model.results_dict[self._results_key].params
-        self.main_stderrs = self._estimation_model.results_dict[self._results_key].bse
+        self.main_coeffs = self._cost_coeffs.params
+        self.main_stderrs = self._cost_coeffs.bse
+        self.main_covar_mat = self._cost_coeffs.covar
         self.trials = trials
 
         # Generate Sampling Distribution
         self.coeff_sample = self._draw_mc_trade_costs()
+
+
+
 
         ##
         # Define Results attributes
@@ -159,15 +166,15 @@ class MonteCarloGE(object):
 
 
         # prep baseline data
-        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        _baseline_data = self._estimation_model.baseline_data.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         if self.baseline_data.shape[0] == 0:
             raise ValueError("There are no observations corresponding to the supplied 'year'")
 
-        # Create summary of sample distrbution
+        # Create summary of sample distribution
         sample_stats = self.coeff_sample.copy()
-        sample_stats.set_index('index', inplace= True)
+        sample_stats.set_index(self._cost_coeffs._identifier_col, inplace= True)
         sample_stats = sample_stats.T.describe().T
 
         # sample_stats = self.coeff_sample.T.describe().T
@@ -186,19 +193,17 @@ class MonteCarloGE(object):
         Returns: A dataframe of random draws of coefficients. Rows are cost variables from self._mc_variables, columns
             are different draws with the exception of a column with corresponding cost variable names ('index')
         '''
+        print('Deriving sample of cost parameters...')
         # Get results and check that all needed info is available (i.e. covariance matrix in estimation model)
-        est_results = self._estimation_model.results_dict[self._results_key]
-        if not isinstance(est_results,GLMResultsWrapper):
-            raise TypeError('MonteCarloGE requires that gme.EstimationModel be estimated with option full_results=True')
-        betas = est_results.params.values
-
-        cov = self._estimation_model.results_dict[self._results_key].cov_params()
-        distribution_alt = multivariate_normal(betas, cov, seed=self._seed)
+        betas = self.main_coeffs
+        cov = self.main_covar_mat
+        # Define distribution of beta parameters
+        distribution_alt = multivariate_normal(betas, cov, seed=self._seed, allow_singular=self._allow_singular)
         draws = list()
         for i in range(self.trials):
             draws.append(pd.Series(distribution_alt.rvs()))
         all_draws = pd.concat(draws, axis=1)
-        all_draws.index = est_results.params.index
+        all_draws.index = betas.index
         all_draws = all_draws.loc[self._mc_variables,:]
         return all_draws.reset_index()
 
@@ -259,10 +264,12 @@ class MonteCarloGE(object):
 
         '''
         models = list()
+        failed_trials = list()
         num_failed_iterations = 0
         for trial in range(self.trials):
             print("\n* Simulating trial {} *".format(trial))
-            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col='index')
+            # Define a new CostCoeff instance using one of the trial values
+            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
             try:
                 trial_model = OneSectorGE(self._estimation_model,
                                           year=self._year,
@@ -270,10 +277,8 @@ class MonteCarloGE(object):
                                           expend_var_name=self.meta_data.expend_var_name,
                                           output_var_name=self.meta_data.output_var_name,
                                           sigma=self.sigma,
-                                          results_key=self._results_key,
                                           cost_variables=self._cost_variables,
                                           cost_coeff_values=param_values,
-                                          # approach = approach,
                                           quiet = quiet)
                 trial_model.build_baseline(omr_rescale=omr_rescale,
                                            imr_rescale=imr_rescale,
@@ -288,10 +293,12 @@ class MonteCarloGE(object):
             except:
                 print("Failed to solve model.\n")
                 num_failed_iterations+=1
+                failed_trials.append(trial)
 
         # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
         self.num_failed_trials = num_failed_iterations
+        self.num_failed_trials = failed_trials
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)
         self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures', result_stats, all_results)
@@ -389,7 +396,7 @@ class MonteCarloGE(object):
 
         '''
         combined_diagnostics = dict()
-        for trial in range(self.trials):
+        for trial in range(len(models)):
             combined_diagnostics[trial] = models[trial].solver_diagnostics
         self.solver_diagnostics = combined_diagnostics
 
