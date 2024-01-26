@@ -746,8 +746,11 @@ import gegravity as ge
             raise ValueError("Baseline must be built first (i.e. ge_model.build_baseline() method")
         self.experiment_data = experiment_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name])
         self.experiment_data.reset_index(inplace = True)
+        # Insure year columns is str so as to match with baseline data
+        #self.experiment_data[self.meta_data.year_var_name] = self.experiment_data[self.meta_data.year_var_name].astype(str)
+
         # Recode reference importer
-        exper_recode = experiment_data.copy()
+        exper_recode = self.experiment_data.copy()
         exper_recode.loc[exper_recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
         exper_recode.loc[exper_recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
         self._experiment_data_recode = exper_recode

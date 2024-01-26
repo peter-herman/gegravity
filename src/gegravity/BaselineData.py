@@ -40,6 +40,7 @@ class BaselineData(object):
                 but may in the future.]
         '''
         self.baseline_data = baseline_data
+
         self.meta_data = _MetaData(imp_var_name=imp_var_name,
                                    exp_var_name=exp_var_name,
                                    year_var_name=year_var_name,
@@ -50,7 +51,10 @@ class BaselineData(object):
         self.specification = Specification(lhs_var = trade_var_name, rhs_var=None)
         self.country_fixed_effects = country_fixed_effects
 
-# ToDo: Needed:
+        # Convert year column to string to insure consistent dtype (OneSectorGE expects str)
+        self.baseline_data[year_var_name] = self.baseline_data[year_var_name].astype(str)
+
+# ToDo: Potentially Needed:
 # ToDo: estimation_model.estimation_data._meta_data,
 # ToDo: cost_coeff_values
 # ToDo: estimation_model.estimation_data.data_frame
