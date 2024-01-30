@@ -267,7 +267,8 @@ class MonteCarloGE(object):
         failed_trials = list()
         num_failed_iterations = 0
         for trial in range(self.trials):
-            print("\n* Simulating trial {} *".format(trial))
+            if not quiet:
+                print("\n* Simulating trial {} *".format(trial))
             # Define a new CostCoeff instance using one of the trial values
             param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
             try:
@@ -291,14 +292,15 @@ class MonteCarloGE(object):
                                      ge_max_iter=ge_max_iter)
                 models.append(trial_model)
             except:
-                print("Failed to solve model.\n")
+                if not quiet:
+                    print("Failed to solve model.\n")
                 num_failed_iterations+=1
                 failed_trials.append(trial)
 
         # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
         self.num_failed_trials = num_failed_iterations
-        self.num_failed_trials = failed_trials
+        self.failed_trials = failed_trials
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)
         self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures', result_stats, all_results)
@@ -401,7 +403,8 @@ class MonteCarloGE(object):
         self.solver_diagnostics = combined_diagnostics
 
     def export_results(self, directory:str = None, name:str = '',
-                       country_names:DataFrame = None, all_results = False):
+                       country_names:DataFrame = None, country:bool = True, bilateral:bool = True,
+                       diagnostics:bool = True):
         '''
         Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
         and (3) solver diagnostics.
@@ -417,6 +420,12 @@ class MonteCarloGE(object):
                 results tables. The supplied DataFrame should include exactly two columns. The first column must be
                 the country identifiers used in the model. The second column must be the alternative identifiers to
                 add.
+            country (boolean): (optional) If True, export country-level results to csv. If False, skip these results.
+                Default is True.
+            bilateral (boolean): (optional) If True, export bilateral results to csv. If False, skip these results.
+                Default is True.
+            diagnostics (boolean): (optional) If True, export diagnostic information to csv. If False, skip these
+                results. Default is True.
 
         Returns:
             None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
@@ -478,9 +487,12 @@ class MonteCarloGE(object):
         diag_frame = diag_frame.fillna('')
 
         if directory is not None:
-            country_results.to_csv("{}/{}_country_results.csv".format(directory, name))
-            bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name), index=False)
-            diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index=False)
+            if country:
+                country_results.to_csv("{}/{}_country_results.csv".format(directory, name))
+            if bilateral:
+                bilateral_results.to_csv("{}/{}_bilateral_results.csv".format(directory, name), index=False)
+            if diagnostics:
+                diag_frame.to_csv("{}/{}_solver_diagnostics.csv".format(directory, name), index=False)
         else:
             return country_results, bilateral_results, diag_frame
 
