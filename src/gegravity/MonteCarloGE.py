@@ -471,8 +471,8 @@ class MonteCarloGE(object):
 
         # Create Dataframe with Diagnostic results
         column_list = list()
-        diagnostics = self.solver_diagnostics
-        for trial_num, trial in diagnostics.items():
+        diagnostic_info = self.solver_diagnostics
+        for trial_num, trial in diagnostic_info.items():
             for results_type, results in trial.items():
                 for key, value in results.items():
                     # Single Entry fields must be converted to list before creating DataFrame
