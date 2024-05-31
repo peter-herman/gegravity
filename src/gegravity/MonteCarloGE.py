@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
-from .OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
+from .OneSectorGE import OneSectorGE, CostValues, _GEMetaData
 from .BaselineData import BaselineData
 from scipy.stats import multivariate_normal
 from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
@@ -47,7 +47,7 @@ class MonteCarloGE(object):
                 experiment. Coefficients for the variables in this list are randomly drawn based on their estimated mean
                  and variance/covariance. Those excluded use their gravity estimated values only. By default, the model
                 uses all cost variables (or those supplied to cost_variables argument) are
-            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+            cost_coeff_values (CostValues): (optional) A set of parameter values or estimates to use for constructing
                 trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
                 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             seed (int): (optional) The seed to use for the random draws of cost coefficients in order to provide
@@ -270,7 +270,7 @@ class MonteCarloGE(object):
             if not quiet:
                 print("\n* Simulating trial {} *".format(trial))
             # Define a new CostCoeff instance using one of the trial values
-            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
+            param_values = CostValues(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
             try:
                 trial_model = OneSectorGE(self._estimation_model,
                                           year=self._year,

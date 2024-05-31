@@ -1,7 +1,7 @@
 __Author__ = "Peter Herman"
 __Project__ = "Gravity Code"
 __Created__ = "08/15/2018"
-__all__ = ['OneSectorGE', 'CostCoeffs', 'Country', 'Economy', 'ResultsLabels']
+__all__ = ['OneSectorGE', 'CostValues', 'Country', 'Economy', 'ResultsLabels']
 __Description__ = """A single sector or aggregate full GE model based on Larch and Yotov, 'General Equilibrium Trade
                   Policy Analysis with Structural Gravity," 2016. (WTO Working Paper ERSD-2016-08)"""
 
@@ -58,8 +58,8 @@ class OneSectorGE(object):
                 False in GME model), this key is 'all', which is the default.
             cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
                 default, all included non-fixed effect variables are used.
-            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
-                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
+            cost_coeff_values (CostValues): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostValues, statsmodels.GLMResultsWrapper, or
                 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
@@ -1836,7 +1836,7 @@ class Country(object):
         intranational_trade_change (float): Estimated percent change in intranational trade
             (100*[X'_{ii} - X_{ii}]/X_{ii}).
 
-        baseline_gdp (float): Baseline real GDP ($GDP_j = Y_j/P_j$).
+        baseline_gdp (float): Baseline real GDP ($GDP_j = Y_j/P_j$ from Yotov et al. (2016) replication files).
         experiment_gdp (float): Estimated counterfactual real GDP (GDP'_j = Y'_j/P'_j).
         gdp_change (float): Estimated percent chnage in real GDP (100*(GDP' - GDP)/GDP)
         phi (float): Phi parameter for expenditure-output share (φ_i = E_i / Y_i). Based on Eqn. (30) from Larch and
@@ -2039,7 +2039,7 @@ class _GEMetaData(object):
         self.output_var_name = output_var_name
 
 
-class CostCoeffs(object):
+class CostValues(object):
     def __init__(self,
                  estimates:DataFrame,
                  identifier_col: str,
@@ -2062,7 +2062,7 @@ class CostCoeffs(object):
                           covar_matrix (DataFrame): A covariance matrix for the gravity coefficient estimates.
 
                          Returns:
-                             CostCoeffs: An instance of a CostCoeffs object.
+                             CostValues: An instance of a CostValues object.
 
                          Examples:
                              Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
@@ -2079,8 +2079,8 @@ class CostCoeffs(object):
                              1    contig    0.8  0.10
                              2  distance   -1.0  0.05
 
-                             Now, we can construct the CostCoeffs object from this data.
-                             >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
+                             Now, we can construct the CostValues object from this data.
+                             >>> cost_params = CostValues(estimates = coeff_df, identifier_col = 'var',
                              ...                          coeff_col = 'coeff', stderr_col = 'ste')
                              >>> print(cost_params.params)
                              var

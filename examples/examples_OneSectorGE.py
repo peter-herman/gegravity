@@ -6,7 +6,7 @@ __Description__ = """A demonstration of the OneSectorGE model and module"""
 # ---
 # Load Packages
 # ---
-from src.gegravity.OneSectorGE import OneSectorGE, CostCoeffs
+from src.gegravity.OneSectorGE import OneSectorGE, CostValues
 import pandas as pd
 # Increase number of columns printed for a pandas DataFrame
 pd.set_option("display.max_columns", None)
@@ -198,7 +198,7 @@ coeff_df = pd.DataFrame(coeff_data)
 print(coeff_df)
 
 # Create a CostCoeff object from those values
-cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var', coeff_col = 'coeff', stderr_col = 'ste')
+cost_params = CostValues(estimates = coeff_df, identifier_col ='var', coeff_col ='coeff', stderr_col ='ste')
 
 # Define a new OneSector GE model using those cost parameters
 alternate_costs = OneSectorGE(gme_model, year = "2006",
