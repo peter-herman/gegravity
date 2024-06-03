@@ -40,6 +40,7 @@ class BaselineData(object):
                 but may in the future.]
         '''
         self.baseline_data = baseline_data
+        self.baseline_columns = baseline_data.columns
 
         self.meta_data = _MetaData(imp_var_name=imp_var_name,
                                    exp_var_name=exp_var_name,
@@ -53,6 +54,10 @@ class BaselineData(object):
 
         # Convert year column to string to insure consistent dtype (OneSectorGE expects str)
         self.baseline_data[year_var_name] = self.baseline_data[year_var_name].astype(str)
+
+    def __repr__(self):
+        return("Baseline data columns: {}\n"
+               "Baseline data dimensions: {}".format(", ".join(self.baseline_columns), self.baseline_data.shape))
 
 # ToDo: Potentially Needed:
 # ToDo: estimation_model.estimation_data._meta_data,

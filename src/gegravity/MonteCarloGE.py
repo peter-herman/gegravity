@@ -20,13 +20,13 @@ class MonteCarloGE(object):
                  baseline: BaselineData,
                  year:str,
                  trials: int,
-                 expend_var_name: str,
-                 output_var_name: str,
                  sigma: float,
                  reference_importer: str,
                  cost_variables: list,
+                 cost_coeff_values: CostValues,
+                 expend_var_name: str = None,
+                 output_var_name: str = None,
                  mc_variables: list = None,
-                 cost_coeff_values=None,
                  seed: int = 0,
                  allow_singular_covar:bool = False):
         '''
@@ -115,8 +115,25 @@ class MonteCarloGE(object):
 
 
         # Store some inputs in model object
-        self._estimation_model = baseline
-        self.meta_data = _GEMetaData(baseline.meta_data, expend_var_name, output_var_name)
+        self._baseline = baseline
+
+        # Determine whether to use expend_var_name and/or output_var_name from MonteCarlo inputs or Baseline meta data.
+        # If both are supplied, the values given in MonteCarlo definition are used.
+        if expend_var_name != None:
+            use_expend_var_name = expend_var_name
+        else:
+            use_expend_var_name = self._baseline.meta_data.expend_var_name
+        if output_var_name != None:
+            use_output_var_name = output_var_name
+        else:
+            use_output_var_name = self._baseline.meta_data.output_var_name
+        if use_output_var_name is None:
+            raise ValueError("Must supply a variable name for the column containing output values.")
+        if use_expend_var_name is None:
+            raise ValueError("Must supply a variable name for the column containing output values.")
+
+
+        self.meta_data = _GEMetaData(baseline.meta_data, use_expend_var_name, use_output_var_name)
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
@@ -166,7 +183,7 @@ class MonteCarloGE(object):
 
 
         # prep baseline data
-        _baseline_data = self._estimation_model.baseline_data.copy()
+        _baseline_data = self._baseline.baseline_data.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         if self.baseline_data.shape[0] == 0:
@@ -220,7 +237,8 @@ class MonteCarloGE(object):
                    ge_max_iter: int = 1000,
                    quiet: bool = False,
                    result_stats:list = ['mean', 'std', 'sem'],
-                   all_results:bool = False):
+                   all_results:bool = False,
+                   redraw_failed_trials: bool = False):
         '''
         Conduct Monte Carlo Simulation of OneSectorGE gravity model.
         Args:
@@ -272,34 +290,84 @@ class MonteCarloGE(object):
             # Define a new CostCoeff instance using one of the trial values
             param_values = CostValues(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
             try:
-                trial_model = OneSectorGE(self._estimation_model,
-                                          year=self._year,
-                                          reference_importer=self._reference_importer,
-                                          expend_var_name=self.meta_data.expend_var_name,
-                                          output_var_name=self.meta_data.output_var_name,
-                                          sigma=self.sigma,
-                                          cost_variables=self._cost_variables,
-                                          cost_coeff_values=param_values,
-                                          quiet = quiet)
-                trial_model.build_baseline(omr_rescale=omr_rescale,
-                                           imr_rescale=imr_rescale,
-                                           mr_method=mr_method,
-                                           mr_max_iter=mr_max_iter,
-                                           mr_tolerance=mr_tolerance)
-                trial_model.define_experiment(experiment_data)
-                trial_model.simulate(ge_method=ge_method,
-                                     ge_tolerance=ge_tolerance,
-                                     ge_max_iter=ge_max_iter)
+                trial_model = self._run_single_trial(param_values=param_values, experiment_data=experiment_data,
+                                                     quiet = quiet, omr_rescale = omr_rescale,
+                                                     imr_rescale = imr_rescale, mr_method = mr_method,
+                                                     mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                     ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                     ge_max_iter = ge_max_iter)
+                # trial_model = OneSectorGE(self._baseline,
+                #                           year=self._year,
+                #                           reference_importer=self._reference_importer,
+                #                           expend_var_name=self.meta_data.expend_var_name,
+                #                           output_var_name=self.meta_data.output_var_name,
+                #                           sigma=self.sigma,
+                #                           cost_variables=self._cost_variables,
+                #                           cost_coeff_values=param_values,
+                #                           quiet = quiet)
+                # trial_model.build_baseline(omr_rescale=omr_rescale,
+                #                            imr_rescale=imr_rescale,
+                #                            mr_method=mr_method,
+                #                            mr_max_iter=mr_max_iter,
+                #                            mr_tolerance=mr_tolerance)
+                # trial_model.define_experiment(experiment_data)
+                # trial_model.simulate(ge_method=ge_method,
+                #                      ge_tolerance=ge_tolerance,
+                #                      ge_max_iter=ge_max_iter)
                 models.append(trial_model)
             except:
                 if not quiet:
                     print("Failed to solve model.\n")
                 num_failed_iterations+=1
                 failed_trials.append(trial)
+        self.num_failed_trials = num_failed_iterations
+
+        # For failed trails, redraw new estimates and solve new models for each failed trial
+        if redraw_failed_trials:
+            # Define distribution of beta parameters to draw new values from (sets new seed to draw from)
+            new_dist = multivariate_normal(self.main_coeffs, self.main_covar_mat, seed=(1 + self._seed),
+                                           allow_singular=self._allow_singular)
+            # Create lists/variables to track successes/failures
+            new_draws = list()
+            new_successes = 0
+            new_failures = 0
+            tries = 0
+            max_retries = self.trials
+            while new_successes < self.num_failed_trials and tries <= max_retries:
+                # Tick up try counter and created column name for random draw
+
+                try_num = self.trials+tries
+                # Create and format coefficient draw
+                new_draw = pd.DataFrame(new_dist.rvs())
+                new_draw.index = self.main_coeffs.index
+                new_draw.reset_index(inplace = True)
+                new_draw.rename(columns={0:str(try_num)}, inplace = True)
+                new_draws.append(new_draw)
+                new_params = CostValues(new_draw, coeff_col=str(try_num), identifier_col=self._cost_coeffs._identifier_col)
+
+                if not quiet:
+                    print("\n* Simulating failed trial replacement {} *".format(try_num))
+                try:
+                    new_trial_model = self._run_single_trial(param_values=new_params, experiment_data=experiment_data,
+                                                             quiet = quiet, omr_rescale = omr_rescale,
+                                                             imr_rescale = imr_rescale, mr_method = mr_method,
+                                                             mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                             ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                             ge_max_iter = ge_max_iter)
+                    models.append(new_trial_model)
+                    new_successes+=1
+                except:
+                    if not quiet:
+                        print("Failed to solve redrawn replacement model.\n")
+                    new_failures += 1
+                    failed_trials.append(trial)
+
+                tries += 1
+
+
 
         # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
-        self.num_failed_trials = num_failed_iterations
         self.failed_trials = failed_trials
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)
@@ -310,6 +378,31 @@ class MonteCarloGE(object):
         self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, 'bilateral_costs', result_stats, all_results)
         self._compile_diagnostics(models)
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
+
+
+
+    def _run_single_trial(self, param_values: CostValues, experiment_data, quiet, omr_rescale, imr_rescale, mr_method,
+                          mr_max_iter, mr_tolerance, ge_method, ge_tolerance, ge_max_iter):
+        trial_model = OneSectorGE(self._baseline,
+                                  year=self._year,
+                                  reference_importer=self._reference_importer,
+                                  expend_var_name=self.meta_data.expend_var_name,
+                                  output_var_name=self.meta_data.output_var_name,
+                                  sigma=self.sigma,
+                                  cost_variables=self._cost_variables,
+                                  cost_coeff_values=param_values,
+                                  quiet=quiet)
+        trial_model.build_baseline(omr_rescale=omr_rescale,
+                                           imr_rescale=imr_rescale,
+                                           mr_method=mr_method,
+                                           mr_max_iter=mr_max_iter,
+                                           mr_tolerance=mr_tolerance)
+        trial_model.define_experiment(experiment_data)
+        trial_model.simulate(ge_method=ge_method,
+                                     ge_tolerance=ge_tolerance,
+                                     ge_max_iter=ge_max_iter)
+        return trial_model
+
 
 
     def _compile_results(self, models, result_type, result_stats, all_results):
@@ -356,10 +449,10 @@ class MonteCarloGE(object):
         summary_results = combined_results.copy()
         if result_type in ['bilateral_trade','bilateral_costs']:
             # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
-            summary_results = summary_results.stack(0).reset_index(level=2)
+            summary_results = summary_results.stack(0, future_stack=True).reset_index(level=2)
             summary_results.rename(columns={'level_2': 'trial'}, inplace=True)
         else:
-            summary_results = summary_results.stack(0).reset_index(level=1)
+            summary_results = summary_results.stack(0, future_stack=True).reset_index(level=1)
             summary_results.rename(columns={'level_1': 'trial'}, inplace=True)
 
         # Compute mean and std across trials
@@ -378,10 +471,10 @@ class MonteCarloGE(object):
         #     if col[1] == 'std':
         #         summary_results[(col[0], 'stderr')] = summary_results[col] / (self.trials ** 0.5)
         if result_type in ['bilateral_trade','bilateral_costs']:
-            summary_results = summary_results.stack(level=1).reset_index(level=2)
+            summary_results = summary_results.stack(level=1, future_stack=True).reset_index(level=2)
             summary_results.rename(columns = {'level_2':'statistic'},inplace = True)
         else:
-            summary_results = summary_results.stack(level=1).reset_index(level=1)
+            summary_results = summary_results.stack(level=1, future_stack=True).reset_index(level=1)
             summary_results.rename(columns = {'level_1':'statistic'},inplace = True)
         if all_results:
             return combined_results, summary_results
