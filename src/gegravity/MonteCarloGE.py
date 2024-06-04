@@ -241,7 +241,8 @@ class MonteCarloGE(object):
                    quiet: bool = False,
                    result_stats:list = ['mean', 'std', 'sem'],
                    all_results:bool = False,
-                   redraw_failed_trials: bool = False):
+                   redraw_failed_trials: bool = False,
+                   trial_omr_rescale: dict = None):
         '''
         Conduct Monte Carlo Simulation of OneSectorGE gravity model.
         Args:
@@ -250,10 +251,10 @@ class MonteCarloGE(object):
                 (MonteCarloGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
             omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
                 are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
-                different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
-                (10^0). However, users should be careful with this choice as results, even when convergent, may not be
-                fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
-                feasible values for a given model.
+                different order of magnitude can help. Values should be of the form 10^n for positive or negative
+                integer n. By default, this value is 1 (10^0). However, users should be careful with this choice as
+                results, even when convergent, may not be fully robust to any selection. The method
+                MonteCarlo.check_omr_rescale() can help identify and compare feasible values for a given model.
             imr_rescale (int): (optional) This value rescales the IMR values to potentially aid in conversion. However,
                 because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
                 because changing the default value, which is 1.
@@ -285,7 +286,10 @@ class MonteCarloGE(object):
                 trials as were specified. E.g. If 10 trials are specified and 2 fail to solve, additional trials will be
                 attempted with additional random draws until 2 additional models have been solved successfully, resulting
                 in 10 successful trials, or 10 additional trails are run without 2 successes.
-
+            trial_omr_rescale (dict): (option) An option to provide alternative OMR rescale factors for specific trials.
+                The argument should be a dictionary keyed with the trial number (0 to N-1) and value equal to the
+                desired rescale factor (10^n) with n a positive or negative integer (e.g. {0:0.001, 3:10} Any trial not
+                specified here will be run using the value specified by the omr_rescale argument (default of 1).
         Returns:
             None: No return but populates many results attributes of the MonteCarloGE model.
 
@@ -299,10 +303,14 @@ class MonteCarloGE(object):
             # Define a new CostCoeff instance using one of the trial values
             param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
             try:
-
+                if (trial_omr_rescale is not None) and (trial in trial_omr_rescale):
+                    # Use alternative omr if supplied
+                    omr_rescale_use = trial_omr_rescale[trial]
+                else:
+                    omr_rescale_use = omr_rescale
 
                 trial_model = self._run_single_trial(param_values=param_values, experiment_data=experiment_data,
-                                                     quiet = quiet, omr_rescale = omr_rescale,
+                                                     quiet = quiet, omr_rescale = omr_rescale_use,
                                                      imr_rescale = imr_rescale, mr_method = mr_method,
                                                      mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
                                                      ge_method = ge_method, ge_tolerance = ge_tolerance,
