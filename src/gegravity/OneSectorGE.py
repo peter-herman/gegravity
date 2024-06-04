@@ -1,7 +1,7 @@
 __Author__ = "Peter Herman"
 __Project__ = "Gravity Code"
 __Created__ = "08/15/2018"
-__all__ = ['OneSectorGE', 'CostValues', 'Country', 'Economy', 'ResultsLabels']
+__all__ = ['OneSectorGE', 'CostCoeffs', 'Country', 'Economy', 'ResultsLabels']
 __Description__ = """A single sector or aggregate full GE model based on Larch and Yotov, 'General Equilibrium Trade
                   Policy Analysis with Structural Gravity," 2016. (WTO Working Paper ERSD-2016-08)"""
 
@@ -58,8 +58,8 @@ class OneSectorGE(object):
                 False in GME model), this key is 'all', which is the default.
             cost_variables (List[str]): (optional) A list of variables to use to compute bilateral trade costs. By
                 default, all included non-fixed effect variables are used.
-            cost_coeff_values (CostValues): (optional) A set of parameter values or estimates to use for constructing
-                trade costs. Should be of type gegravity.CostValues, statsmodels.GLMResultsWrapper, or
+            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
                 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
 
@@ -618,7 +618,7 @@ import gegravity as ge
                     sigma_inverse = 1 / (1 - self.sigma)
                     # Check for invalid/problematic imr_ratios
                     if (self.country_set[country]._baseline_imr_ratio<0) | (self.country_set[country]._baseline_omr_ratio<0):
-                        raise ValueError("IMR or OMR values problematic for {} and possibly other countries, try a different omr_rescale factor.".format(country))
+                        raise ValueError("IMR or OMR values problematic for {} and possibly other countries (e.g. negative), try a different omr_rescale factor.".format(country))
                     self.country_set[country].baseline_imr = 1 / (self.country_set[country]._baseline_imr_ratio ** sigma_inverse)
                     self.country_set[country].baseline_omr = 1 / (self.country_set[country]._baseline_omr_ratio ** sigma_inverse)
 
@@ -1636,24 +1636,31 @@ import gegravity as ge
             if not self.quiet:
                 print("\nTrying OMR rescale factor of {}".format(rescale_factor))
             self._omr_rescale = rescale_factor
-            self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
-                                                    version='baseline')
             value_results['omr_rescale'] = rescale_factor
             value_results['omr_rescale (alt format)'] = '10^{}'.format(scale_value)
-            value_results['solved'] = self.solver_diagnostics['baseline_MRs']['success']
-            value_results['message'] = self.solver_diagnostics['baseline_MRs']['message']
-            func_vals = self.solver_diagnostics['baseline_MRs']['fun']
-            value_results['max_func_value'] = func_vals.max()
-            value_results['mean_func_value'] = func_vals.mean()
-            value_results['mean_func_value'] = median(func_vals)
-            omr_ratio = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
-            omr = omr =(1/omr_ratio)**(1/(1-self.sigma))
-            value_results['reference_importer_omr'] = omr
-            for country in countries:
-                omr_ratio = self.country_set[country]._baseline_omr_ratio
-                omr =(1/omr_ratio)**(1/(1-self.sigma))
-                value_results['{}_omr'.format(country)] = omr
-            findings.append(value_results)
+            try:
+
+                self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
+                                                        version='baseline')
+                value_results['solved'] = self.solver_diagnostics['baseline_MRs']['success']
+                value_results['message'] = self.solver_diagnostics['baseline_MRs']['message']
+                func_vals = self.solver_diagnostics['baseline_MRs']['fun']
+                value_results['max_func_value'] = func_vals.max()
+                value_results['mean_func_value'] = func_vals.mean()
+                value_results['mean_func_value'] = median(func_vals)
+                omr_ratio = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
+                omr = omr =(1/omr_ratio)**(1/(1-self.sigma))
+                value_results['reference_importer_omr'] = omr
+                for country in countries:
+                    omr_ratio = self.country_set[country]._baseline_omr_ratio
+                    omr =(1/omr_ratio)**(1/(1-self.sigma))
+                    value_results['{}_omr'.format(country)] = omr
+                findings.append(value_results)
+            except:
+                print("Failed to produce valid OMR/IMR values")
+                value_results['solved'] = False
+                value_results['message'] = "Failed to produce valid OMR/IMR values"
+                findings.append(value_results)
         findings_table = pd.DataFrame(findings)
 
         return findings_table
@@ -2039,7 +2046,7 @@ class _GEMetaData(object):
         self.output_var_name = output_var_name
 
 
-class CostValues(object):
+class CostCoeffs(object):
     def __init__(self,
                  estimates:DataFrame,
                  identifier_col: str,
@@ -2047,51 +2054,52 @@ class CostValues(object):
                  stderr_col:str = None,
                  covar_matrix:DataFrame = None):
         '''
-                         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
-                         source of gravity estimates.
-                         Args:
-                          estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-                              following non-optional columns.
-                          identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-                              correspond to the cost variables that you will use for trade costs in the simulation. This column is
-                              required.
-                          coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-                              should be numeric and are required.
-                          stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-                              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
-                          covar_matrix (DataFrame): A covariance matrix for the gravity coefficient estimates.
+        Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
+        source of gravity estimates.
 
-                         Returns:
-                             CostValues: An instance of a CostValues object.
+        Attributes:
+            estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+              following non-optional columns.
+            identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+              correspond to the cost variables that you will use for trade costs in the simulation. This column is
+              required.
+            coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+              should be numeric and are required.
+            stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+            covar_matrix (DataFrame): A covariance matrix for the gravity coefficient estimates.
 
-                         Examples:
-                             Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
-                             agreements.
-                             >>> import gegravity as ge
-                             >>> import pandas as pd
-                             >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
-                             ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
-                             ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
-                             >>> coeff_df = pd.DataFrame(coeff_data)
-                             >>> print(coeff_df)
-                                     var  coeff   ste
-                             0  distance   -1.0  0.05
-                             1    contig    0.8  0.10
-                             2  distance   -1.0  0.05
+        Returns:
+            CostCoeffs: An instance of a CostCoeffs object.
 
-                             Now, we can construct the CostValues object from this data.
-                             >>> cost_params = CostValues(estimates = coeff_df, identifier_col = 'var',
-                             ...                          coeff_col = 'coeff', stderr_col = 'ste')
-                             >>> print(cost_params.params)
-                             var
-                             distance   -1.0
-                             contig      0.8
-                             distance   -1.0
-                             Name: coeff, dtype: float64
+        Examples:
+            Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
+            agreements.
+            >>> import gegravity as ge
+            >>> import pandas as pd
+            >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
+            ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
+            ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
+            >>> coeff_df = pd.DataFrame(coeff_data)
+            >>> print(coeff_df)
+                 var  coeff   ste
+            0  distance   -1.0  0.05
+            1    contig    0.8  0.10
+            2  distance   -1.0  0.05
 
-                             And supply them to a OneSectorGE model via the argument
-                             >>> OneSectorGE(cost_coeff_values=cost_params)
-                         '''
+            Now, we can construct the CostCoeffs object from this data.
+            >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
+            ...                          coeff_col = 'coeff', stderr_col = 'ste')
+            >>> print(cost_params.params)
+            var
+            distance   -1.0
+            contig      0.8
+            distance   -1.0
+            Name: coeff, dtype: float64
+
+            And supply them to a OneSectorGE model via the argument
+            >>> OneSectorGE(cost_coeff_values=cost_params)
+        '''
         self._identifier_col = identifier_col
         estimates = estimates.set_index(self._identifier_col)
         self._table = estimates
