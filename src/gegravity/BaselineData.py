@@ -2,6 +2,7 @@ __Author__ = "Peter Herman"
 __Project__ = "gegravity"
 __Created__ = "July 13, 2023"
 __Description__ = '''Class to handle baseline data inputs without using the GME package.'''
+__all__ = ['BaselineData']
 
 from pandas import DataFrame
 from typing import List
@@ -38,6 +39,37 @@ class BaselineData(object):
                 country identifier must appear in the first column. The fixed effects columns must be named with
                 exp_var_name and imp_var_name, respectively. [Note: this argument currently serves no practical function
                 but may in the future.]
+
+        Atributes:
+            baseline_data (pandas.DataFrame): The baseline_data dataframe
+            baseline_columns (list): A list of the columns in the baseline_data dataframe
+            meta_data (gegravity._MetaData): An object class that holds and organizes the column labels associated with
+                various components of the data inputs.
+            specification (gegravity.Specification) An object class holding information on the underlying econometric
+                specification [Note: supported GME package integration but is largely unused as of v0.3]
+            country_fixed_effects (pandas.DataFrame): The country_fixed_effects argument, if supplied.
+
+        Examples:
+            import gegravity as ge and pandas
+            >>> import pandas as pd
+            >>> import gegravity as ge
+
+            Load the data.
+            >>> grav_data = pd.read_csv(sample_data_set.dlm
+            >>> grav_data.head()
+              exporter importer  year  trade        Y       E  pta  contiguity  common_language  lndist  international
+            0      GBR      AUS  2006   4310   925638  362227    0           0                1  9.7126              1
+            1      FIN      AUS  2006    514   142759  362227    0           0                0  9.5997              1
+            2      USA      AUS  2006  16619  5019964  362227    1           0                1  9.5963              1
+            3      IND      AUS  2006    763   548517  362227    0           0                1  9.1455              1
+            4      SGP      AUS  2006   8756   329817  362227    1           0                1  8.6732              1
+
+            Define BaselineData object to hold and organize the baseline data inputs
+            >>> baseline = ge.BaselineData(grav_data,
+            ...                            imp_var_name='importer',
+            ...                            exp_var_name='exporter',
+            ...                            year_var_name='year', trade_var_name='trade',
+            ...                            expend_var_name='E', output_var_name='Y')
         '''
         self.baseline_data = baseline_data
         self.baseline_columns = baseline_data.columns

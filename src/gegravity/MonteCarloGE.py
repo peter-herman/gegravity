@@ -113,6 +113,22 @@ class MonteCarloGE(object):
             all_outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values for each
                 individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
                 ResultsLabels for description of results.
+
+        Examples:
+
+            Create a MonteCarloGE model instance using BaselineData and CostCoeff instances (see respective APIs). Model
+            will solve 10 randomly drawn trials.
+            >>> baseline = ge.BaselineData(...)
+            >>> cost_params = ge.CostCoeffs(...)
+            >>> mc_model = ge.MonteCarloGE(
+            ...            baseline,
+            ...            year = '2006',
+            ...            trials = 10,
+            ...            reference_importer='DEU',
+            ...            sigma=7,
+            ...            cost_variables=['lndist', 'contiguity', 'common_language', 'pta', 'international', 'constant'],
+            ...            cost_coeff_values=cost_params,
+            ...            seed = 1)
         '''
 
 
@@ -159,9 +175,6 @@ class MonteCarloGE(object):
 
         # Generate Sampling Distribution
         self.coeff_sample = self._draw_mc_trade_costs()
-
-
-
 
         ##
         # Define Results attributes
@@ -293,6 +306,42 @@ class MonteCarloGE(object):
         Returns:
             None: No return but populates many results attributes of the MonteCarloGE model.
 
+        Examples:
+             Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
+             'counterfactual_dataframe' is a counterfactual version of the baseline data to use for the experiment.
+             >>> monte_model = ge.MonteCarloGE(...)
+             >>> monte_model.run_trials(experiment_data = counterfactual_dataframe,
+             ...                        omr_rescale = 1)
+             * Simulating trial 0 *
+             Solving for baseline MRs...
+             The solution converged.
+             Solving for conditional MRs...
+             The solution converged.
+             Solving full GE model...
+             The solution converged.\n
+             * Simulating trial 1 *
+             Solving for baseline MRs...
+             The solution converged.
+             Solving for conditional MRs...
+             The solution converged.
+             Solving full GE model...
+             The solution converged.\n
+             (etc.)
+
+            Return all info about each trial, not just summary info across trials
+            >>> monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1,
+            ...                        all_results=True)
+
+            Specify alternative OMR rescale factors for trials 2 and 3, while using the value of 1 for all other trials.
+            >>> monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1,
+            ...                        trail_rescale_factors = {2:0.001, 3:100})
+
+             Draw additional random cost values to replace trials that failed to solve
+             >>> monte_model.run_trials(experiment_data = counterfactual_dataframe,
+             ...                        omr_rescale = 1,
+             ...                        redraw_failed_trials=True)
         '''
         models = list()
         failed_trials = list()
@@ -364,13 +413,16 @@ class MonteCarloGE(object):
                     failed_trials.append(try_num)
 
                 tries += 1
+            if len(new_draws)>0:
+                self.replacement_sample = pd.concat(new_draws, axis=1)
+            else:
+                self.replacement_sample = new_draws
 
 
 
         # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
         self.failed_trials = failed_trials
-        self.replacement_sample = pd.concat(new_draws, axis = 1)
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)
         self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, 'outputs_expenditures', result_stats, all_results)
@@ -385,6 +437,14 @@ class MonteCarloGE(object):
 
     def _run_single_trial(self, param_values: CostCoeffs, experiment_data, quiet, omr_rescale, imr_rescale, mr_method,
                           mr_max_iter, mr_tolerance, ge_method, ge_tolerance, ge_max_iter):
+        '''
+        Create and solve a single OneSectorGE model using given inputs. Inputs the same as OneSectorGE.
+        Args:
+            See arguments for OneSectorGE.
+
+        Returns:
+            Solved OneSectorGE model instance
+        '''
         trial_model = OneSectorGE(self._baseline,
                                   year=self._year,
                                   reference_importer=self._reference_importer,
@@ -528,7 +588,12 @@ class MonteCarloGE(object):
                 DataFrames.
 
         Examples:
+            Export all three results files with the file prefix "example_monte_carlo_results"
+            >>> mc_model.export_results(directory="C:\simulation_results\", name = "example_monte_carlo_results")
 
+            Export only the country level results (i.e. do not export the bilateral and diagnostic results)
+            >>> mc_model.export_results(directory="C:\simulation_results\", name = "example_monte_carlo_results",
+            ...                         bilateral = False, diagnostics = False)
 
         '''
 
@@ -629,6 +694,12 @@ class MonteCarloGE(object):
                     objective functions. Function values closer to zero imply a better solution to system of equations.
                 'reference_importer_omr': The solution value for the reference importer's OMR value.\n
                 '..._omr': The solution value(s) for the user supplied countries.
+
+        Examples:
+            Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
+            >>> omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+            Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
+            >>> omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
         '''
 
         # Check trials argument if provided

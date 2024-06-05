@@ -56,7 +56,7 @@ if round(gme_model.results_dict['all'].params['INTL_BRDR'],3)!= -2.474:
 # Set up GE Analysis
 # ---
 
-ge_model = OneSectorGE(estimation_model=gme_model,
+ge_model = OneSectorGE(baseline=gme_model,
                        expend_var_name='E',
                        output_var_name='Y',
                        year='2006', sigma=7, reference_importer='ZZZ')
