@@ -2089,6 +2089,7 @@ class CostCoeffs(object):
         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
         source of gravity estimates.
 
+
         Attributes:
             estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
               following non-optional columns.

@@ -113,6 +113,7 @@ class MonteCarloGE(object):
             all_outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values for each
                 individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
                 ResultsLabels for description of results.
+            trial_models (gegravity.OneSectorGE): A list of OneSectorGE models corresponding to each trial.
 
         Examples:
 
@@ -196,6 +197,7 @@ class MonteCarloGE(object):
         self.all_bilateral_costs = None
         self.bilateral_costs = None
         self.solver_diagnostics = None
+        self.trial_models = None
 
 
         # prep baseline data
@@ -422,6 +424,8 @@ class MonteCarloGE(object):
 
         # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
+        if all_results:
+            self.trial_models = models
         self.failed_trials = failed_trials
         self.all_country_results, self.country_results = self._compile_results(models, 'country_results', result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, 'mr_terms', result_stats, all_results)

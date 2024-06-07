@@ -77,7 +77,7 @@ ests = [
     (       'constant',    16.32434,   0.4844137)]
 ests = pd.DataFrame(ests, columns = ['var', 'beta', 'stderr'])
 
-# Use the ests dataframe to define a CostCoeff object for the gegravity model, specifying the columns containinwhere coefficients
+# Use the ests dataframe to define a CostCoeff object for the gegravity model, specifying the columns containing the variable identifiers, coefficient estimates, and standard errors
 cost_params = ge.CostCoeffs(estimates = ests,          # Dataframe with estimate values
                             identifier_col ='var',     # Column with variable identifier
                             coeff_col ='beta',         # Column with estimated coefficient values
@@ -85,7 +85,7 @@ cost_params = ge.CostCoeffs(estimates = ests,          # Dataframe with estimate
 
 
 # ----
-# Define a GE model and calibrate to the baseline
+# Define a GE model and calibrate the baseline version of the model
 # ----
 
 # Define OneSectorGE model
@@ -130,79 +130,49 @@ ge_model.build_baseline(omr_rescale = 1)
 Solving for baseline MRs...
 The solution converged.
 '''
-
-
-# ----
-# Diagnose model solvability
-# ----
-
-# The following commands are not required to define or solve the GE model but can help diagnose issues that arise if
-# the model fails to solve.
-
-##
-# Check inputs
-##
-
-# Test that the model system of equations is computable from the supplied data and parameters
-test_diagnostics = ge_model.test_baseline_mr_function()
-# See what is returned:
-print(test_diagnostics.keys())
-# Check the values of the model parameters computed from the baseline data, which should be numeric with no missing
-# values
-input_params = test_diagnostics['mr_params']
-# Check one set of parameters, for example:
-print(input_params['cost_exp_shr'])
-
-
-##
-# Check scaling of outward multilateral resistances (OMRs)
-##
-
-# Check for OMR rescale factors that results in convergence
-rescale_eval = ge_model.check_omr_rescale(omr_rescale_range=3)
-print(rescale_eval)
-# From the tests, it looks like 10, 100, and 1000 are good candidate rescale factors based on the fact that
-# the model solves (i.e. converges) and all three produce consistent solutions for the reference importer's
-# outward multilateral resistance (OMR) terms (2.918).
-
-
-
-# ---
-# Solve baseline and experiment GE model
-# ---
-
-##
-# Solve the baseline model
-##
-ge_model.build_baseline(omr_rescale=100)
-# Examine the solutions for the baselin multilateral resistances
+# Examine the solutions for the baseline multilateral resistances
 print(ge_model.baseline_mr.head(12))
 
-##
-# Define the counterfactual experiment
-##
+
+# ---
+# Define counterfactual experiment
+# ---
+
 # Create a copy of the baseline data
 exp_data = ge_model.baseline_data.copy()
 
 # Modify the copied data to reflect a counterfactual experiment in which Canada (CAN) and Japan (JPN) sign a
-# preferential trade agreement (pta)
+# preferential trade agreement (pta) by setting the 'pta' variable to one for these countries
 exp_data.loc[(exp_data["importer"] == "CAN") & (exp_data["exporter"] == "JPN"), "pta"] = 1
 exp_data.loc[(exp_data["importer"] == "JPN") & (exp_data["exporter"] == "CAN"), "pta"] = 1
-# Define the experiment within the GE model
+
+# Define the model experiment by inputting this data into the GE model
 ge_model.define_experiment(exp_data)
-# Examine the baseline and counterfactual trade costs
+
+# Counterfactual experiment trade costs are constructed when defining the experiment and can be examined. Trade costs
+# in the GE model are represented similarly to trade costs estimated in the econometric model (trade = exp(BX), where
+# BX is the trade cost estimate as captured by the model covariates). As a result, the cost values are generally
+# positive and higher values imply more trade.
 print(ge_model.bilateral_costs.head())
+# Check the costs of Canadian exports to Japan
+print(ge_model.bilateral_costs.loc[('CAN','JPN'),:])
+'''
+baseline trade cost      11305.165421
+experiment trade cost    18108.800547
+trade cost change (%)       60.181650
+Name: (CAN, JPN), dtype: float64
+'''
 
 ##
 # Simulate the counterfactual model
 ##
+# Finally, we can simulate the effects of the counterfactual experiment
 ge_model.simulate()
-# Examine the counterfactual trade flows predicted by the model.
-print(ge_model.bilateral_trade_results.head())
+
 
 
 # -----
-# Access and Export Results
+# Access Results
 # -----
 
 ##
@@ -219,9 +189,9 @@ mr_terms = ge_model.country_mr_terms
 # Get the solver diaganoistics, which is a dictionary containing many types of solver diagnostic info
 solver_diagnostics = ge_model.solver_diagnostics
 
-##
+# ----
 # Export results
-##
+# ----
 # Export the results to a collection of spreadsheet (.csv) files and add trade values in levels to the outputs.
 ge_model.export_results(directory="examples//",name="CAN_JPN_PTA_experiment", include_levels = True)
 # It is also possible to add alternative country identifies such as full country names using the country_names argument.
@@ -236,10 +206,6 @@ ge_model.export_results(directory="examples//",name="CAN_JPN_PTA_experiment", in
 # Examine how the counterfactual experiment affected Canadian imports from NAFTA members USA and Mexico
 nafta_share = ge_model.trade_share(importers = ['CAN'],exporters = ['USA','MEX'])
 print(nafta_share)
-
-# Print the first few rows of country-level estimated change in factory prices, GDP, and foreign exports
-print(country_results[['factory gate price change (percent)', 'GDP change (percent)',
-                       'foreign exports change (percent)']].head())
 
 # Calculate counterfactual experiment trade based on observed levels and estimated changes in trade
 levels = ge_model.calculate_levels()
@@ -257,30 +223,30 @@ print(country_cost_shock.head())
 
 
 # ----
-# Create model with alternative cost estimates
+# Diagnose model solver problems
 # ----
-
-# Prepare a DataFrame with the desired cost parameter values.
-coeff_data = [{'var':"lndist", 'coeff':-0.4, 'ste':0.05},
-              {'var':"contiguity", 'coeff':0.9, 'ste':0.10},
-              {'var':"pta", 'coeff':0.5, 'ste':0.02},
-              {'var':"common_language", 'coeff':0.04, 'ste':0.06},
-              {'var':"international", 'coeff':-3.2, 'ste':0.3}]
-coeff_df = pd.DataFrame(coeff_data)
-print(coeff_df)
-
-# Create a CostCoeff object from those values
-cost_params = CostCoeffs(estimates = coeff_df, identifier_col ='var', coeff_col ='coeff', stderr_col ='ste')
-
-# Define a new OneSector GE model using those cost parameters
-alternate_costs = OneSectorGE(gme_model, year = "2006",
-                       expend_var_name = "E",  # Expenditure column name
-                       output_var_name = "Y",  # Output column name
-                       reference_importer = "DEU",  # Reference importer
-                       sigma = 5,
-                       cost_coeff_values=cost_params)
-alternate_costs.build_baseline(omr_rescale=10)
+# Define a new model to work with
+new_model = ge.OneSectorGE(baseline = baseline,
+                          cost_coeff_values = cost_params,
+                          cost_variables = ['lndist', 'contiguity',
+                                            'common_language', 'pta',
+                                            'international', 'constant'],
+                          year = "2006",
+                          reference_importer = "DEU",
+                          sigma = 5)
 
 
+# In addition to the check_omr_rescale method, There are additional tools that can be used to help diagnose issues when
+# a model fails to solve. One option is to test that the model system of equations is computable from the supplied data
+# and parameters using the following method.
+test_diagnostics = new_model.test_baseline_mr_function()
 
+# This method computes the values of the MR system of equation at the initial values (not the solution) to insure
+# that the functions are fully parameterized and can be computed. The various vectors and matrices should be filled
+# completely with numeric values. The presence of any missing values (nan) is an indication that the baseline data
+# and/or trade cost parameters are not complete or defined incorrectly.
+
+# Check one set of parameters (trade cost x expenditure share), for example:
+input_params = test_diagnostics['mr_params']
+print(input_params['cost_exp_shr'])
 
