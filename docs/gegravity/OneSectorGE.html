@@ -812,8 +812,7 @@ class OneSectorGE(object):
                 Default is 1000.
 
         Returns:
-            None
-                No return but populates new attributes of model.
+            None: No return but populates new attributes of model.
 
         Examples:
             Building on the ONESectorGE example:
@@ -2117,8 +2116,7 @@ class CostCoeffs(object):
         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
         source of gravity estimates.
 
-
-        Attributes:
+        Args:
             estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
               following non-optional columns.
             identifier_col (str): The name of the column containing the identifiers for each estimate. These should
@@ -2128,7 +2126,13 @@ class CostCoeffs(object):
               should be numeric and are required.
             stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
               required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
-            covar_matrix (DataFrame): A covariance matrix for the gravity coefficient estimates.
+            covar_matrix (pandas.DataFrame): A covariance matrix for the gravity coefficient estimates. Variable
+                idenitifiers should be included as the row index and columns headers (rather than as a column or row).
+
+        Attributes:
+            params (pandas.Series): A vector containing the coefficient (beta) estimates.
+            bse (pandas.Series): The standard errors (&#34;beta standard errors&#34;)
+            covar (pandas.DataFrame): The varriance-covariance matrix.
 
         Returns:
             CostCoeffs: An instance of a CostCoeffs object.
@@ -2361,7 +2365,7 @@ class ResultsLabels(object):
 <dd>
 <div class="desc"><p>Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
 source of gravity estimates.</p>
-<h2 id="attributes">Attributes</h2>
+<h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>estimates</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>A dataframe containing gravity model estimates, which ought to include the
@@ -2376,8 +2380,18 @@ should be numeric and are required.</dd>
 <dt><strong><code>stderr_col</code></strong> :&ensp;<code>str</code></dt>
 <dd>The column name for the standard error estimates for each variable. This column is only
 required for the MonteCarloGE model and may be omitted for the OneSectorGE model.</dd>
-<dt><strong><code>covar_matrix</code></strong> :&ensp;<code>DataFrame</code></dt>
-<dd>A covariance matrix for the gravity coefficient estimates.</dd>
+<dt><strong><code>covar_matrix</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
+<dd>A covariance matrix for the gravity coefficient estimates. Variable
+idenitifiers should be included as the row index and columns headers (rather than as a column or row).</dd>
+</dl>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>params</code></strong> :&ensp;<code>pandas.Series</code></dt>
+<dd>A vector containing the coefficient (beta) estimates.</dd>
+<dt><strong><code>bse</code></strong> :&ensp;<code>pandas.Series</code></dt>
+<dd>The standard errors ("beta standard errors")</dd>
+<dt><strong><code>covar</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
+<dd>The varriance-covariance matrix.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -2424,8 +2438,7 @@ Name: coeff, dtype: float64
         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
         source of gravity estimates.
 
-
-        Attributes:
+        Args:
             estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
               following non-optional columns.
             identifier_col (str): The name of the column containing the identifiers for each estimate. These should
@@ -2435,7 +2448,13 @@ Name: coeff, dtype: float64
               should be numeric and are required.
             stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
               required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
-            covar_matrix (DataFrame): A covariance matrix for the gravity coefficient estimates.
+            covar_matrix (pandas.DataFrame): A covariance matrix for the gravity coefficient estimates. Variable
+                idenitifiers should be included as the row index and columns headers (rather than as a column or row).
+
+        Attributes:
+            params (pandas.Series): A vector containing the coefficient (beta) estimates.
+            bse (pandas.Series): The standard errors (&#34;beta standard errors&#34;)
+            covar (pandas.DataFrame): The varriance-covariance matrix.
 
         Returns:
             CostCoeffs: An instance of a CostCoeffs object.
@@ -2586,7 +2605,7 @@ flows) (X'_i = sum_j X'_ij for all j!=i).</dd>
 <dd>Estimated counterfactual intranational trade (X'_{ii}).</dd>
 <dt><strong><code>intranational_trade_change</code></strong> :&ensp;<code>float</code></dt>
 <dd>Estimated percent change in intranational trade
-(100*[X'<em ii>{ii} - X</em>]/X_{ii}).</dd>
+(100*[X'<em ii>{ii} - X</em>).}]/X_{ii</dd>
 <dt><strong><code>baseline_gdp</code></strong> :&ensp;<code>float</code></dt>
 <dd>Baseline real GDP ($GDP_j = Y_j/P_j$ from Yotov et al. (2016) replication files).</dd>
 <dt><strong><code>experiment_gdp</code></strong> :&ensp;<code>float</code></dt>
@@ -3824,8 +3843,7 @@ econometric gravity model) and convert to DataFrame</p>
                 Default is 1000.
 
         Returns:
-            None
-                No return but populates new attributes of model.
+            None: No return but populates new attributes of model.
 
         Examples:
             Building on the ONESectorGE example:
@@ -5503,8 +5521,10 @@ Default is 1e-8.</dd>
 Default is 1000.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>None
-No return but populates new attributes of model.</p>
+<dl>
+<dt><code>None</code></dt>
+<dd>No return but populates new attributes of model.</dd>
+</dl>
 <h2 id="examples">Examples</h2>
 <p>Building on the ONESectorGE example:</p>
 <pre><code class="language-python-repl">&gt;&gt;&gt; ge_model.simulate()
@@ -5565,8 +5585,7 @@ AUS      AUS                216148.589959     216190.688325                0.019
             Default is 1000.
 
     Returns:
-        None
-            No return but populates new attributes of model.
+        None: No return but populates new attributes of model.
 
     Examples:
         Building on the ONESectorGE example:
@@ -5976,7 +5995,7 @@ sample. (i.e. estimated trade change times observed values)</p>
 baseline values. (Not necessarily equivalent to modeled values.)</p>
 <p><strong>baseline trade cost</strong>: Baseline estimated trade costs (t_{ij}^{1-sigma})</p>
 <p><strong>experiment trade cost</strong>: Counterfactual experiment trade costs (t'_{ij}^{1-sigma})</p>
-<p><strong>trade cost change (%)</strong>: Change in trade costs 100*(t'<em ij>{ij}^{1-sigma} - t</em>^{1-sigma})/t_{ij}^{1-sigma}</p>
+<p><strong>trade cost change (%)</strong>: Change in trade costs 100*(t'<em ij>{ij}^{1-sigma} - t</em>}^{1-sigma})/t_{ij}^{1-sigma</p>
 <pre><code># Country level Results
 </code></pre>
 <p><strong>country</strong>: Country identifier.</p>

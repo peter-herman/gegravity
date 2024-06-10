@@ -58,7 +58,7 @@ class MonteCarloGE(object):
 
         Attributes:
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
-            coeff_sample (Pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
+            coeff_sample (pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
                 column corresponds to a different trial.
             main_coeffs (pandas.Series): The main coefficient estimates for the cost varaibles supplied to the model.
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
@@ -311,24 +311,24 @@ class MonteCarloGE(object):
         Examples:
              Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
              'counterfactual_dataframe' is a counterfactual version of the baseline data to use for the experiment.
-             >>> monte_model = ge.MonteCarloGE(...)
-             >>> monte_model.run_trials(experiment_data = counterfactual_dataframe,
-             ...                        omr_rescale = 1)
-             * Simulating trial 0 *
-             Solving for baseline MRs...
-             The solution converged.
-             Solving for conditional MRs...
-             The solution converged.
-             Solving full GE model...
-             The solution converged.\n
-             * Simulating trial 1 *
-             Solving for baseline MRs...
-             The solution converged.
-             Solving for conditional MRs...
-             The solution converged.
-             Solving full GE model...
-             The solution converged.\n
-             (etc.)
+            >>> monte_model = ge.MonteCarloGE(...)
+            >>> monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1)
+            * Simulating trial 0 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            * Simulating trial 1 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            (truncated...)
 
             Return all info about each trial, not just summary info across trials
             >>> monte_model.run_trials(experiment_data = counterfactual_dataframe,
@@ -702,6 +702,7 @@ class MonteCarloGE(object):
         Examples:
             Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
             >>> omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+
             Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
             >>> omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
         '''

@@ -784,8 +784,7 @@ class OneSectorGE(object):
                 Default is 1000.
 
         Returns:
-            None
-                No return but populates new attributes of model.
+            None: No return but populates new attributes of model.
 
         Examples:
             Building on the ONESectorGE example:
@@ -2089,8 +2088,7 @@ class CostCoeffs(object):
         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
         source of gravity estimates.
 
-
-        Attributes:
+        Args:
             estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
               following non-optional columns.
             identifier_col (str): The name of the column containing the identifiers for each estimate. These should
@@ -2100,7 +2098,13 @@ class CostCoeffs(object):
               should be numeric and are required.
             stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
               required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
-            covar_matrix (DataFrame): A covariance matrix for the gravity coefficient estimates.
+            covar_matrix (pandas.DataFrame): A covariance matrix for the gravity coefficient estimates. Variable
+                idenitifiers should be included as the row index and columns headers (rather than as a column or row).
+
+        Attributes:
+            params (pandas.Series): A vector containing the coefficient (beta) estimates.
+            bse (pandas.Series): The standard errors ("beta standard errors")
+            covar (pandas.DataFrame): The varriance-covariance matrix.
 
         Returns:
             CostCoeffs: An instance of a CostCoeffs object.

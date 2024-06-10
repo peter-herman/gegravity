@@ -23,30 +23,30 @@ class BaselineData(object):
         '''
         Create the baseline data input for the OneSectorGE model.
         Args:
-            baseline_data: (pandas DataFrame) A pandas dataframe containing bilateral data used for the model. Data
+            baseline_data (pandas DataFrame): A pandas dataframe containing bilateral data used for the model. Data
                 should include importer, exporter, and year identifiers; trade values; total output and expenditure
                 values for each exporter and importer, respectively; and all trade cost variables, including any fixed
                 effects to be used to compute trade costs. Fixed effects should be included as corresponding dummy
                 variables.
-            imp_var_name: (str) Name of the column containing the importer identifiers.
-            exp_var_name: (str) Name of the column containing the exporter identifiers.
-            year_var_name: (str) Name of the column containing the year identifiers.
-            trade_var_name: (str) Name o the column containing bilateral trade values.
-            expend_var_name: (str) Name of the column containing importer total expenditure values.
-            output_var_name: (str) Name of the column containing exporter total output values.
-            country_fixed_effects: (pandas DataFrame) Optional, estimated exporter and importer fixed effects. DataFrame
+            imp_var_name (str): Name of the column containing the importer identifiers.
+            exp_var_name (str): Name of the column containing the exporter identifiers.
+            year_var_name (str): Name of the column containing the year identifiers.
+            trade_var_name (str): Name o the column containing bilateral trade values.
+            expend_var_name (str): Name of the column containing importer total expenditure values.
+            output_var_name (str): Name of the column containing exporter total output values.
+            country_fixed_effects (pandas DataFrame): Optional, estimated exporter and importer fixed effects. DataFrame
                 must contain three columns: country identifier, exporter fixed effect, and importer fixed effect. The
                 country identifier must appear in the first column. The fixed effects columns must be named with
                 exp_var_name and imp_var_name, respectively. [Note: this argument currently serves no practical function
                 but may in the future.]
 
-        Atributes:
-            baseline_data (pandas.DataFrame): The baseline_data dataframe
-            baseline_columns (list): A list of the columns in the baseline_data dataframe
+        Attributes:
+            baseline_data (pandas.DataFrame): The baseline_data dataframe.
+            baseline_columns (list): A list of the columns in the baseline_data dataframe.
             meta_data (gegravity._MetaData): An object class that holds and organizes the column labels associated with
                 various components of the data inputs.
-            specification (gegravity.Specification) An object class holding information on the underlying econometric
-                specification [Note: supported GME package integration but is largely unused as of v0.3]
+            specification (gegravity.Specification): An object class holding information on the underlying econometric
+                specification [Note: supported GME package integration but is largely unused as of v0.3].
             country_fixed_effects (pandas.DataFrame): The country_fixed_effects argument, if supplied.
 
         Examples:

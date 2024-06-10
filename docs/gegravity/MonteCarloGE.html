@@ -86,7 +86,7 @@ class MonteCarloGE(object):
 
         Attributes:
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
-            coeff_sample (Pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
+            coeff_sample (pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
                 column corresponds to a different trial.
             main_coeffs (pandas.Series): The main coefficient estimates for the cost varaibles supplied to the model.
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
@@ -339,24 +339,24 @@ class MonteCarloGE(object):
         Examples:
              Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
              &#39;counterfactual_dataframe&#39; is a counterfactual version of the baseline data to use for the experiment.
-             &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
-             &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
-             ...                        omr_rescale = 1)
-             * Simulating trial 0 *
-             Solving for baseline MRs...
-             The solution converged.
-             Solving for conditional MRs...
-             The solution converged.
-             Solving full GE model...
-             The solution converged.\n
-             * Simulating trial 1 *
-             Solving for baseline MRs...
-             The solution converged.
-             Solving for conditional MRs...
-             The solution converged.
-             Solving full GE model...
-             The solution converged.\n
-             (etc.)
+            &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1)
+            * Simulating trial 0 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            * Simulating trial 1 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            (truncated...)
 
             Return all info about each trial, not just summary info across trials
             &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
@@ -730,6 +730,7 @@ class MonteCarloGE(object):
         Examples:
             Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
             &gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+
             Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
             &gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
         &#39;&#39;&#39;
@@ -822,7 +823,7 @@ values from multivariate normal distribution. Default is False.</dd>
 <dl>
 <dt><strong><code>baseline_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>Baseline data supplied to model in gme.EstimationModel.</dd>
-<dt><strong><code>coeff_sample</code></strong> :&ensp;<code>Pandas.DataFrame</code></dt>
+<dt><strong><code>coeff_sample</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>The randomly drawn sample of cost coefficients for each cost variable. Each
 column corresponds to a different trial.</dd>
 <dt><strong><code>main_coeffs</code></strong> :&ensp;<code>pandas.Series</code></dt>
@@ -969,7 +970,7 @@ will solve 10 randomly drawn trials.</p>
 
         Attributes:
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
-            coeff_sample (Pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
+            coeff_sample (pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
                 column corresponds to a different trial.
             main_coeffs (pandas.Series): The main coefficient estimates for the cost varaibles supplied to the model.
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
@@ -1222,24 +1223,24 @@ will solve 10 randomly drawn trials.</p>
         Examples:
              Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
              &#39;counterfactual_dataframe&#39; is a counterfactual version of the baseline data to use for the experiment.
-             &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
-             &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
-             ...                        omr_rescale = 1)
-             * Simulating trial 0 *
-             Solving for baseline MRs...
-             The solution converged.
-             Solving for conditional MRs...
-             The solution converged.
-             Solving full GE model...
-             The solution converged.\n
-             * Simulating trial 1 *
-             Solving for baseline MRs...
-             The solution converged.
-             Solving for conditional MRs...
-             The solution converged.
-             Solving full GE model...
-             The solution converged.\n
-             (etc.)
+            &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1)
+            * Simulating trial 0 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            * Simulating trial 1 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            (truncated...)
 
             Return all info about each trial, not just summary info across trials
             &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
@@ -1613,6 +1614,7 @@ will solve 10 randomly drawn trials.</p>
         Examples:
             Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
             &gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+
             Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
             &gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
         &#39;&#39;&#39;
@@ -1699,8 +1701,9 @@ objective functions. Function values closer to zero imply a better solution to s
 <h2 id="examples">Examples</h2>
 <p>Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.</p>
 <pre><code class="language-python-repl">&gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
-Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
-&gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
+</code></pre>
+<p>Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
 </code></pre></div>
 <details class="source">
 <summary>
@@ -1748,6 +1751,7 @@ Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range
     Examples:
         Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
         &gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+
         Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
         &gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
     &#39;&#39;&#39;
@@ -2009,33 +2013,25 @@ specified here will be run using the value specified by the omr_rescale argument
 <h2 id="examples">Examples</h2>
 <p>Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
 'counterfactual_dataframe' is a counterfactual version of the baseline data to use for the experiment.</p>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>monte_model = ge.MonteCarloGE(&hellip;)
-monte_model.run_trials(experiment_data = counterfactual_dataframe,
-&hellip;
-omr_rescale = 1)
+<pre><code class="language-python-repl">&gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+&gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+...                        omr_rescale = 1)
 * Simulating trial 0 *
-Solving for baseline MRs&hellip;
+Solving for baseline MRs...
 The solution converged.
-Solving for conditional MRs&hellip;
+Solving for conditional MRs...
 The solution converged.
-Solving full GE model&hellip;
-The solution converged.</p>
-</blockquote>
-</blockquote>
-</blockquote>
-<ul>
-<li>Simulating trial 1 *
-Solving for baseline MRs&hellip;
+Solving full GE model...
 The solution converged.
-Solving for conditional MRs&hellip;
+* Simulating trial 1 *
+Solving for baseline MRs...
 The solution converged.
-Solving full GE model&hellip;
-The solution converged.</li>
-</ul>
-<p>(etc.)</p>
+Solving for conditional MRs...
+The solution converged.
+Solving full GE model...
+The solution converged.
+(truncated...)
+</code></pre>
 <p>Return all info about each trial, not just summary info across trials</p>
 <pre><code class="language-python-repl">&gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
 ...                        omr_rescale = 1,
@@ -2130,24 +2126,24 @@ redraw_failed_trials=True)</p>
     Examples:
          Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
          &#39;counterfactual_dataframe&#39; is a counterfactual version of the baseline data to use for the experiment.
-         &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
-         &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
-         ...                        omr_rescale = 1)
-         * Simulating trial 0 *
-         Solving for baseline MRs...
-         The solution converged.
-         Solving for conditional MRs...
-         The solution converged.
-         Solving full GE model...
-         The solution converged.\n
-         * Simulating trial 1 *
-         Solving for baseline MRs...
-         The solution converged.
-         Solving for conditional MRs...
-         The solution converged.
-         Solving full GE model...
-         The solution converged.\n
-         (etc.)
+        &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+        &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+        ...                        omr_rescale = 1)
+        * Simulating trial 0 *
+        Solving for baseline MRs...
+        The solution converged.
+        Solving for conditional MRs...
+        The solution converged.
+        Solving full GE model...
+        The solution converged.
+        * Simulating trial 1 *
+        Solving for baseline MRs...
+        The solution converged.
+        Solving for conditional MRs...
+        The solution converged.
+        Solving full GE model...
+        The solution converged.
+        (truncated...)
 
         Return all info about each trial, not just summary info across trials
         &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,

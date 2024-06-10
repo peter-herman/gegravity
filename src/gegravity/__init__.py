@@ -178,7 +178,7 @@ BRA                                -0.005588              0.005588             -
 CAN                                -0.135770              0.135955             -0.551724              0.418261           0.995835                         0.418261                -0.135770                     -0.135770                          1.573180                          1.504744                             -1.939006
 
 
-** Bilateral trade results:** Baseline and counterfactual trade between each pair of countries.
+**Bilateral trade results:** Baseline and counterfactual trade between each pair of countries.
 >>> bilateral_results = ge_model.bilateral_trade_results
 >>> print(bilateral_results.head())
                    baseline modeled trade  experiment trade  trade change (percent)
@@ -195,7 +195,7 @@ AUS      AUS                218129.130005     218172.625325                0.019
 **Multilateral Resistances:** Country multilateral resistance (MR) terms
 >>> mr_terms = ge_model.country_mr_terms
 
-**Solver Diagnostics** A dictionary containing many types of solver diagnostic info.
+**Solver Diagnostics:** A dictionary containing many types of solver diagnostic info.
 >>> solver_diagnostics = ge_model.solver_diagnostics
 
 
@@ -308,7 +308,7 @@ Define gegravity CostValues object to organize this info as inputs for the GE mo
 ...                             covar_matrix=var_covar)
 
 Note: These estimates were produced using Stata and the following code
->>> import delimited "D:\work\Peter_Herman\projects\gegravity\examples\sample_data_set.dlm"
+>>> import delimited "C:\gegravity\examples\sample_data_set.dlm"
 >>> encode importer, gen(imp_fe)
 >>> encode exporter, gen(exp_fe)
 >>> ppmlhdfe trade lndist  contiguity  common_language pta international, absorb(i.exp_fe i.imp_fe)
@@ -431,7 +431,7 @@ One likely source of solver issues is the OMR rescale factor. There is a version
 ...                              seed = 1)
 >>> mc_omr_checks = mc_model_2.check_omr_rescale(omr_rescale_range=5, trials = [1, 4, 5])
 
-One potential option for dealing with a failed trial is to specify a different omr_rescale_factor to use for that specific trial. FOr example, we could specify that trials 4 and 5 use a rescale factor of 100 instead of 1, which is used for all other trials.
+One potential option for dealing with a failed trial is to specify a different omr_rescale_factor to use for that specific trial. For example, we could specify that trials 4 and 5 use a rescale factor of 100 instead of 1, which is used for all other trials.
 >>> mc_model_2.run_trials(experiment_data=exp_data,
 ...                       omr_rescale=1,
 ...                       trial_omr_rescale={4:100, 5:100})
