@@ -9,6 +9,18 @@
 
 :: Serve live updating local HTTP server (click link in terminal)
 pdoc3 --http : gegravity
+
+
+:: Or, more recently, had to use the full path to get to pdoc3 (06/07/2024).
+:: The HTTP version was hosting an old version of the package (maybe the public version of gegravity 0.2?) Update: Yes,
+:: gegravity v0.2 was install to the interpreter being used. However, was not able to test if it worked after uninstalling
+:: because OCIO blocked my use of pdoc)
+c:\users\peter.herman\appdata\roaming\python\python311\scripts\pdoc3.exe --html --output-dir docs src/gegravity --force
+c:\users\peter.herman\appdata\roaming\python\python311\scripts\pdoc3.exe --http : gegravity
+
+:: Home PC
+"C:\Documents\Research\python_venvs\gegravity_dev\Scripts\pdoc3.exe" -- http : gegravity
+
 :: Create HTML in "docs" directory for package "gegravity", force overwrite
 :: IN ORDER TO RENDER DOCUMENTATION ON INDEX: In order to get the documentation text that appears in __
 pdoc3 --html --output-dir docs src/gegravity --force

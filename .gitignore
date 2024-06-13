@@ -22,6 +22,8 @@ build/
 *.csv
 *.xlsx
 *.xls
+*.zip
+*.tmp
 
 # Word Processing
 *.docx

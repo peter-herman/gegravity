@@ -7,11 +7,12 @@ __Description__ = """A single sector or aggregate full GE model based on Larch a
 
 # ToDo: Finish OneSectorGE attributes list, add attributes for Country and Economy classes.
 
-from typing import List
+from typing import List, Union
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
+from src.gegravity.BaselineData import BaselineData
 from scipy.optimize import root
 from numpy import multiply, median
 from warnings import warn
@@ -28,12 +29,12 @@ Convergence Tips:
 
 class OneSectorGE(object):
     def __init__(self,
-                 estimation_model: EstimationModel,
-                 year: str,
-                 reference_importer: str,
-                 expend_var_name: str,
-                 output_var_name: str,
-                 sigma: float,
+                 baseline: BaselineData = None,
+                 year: str = None,
+                 reference_importer: str = None,
+                 expend_var_name: str = None,
+                 output_var_name: str = None,
+                 sigma: float = None,
                  results_key: str = 'all',
                  cost_variables: List[str] = None,
                  cost_coeff_values = None,
@@ -42,7 +43,8 @@ class OneSectorGE(object):
         '''
         Define a general equilibrium (GE) gravity model.
         Args:
-            estimation_model (gme.EstimationModel): A GME Estimation model
+            baseline (BaselineData): A BaselineData class object containing the baseline model data (trade
+                flows, cost variables, outputs, expenditures).
             year (str): The year to be used for the model. Works best if estimation_model year column has been cast as
                 string too.
             reference_importer (str): Identifier for the country to be used as the reference importer (inward
@@ -98,13 +100,12 @@ class OneSectorGE(object):
 
             Create and estimate the GME model baseline model.
 
-
-import gegravity as ge
+            import gegravity as ge and pandas
             >>> import pandas as pd
-            >>> import gme as gme
+            >>> import gegravity as ge
 
             Load the data.
-            >>> grav_data = pd.read_csv(ssample_data_set.dlm
+            >>> grav_data = pd.read_csv(sample_data_set.dlm
             >>> grav_data.head()
               exporter importer  year  trade        Y       E  pta  contiguity  common_language  lndist  international
             0      GBR      AUS  2006   4310   925638  362227    0           0                1  9.7126              1
@@ -113,68 +114,73 @@ import gegravity as ge
             3      IND      AUS  2006    763   548517  362227    0           0                1  9.1455              1
             4      SGP      AUS  2006   8756   329817  362227    1           0                1  8.6732              1
 
-            Define the gme estimation data.
-            >>> gme_data = gme.EstimationData(grav_data,
-            ...                               imp_var_name="importer",
-            ...                               exp_var_name="exporter",
-            ...                               year_var_name = "year",
-            ...                               trade_var_name="trade")
+            Define BaselineData object to hold and organize the baseline data inputs
+            >>> baseline = ge.BaselineData(grav_data,
+            ...                            imp_var_name='importer',
+            ...                            exp_var_name='exporter',
+            ...                            year_var_name='year', trade_var_name='trade',
+            ...                            expend_var_name='E', output_var_name='Y')
 
-            Define the gme ravity model.
-            >>> gme_model = gme.EstimationModel(gme_data,
-            ...                                 lhs_var="trade",
-            ...                                 rhs_var=["pta","contiguity","common_language",
-            ...                                          "lndist","international"],
-            ...                                 fixed_effects=[["exporter"],["importer"]])
+            Specify some cost parameters (e.g. coefficient (coeff) and standard error (ste) estimates from an
+            econometric gravity model) and convert to DataFrame
+            >>> coeff_data = [{'var':"lndist", 'coeff':-0.3764, 'ste':0.072},
+            ...               {'var':"contiguity", 'coeff':0.8850, 'ste':0.131},
+            ...               {'var':"pta", 'coeff':0.4823, 'ste':0.109},
+            ...               {'var':"common_language", 'coeff':0.0392, 'ste':0.084},
+            ...               {'var':"international", 'coeff':-3.4224, 'ste':0.215}]
+            >>> coeff_df = pd.DataFrame(coeff_data)
 
-            Estimate parameters of the model
-            >>> gme_model.estimate()
-            select specification variables: ['pta', 'contiguity', 'common_language', 'lndist', 'international', 'trade', 'importer', 'exporter', 'year'], Observations excluded by user: {'rows': 0, 'columns': 2}
-            drop_intratrade: no, Observations excluded by user: {'rows': 0, 'columns': 0}
-            drop_imp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
-            drop_exp: none, Observations excluded by user: {'rows': 0, 'columns': 0}
-            keep_imp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
-            keep_exp: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
-            drop_years: none, Observations excluded by user: {'rows': 0, 'columns': 0}
-            keep_years: all available, Observations excluded by user: {'rows': 0, 'columns': 0}
-            drop_missing: yes, Observations excluded by user: {'rows': 0, 'columns': 0}
-            Estimation began at 11:47 AM  on Mar 16, 2021
-            Omitted Columns: ['importer_fe_ZAF', 'importer_fe_USA']
-            Estimation completed at 11:47 AM  on Mar 16, 2021
+            Creat gegravity CostCoeff object from the cost parameter values
+            >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col ='var',
+            ...                          coeff_col ='coeff', stderr_col ='ste')
 
             Define the gegravity OneSectorGE general equilibrium gravity model
-            >>> ge_model = ge.OneSectorGE(gme_model, year = "2006",
+            >>> ge_model = ge.OneSectorGE(baseline, year = "2006",
             ...                           expend_var_name = "E",
             ...                           output_var_name = "Y",
+            ...                           cost_coeff_values=cost_params,
+            ...                           cost_variables = ['lndist', "contiguity","pta","common_language","international"],
             ...                           reference_importer = "DEU",
             ...                           sigma = 5)
-
         '''
 
         if not isinstance(year, str):
             raise TypeError('year should be a string')
 
-        # Check reference country (does not currently work)
-        # try:
-        #     omitted_fe = estimation_model.results_dict[results_key].params[('importer_fe_'+reference_importer)]
-        #     raise ValueError('reference_importer should be the excluded importer fixed effect')
-        # except:
-        #     print('reference_importer OK')
+        if isinstance(baseline, EstimationModel):
+            self._is_gme = True
+        elif isinstance(baseline, BaselineData):
+            self._is_gme = False
+        else:
+            raise TypeError("estimation_model argument must be a gme.EstimationModel or BaselineData class.")
+
+        # For BaselineData input, if and expend_var_name or output_var_name are provided for OneSectorGE, use it.
+        # Otherwise use the one supplied to the BaselineData
+        if not self._is_gme:
+            if expend_var_name != None:
+                use_expend_var_name = expend_var_name
+            else:
+                use_expend_var_name = baseline.meta_data.expend_var_name
+            if output_var_name != None:
+                use_output_var_name = output_var_name
+            else:
+                use_output_var_name = baseline.meta_data.output_var_name
+
         self.labels = ResultsLabels()
 
         # Extract GME Meta data
-        #   If GME 1.2, meta data stored in attribute EstimationData._meta_data
-        if hasattr(estimation_model.estimation_data, '_meta_data'):
-            self.meta_data = _GEMetaData(estimation_model.estimation_data._meta_data, expend_var_name, output_var_name)
-        #   If GME 1.3+, meta data stored in attribute EstimationData.meta_data
-        elif hasattr(estimation_model.estimation_data, 'meta_data'):
-            self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        if self._is_gme:
+            #   If GME 1.2, meta data stored in attribute EstimationData._meta_data
+            if hasattr(baseline.estimation_data, '_meta_data'):
+                self.meta_data = _GEMetaData(baseline.estimation_data._meta_data, expend_var_name, output_var_name)
+            #   If GME 1.3+, meta data stored in attribute EstimationData.meta_data
+            elif hasattr(baseline.estimation_data, 'meta_data'):
+                self.meta_data = _GEMetaData(baseline.estimation_data.meta_data, expend_var_name, output_var_name)
+        elif not self._is_gme:
+            self.meta_data = _GEMetaData(baseline.meta_data, use_expend_var_name, use_output_var_name)
 
-        self._estimation_model = estimation_model
-        if cost_coeff_values is None:
-            self._estimation_results = self._estimation_model.results_dict[results_key]
-        else:
-            self._estimation_results = None
+
+        self._estimation_model = baseline
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
@@ -219,7 +225,23 @@ import gegravity as ge
         if self.meta_data.trade_var_name is None:
             raise ValueError('\n Missing Input: Please insure trade_var_name is set in EstimationData object.')
 
-        if cost_variables is None:
+        # Check for inputs needed if not using gme estimated model
+        if not self._is_gme and (cost_variables is None):
+            raise ValueError("cost_variables must be provided if using BaselineData input.")
+        if not self._is_gme and (cost_coeff_values is None):
+            raise ValueError("cost_coeff_values must be provided if using BaselineData input.")
+
+
+
+        # Set cost_coeff_values to those from gme estimated model if gme model provided and values not
+        # otherwise supplied
+        if self._is_gme and (cost_coeff_values is None):
+                self._estimation_results = baseline.results_dict[results_key]
+        else:
+            self._estimation_results = None
+
+        # Use GME RHS variables if GME model and vars not otherwise supplied
+        if self._is_gme and (cost_variables is None):
             self.cost_variables = self._estimation_model.specification.rhs_var
         else:
             self.cost_variables = cost_variables
@@ -232,7 +254,10 @@ import gegravity as ge
 
         # Prep baseline data (convert year to string in order to ensure type matching, sort data and reset index values
         #   to ensure concatenation works as expected later on.)
-        _baseline_data = estimation_model.estimation_data.data_frame.copy()
+        if self._is_gme:
+            _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        elif not self._is_gme:
+            _baseline_data = self._estimation_model.baseline_data.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         self.baseline_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name], inplace=True)
@@ -297,13 +322,15 @@ import gegravity as ge
 
             Examine the constructed baseline multilateral resistances.
             >>> print(ge_model.baseline_mr.head())
+            Solving for baseline MRs...
+            The solution converged.
                      baseline omr  baseline imr
             country
-            AUS          3.577130      1.421059
-            AUT          3.408633      1.224844
-            BEL          2.925592      1.050865
-            BRA          3.590866      1.292782
-            CAN          3.313605      1.338893
+            AUS          3.576844      1.421035
+            AUT          3.408385      1.224843
+            BEL          2.925399      1.050872
+            BRA          3.590565      1.292766
+            CAN          3.313350      1.338871
         '''
         self._omr_rescale = omr_rescale
         self._imr_rescale = imr_rescale
@@ -313,8 +340,9 @@ import gegravity as ge
 
         # Solve for the baseline multilateral resistance terms
         if self.approach == 'GEPPML':
+            # ToDo: this was never completed and may not work well with non-GME option
             if self._estimation_results is None:
-                raise ValueError("GEPPML approach requires that the gme.EstimationModel be estimated and use importer and exporter fixed effects.")
+                raise ValueError("GEPPML approach requires that the model be defined using an gme.EstimationModel that is estimated and uses importer and exporter fixed effects.")
             self._calculate_GEPPML_multilateral_resistance(version='baseline')
         else:
             self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs, version='baseline')
@@ -366,54 +394,64 @@ import gegravity as ge
 
         reference_expenditure = float(
             country_data.loc[country_data[self.meta_data.imp_var_name] == self._reference_importer_recode,
-                             self.meta_data.expend_var_name])
+                             self.meta_data.expend_var_name].values[0])
 
         # Convert DataFrame to a dictionary of country objects
         country_set = {}
 
         # Identify appropriate fixed effect naming convention and define function for creating them
-        fe_specification = self._estimation_model.specification.fixed_effects
-        # Importer FEs
-        if [self.meta_data.imp_var_name] in fe_specification:
-            def imp_fe_identifier(country_id):
-                return "_".join([self.meta_data.imp_var_name,
-                                 'fe', (country_id)])
-        elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
-            def imp_fe_identifier(country_id):
-                return "_".join([self.meta_data.imp_var_name, self.meta_data.year_var_name,
-                                 'fe', (country_id + self._year)])
-        # else:
-        #     raise ValueError("Fixed Effect Specification must feature {} or {}".format([self.meta_data.imp_var_name],
-        #                                                                                [self.meta_data.imp_var_name,
-        #                                                                                 self.meta_data.year_var_name]))
+        if self._is_gme:
+            fe_specification = self._estimation_model.specification.fixed_effects
+            # Importer FEs
+            if [self.meta_data.imp_var_name] in fe_specification:
+                def imp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.imp_var_name,
+                                     'fe', (country_id)])
+            elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
+                def imp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.imp_var_name, self.meta_data.year_var_name,
+                                     'fe', (country_id + self._year)])
 
-        # Exporter FEs
-        if [self.meta_data.exp_var_name] in fe_specification:
-            def exp_fe_identifier(country_id):
-                return "_".join([self.meta_data.exp_var_name,
-                                 'fe', (country_id)])
-        elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
-            def exp_fe_identifier(country_id):
-                return "_".join([self.meta_data.exp_var_name, self.meta_data.year_var_name,
-                                 'fe', (country_id + self._year)])
-        # else:
-        #     raise ValueError(
-        #         "Fixed Effect Specification must feature {} or {}".format([self.meta_data.exp_var_name],
-        #                                                                   [self.meta_data.exp_var_name,
-        #                                                                    self.meta_data.year_var_name]))
+            # Exporter FEs
+            if [self.meta_data.exp_var_name] in fe_specification:
+                def exp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.exp_var_name,
+                                     'fe', (country_id)])
+            elif [self.meta_data.imp_var_name, self.meta_data.year_var_name] in fe_specification:
+                def exp_fe_identifier(country_id):
+                    return "_".join([self.meta_data.exp_var_name, self.meta_data.year_var_name,
+                                     'fe', (country_id + self._year)])
+
 
         for row in range(country_data.shape[0]):
             country_id = country_data.loc[row, self.meta_data.imp_var_name]
 
-            # Get fixed effects if estimated
-            try:
-                bsln_imp_fe = self._estimation_results.params[imp_fe_identifier(country_id)]
-            except:
-                bsln_imp_fe = 'no estimate'
-            try:
-                bsln_exp_fe = self._estimation_results.params[exp_fe_identifier(country_id)]
-            except:
-                bsln_exp_fe = 'no estimate'
+            # For GME input: Get fixed effects if estimated
+            if self._is_gme:
+                try:
+                    bsln_imp_fe = self._estimation_results.params[imp_fe_identifier(country_id)]
+                except:
+                    bsln_imp_fe = 'no estimate'
+                try:
+                    bsln_exp_fe = self._estimation_results.params[exp_fe_identifier(country_id)]
+                except:
+                    bsln_exp_fe = 'no estimate'
+            # For BaselineModel input: get fixed effects if supplied
+            elif not self._is_gme:
+                try:
+                    fe_country_identifier = self._estimation_model.country_fixed_effects.columns[0]
+                    bsln_imp_fe = self._estimation_model.country_fixed_effects.loc[
+                        self._estimation_model.country_fixed_effects[fe_country_identifier]==country_id,
+                        self.meta_data.imp_var_name]
+                except:
+                    bsln_imp_fe = 'no estimate'
+                try:
+                    fe_country_identifier = self._estimation_model.country_fixed_effects.columns[0]
+                    bsln_exp_fe = self._estimation_model.country_fixed_effects.loc[
+                        self._estimation_model.country_fixed_effects[fe_country_identifier]==country_id,
+                        self.meta_data.exp_var_name]
+                except:
+                    bsln_exp_fe = 'no estimate'
 
             # Build country
             try:
@@ -476,8 +514,8 @@ import gegravity as ge
         # cost_output_share: t_{ij}^{1-\sigma} * Y_i / Y
         # cost_expend_share: t_{ij}^{1-\sigma} * E_j / Y
         cost_params = trade_costs.copy()
-        cost_params['cost_output_share'] = -9999
-        cost_params['cost_expend_share'] = -9999
+        cost_params['cost_output_share'] = -9999.99
+        cost_params['cost_expend_share'] = -9999.99
         # Build actual values
         for row in cost_params.index:
             importer_key = cost_params.loc[row, self.meta_data.imp_var_name]
@@ -570,6 +608,9 @@ import gegravity as ge
                     self.country_set[country]._baseline_imr_ratio = mrs.loc[country, 'imrs']  # 1 / P^{1-sigma}
                     self.country_set[country]._baseline_omr_ratio = mrs.loc[country, 'omrs']  # 1 / π^{1-sigma}
                     sigma_inverse = 1 / (1 - self.sigma)
+                    # Check for invalid/problematic imr_ratios
+                    if (self.country_set[country]._baseline_imr_ratio<0) | (self.country_set[country]._baseline_omr_ratio<0):
+                        raise ValueError("IMR or OMR values problematic for {} and possibly other countries (e.g. negative), try a different omr_rescale factor.".format(country))
                     self.country_set[country].baseline_imr = 1 / (self.country_set[country]._baseline_imr_ratio ** sigma_inverse)
                     self.country_set[country].baseline_omr = 1 / (self.country_set[country]._baseline_omr_ratio ** sigma_inverse)
 
@@ -687,9 +728,9 @@ import gegravity as ge
             >>> print(ge_model.bilateral_costs.head())
                                baseline trade cost  experiment trade cost  trade cost change (%)
             exporter importer
-            AUS      AUS                  0.072546               0.072546                    0.0
+            AUS      AUS                  0.072571               0.072571                    0.0
                      AUT                  0.000863               0.000863                    0.0
-                     BEL                  0.000848               0.000848                    0.0
+                     BEL                  0.000849               0.000849                    0.0
                      BRA                  0.000931               0.000931                    0.0
                      CAN                  0.000902               0.000902                    0.0
         '''
@@ -697,8 +738,11 @@ import gegravity as ge
             raise ValueError("Baseline must be built first (i.e. ge_model.build_baseline() method")
         self.experiment_data = experiment_data.sort_values([self.meta_data.exp_var_name, self.meta_data.imp_var_name])
         self.experiment_data.reset_index(inplace = True)
+        # Insure year columns is str so as to match with baseline data
+        #self.experiment_data[self.meta_data.year_var_name] = self.experiment_data[self.meta_data.year_var_name].astype(str)
+
         # Recode reference importer
-        exper_recode = experiment_data.copy()
+        exper_recode = self.experiment_data.copy()
         exper_recode.loc[exper_recode[self.meta_data.imp_var_name]==self._reference_importer,self.meta_data.imp_var_name]=self._reference_importer_recode
         exper_recode.loc[exper_recode[self.meta_data.exp_var_name]==self._reference_importer,self.meta_data.exp_var_name]=self._reference_importer_recode
         self._experiment_data_recode = exper_recode
@@ -740,8 +784,7 @@ import gegravity as ge
                 Default is 1000.
 
         Returns:
-            None
-                No return but populates new attributes of model.
+            None: No return but populates new attributes of model.
 
         Examples:
             Building on the ONESectorGE example:
@@ -751,15 +794,42 @@ import gegravity as ge
             Solving full GE model...
             The solution converged.
 
+            Examine the country-level results.
+            >>> ge_model.country_results.head()
+                                 factory gate price change (percent)  omr change (percent)  imr change (percent)  GDP change (percent)  welfare statistic  terms of trade change (percent)  output change (percent)  expenditure change (percent)  foreign exports change (percent)  foreign imports change (percent)  intranational trade change (percent)
+            country
+            AUS                                 0.003619             -0.003619              0.010917             -0.007297           1.000073                        -0.007297                 0.003619                      0.003619                         -0.087967                         -0.034924                              0.019477
+            AUT                                -0.002883              0.002883              0.002462             -0.005345           1.000053                        -0.005345                -0.002883                     -0.002883                         -0.034994                         -0.026757                             -0.001338
+            BEL                                -0.002154              0.002154              0.000362             -0.002516           1.000025                        -0.002516                -0.002154                     -0.002154                         -0.038306                         -0.031138                             -0.011198
+            BRA                                -0.005570              0.005570              0.000090             -0.005660           1.000057                        -0.005660                -0.005570                     -0.005570                         -0.080164                         -0.066571                             -0.005454
+            CAN                                -0.133548              0.133727             -0.566459              0.435377           0.995665                         0.435377                -0.133548                     -0.133548                          1.634938                          1.563632                             -2.001652
+
+            Examine the baseline and experiment values for Japan
+            >>> jpn_results = ge_model.country_set['JPN']
+            >>> print(jpn_results)
+            Country: JPN
+            Year: 2006
+            Baseline Output: 2664872.0
+            Baseline Expenditure: 2409677.0
+            Baseline IMR: 0.9614086322479758
+            Baseline OMR: 3.1061335655869926
+            Experiment IMR: 0.9632560064469474
+            Experiment OMR: 3.0984342875425104
+            Experiment Factory Price: 1.0024848931201829
+            Output Change (%): 0.2484893120182775
+            Expenditure Change (%): 0.24848931201827681
+            Terms of Trade Change (%): 0.05622840588179004
+
+
             Examine the bilateral trade results.
             >>> print(ge_model.bilateral_trade_results.head())
-                                baseline modeled trade  experiment trade  trade change (percent)
+                               baseline modeled trade  experiment trade  trade change (percent)
             exporter importer
-            AUS      AUS                216157.106891     216199.213687                0.019480
-                     AUT                   683.873129        683.730549               -0.020849
-                     BEL                  1586.476403       1586.023933               -0.028520
-                     BRA                  2794.995080       2794.072041               -0.033025
-                     CAN                  2891.501311       2821.979450               -2.404352
+            AUS      AUS                216148.589959     216190.688325                0.019477
+                     AUT                   683.950879        683.808330               -0.020842
+                     BEL                  1586.705100       1586.252670               -0.028514
+                     BRA                  2795.248778       2794.325939               -0.033015
+                     CAN                  2891.723008       2822.195872               -2.404350
         '''
         if not self._baseline_built:
             raise ValueError("Baseline must be built first (i.e. OneSectorGE.build_baseline() method")
@@ -868,6 +938,7 @@ import gegravity as ge
             total_output += country_obj.experiment_output
 
         # The second time looping through gets things that are dependent on total output/expenditure
+        country_results_list = list()
         for country in self.country_set.keys():
             country_obj = self.country_set[country]
             country_obj.experiment_output_share = country_obj.experiment_output / total_output
@@ -879,7 +950,8 @@ import gegravity as ge
                     self.labels.baseline_expenditure: country_obj.baseline_expenditure,
                     self.labels.experiment_expenditure: country_obj.experiment_expenditure,
                     self.labels.expenditure_change: country_obj.expenditure_change}, index = [country])
-            results_table = pd.concat([results_table, new_row], axis = 0)
+            country_results_list.append(new_row)
+        results_table = pd.concat(country_results_list, axis = 0)
 
         # Store some economy-wide values to economy object
         self.economy.experiment_total_output = total_output
@@ -1190,7 +1262,7 @@ import gegravity as ge
             >>> ge_model.export_results(directory="c://examples//",name="CAN_JPN_PTA_experiment")
 
             Alternatively, return the three outputs as dataframes instead and include trade value levels:
-            >>> county_table, bilateral_table_ diagnostic_table = ge_model.export_results(include_levels=True)
+            >>> county_table, bilateral_table, diagnostic_table = ge_model.export_results(include_levels=True)
 
             To include alternative country names, supply a DataFrame of country names to append.
             >>> alt_names = pd.DataFrame({'iso3':'AUS','name':'Australia'},
@@ -1291,16 +1363,27 @@ import gegravity as ge
                 measures is returned.
 
         Examples:
-            Given a the simulated model from the OneSectorGE examples:
+            Given the simulated model from the OneSectorGE examples:
             >>> levels = ge_model.calculate_levels()
             >>> print(levels.head())
                       baseline observed foreign exports  experiment observed foreign exports  baseline observed foreign imports  experiment observed foreign imports  baseline observed intranational trade  experiment observed intranational trade
             exporter
-            AUS                                   42485                         42447.623715                              98938                         98903.447561                                 261365                            261415.913167
-            AUT                                   87153                         87122.499763                              96165                         96139.268309                                  73142                             73141.020467
-            BEL                                  258238                        258139.077300                             262743                        262661.185594                                 486707                            486652.495569
-            BRA                                   61501                         61451.693948                              56294                         56256.521328                                 465995                            465969.574658
-            CAN                                  256829                        261027.705536                             266512                        270678.983376                                 223583                            219107.825980
+            AUS                                   42485                         42447.627390                              98938                         98903.446862                                 261365                            261415.904979
+            AUT                                   87153                         87122.501330                              96165                         96139.269224                                  73142                             73141.021289
+            BEL                                  258238                        258139.079444                             262743                        262661.186167                                 486707                            486652.500615
+            BRA                                   61501                         61451.698622                              56294                         56256.524427                                 465995                            465969.585875
+            CAN                                  256829                        261027.995576                             266512                        270679.267448                                 223583                            219107.645633
+
+            Alternatively, compute the levels for each bilateral pair
+            >>> bilat_levels = ge_model.calculate_levels('bilateral')
+            >>> print(bilat_levels.head())
+            exporter importer  baseline observed trade  experiment observed trade  trade change (observed level)  trade change (percent)
+                 AUS      AUS                   261365              261415.904979                      50.904979                0.019477
+                 AUS      AUT                       66                  65.986244                      -0.013756               -0.020842
+                 AUS      BEL                      410                 409.883093                      -0.116907               -0.028514
+                 AUS      BRA                      109                 108.964014                      -0.035986               -0.033015
+                 AUS      CAN                      928                 905.687634                     -22.312366               -2.404350
+
         '''
         if not self._baseline_built and self._experiment_defined:
             raise ValueError('Model must be fully solved before calculating levels.')
@@ -1394,25 +1477,26 @@ import gegravity as ge
             >>> bilat_cost_shock = ge_model.trade_weighted_shock(how = 'bilateral')
             >>> print(bilat_cost_shock.head())
               exporter importer  baseline modeled trade  trade cost change (%)  weighted_cost_change
-            0      AUS      AUS           216157.106891                    0.0                   0.0
-            1      AUS      AUT              683.873129                    0.0                   0.0
-            2      AUS      BEL             1586.476403                    0.0                   0.0
-            3      AUS      BRA             2794.995080                    0.0                   0.0
-            4      AUS      CAN             2891.501311                    0.0                   0.0
+            0      AUS      AUS           216148.589959                    0.0                   0.0
+            1      AUS      AUT              683.950879                    0.0                   0.0
+            2      AUS      BEL             1586.705100                    0.0                   0.0
+            3      AUS      BRA             2795.248778                    0.0                   0.0
+            4      AUS      CAN             2891.723008                    0.0                   0.0
 
             Next, we can see summary stats about the bilater cost changes at the country level:
             >>> country_cost_shock  = ge_model.trade_weighted_shock(how='country', aggregations = ['mean', 'sum', 'max'])
             >>> print(country_cost_shock.head())
+                            weighted_cost_change
                                 mean       sum       max      mean      sum      max
                             exporter  exporter  exporter  importer importer importer
             AUS             0.000000  0.000000  0.000000  0.000000      0.0      0.0
             AUT             0.000000  0.000000  0.000000  0.000000      0.0      0.0
             BEL             0.000000  0.000000  0.000000  0.000000      0.0      0.0
             BRA             0.000000  0.000000  0.000000  0.000000      0.0      0.0
-            CAN             0.010171  0.305121  0.305121  0.033333      1.0      1.0
+            CAN             0.010172  0.305152  0.305152  0.033333      1.0      1.0
 
             From this slice of the results, we We see Canada has relatively high shocks (the largest for an importer
-            given the maximum possible shock is 1).
+            given the maximum possible shock is 1), which is not suprising given the CAN-JPN FTA experiment.
         '''
         # Collect needed results
         bilat_trade = self.bilateral_trade_results.copy()
@@ -1548,18 +1632,19 @@ import gegravity as ge
             >>> omr_check = ge_model.check_omr_rescale(omr_rescale_range=3)
             >>> print(omr_check)
                omr_rescale omr_rescale (alt format)  solved                                            message  max_func_value  mean_func_value  reference_importer_omr
-            0        0.001                    10^-3   False  The iteration is not making good progress, as ...    8.774878e-02     4.441303e-04                2.339813
-            1        0.010                    10^-2    True                            The solution converged.    3.683065e-11    -2.652545e-12                2.918339
-            2        0.100                    10^-1    True                            The solution converged.    2.610248e-09     4.552991e-11                2.920591
-            3        1.000                     10^0    True                            The solution converged.    7.409855e-10    -1.980349e-11                2.967636
-            4       10.000                     10^1    True                            The solution converged.    9.853662e-10    -2.213563e-12                2.918339
-            5      100.000                     10^2    True                            The solution converged.    3.629199e-10     2.458433e-11                2.918339
-            6     1000.000                     10^3    True                            The solution converged.    3.392378e-09    -3.910916e-11                2.918339
+            0        0.001                    10^-3   False  The iteration is not making good progress, as ...    1.181007e-01    -2.180370e-03                1.699546
+            1        0.010                    10^-2    True                            The solution converged.    4.773490e-10    -1.611089e-11                2.918125
+            2        0.100                    10^-1   False             Failed to produce valid OMR/IMR values             NaN              NaN                     NaN
+            3        1.000                     10^0   False             Failed to produce valid OMR/IMR values             NaN              NaN                     NaN
+            4       10.000                     10^1    True                            The solution converged.    9.583204e-10    -1.840972e-12                2.918125
+            5      100.000                     10^2    True                            The solution converged.    3.633115e-10     2.453893e-11                2.918125
+            6     1000.000                     10^3    True                            The solution converged.    3.389947e-09    -3.902056e-11                2.918125
+
 
             From the tests, it looks like 10, 100, and 1000 are good candidate rescale factors based on the fact that
-            the model solves (i.e. converges) and all three produce consistent solutions for the reference importer's
-            OMR term (2.918).
-
+            the model solves (i.e. converges), the function value is everywhere close to zero, and all three factors
+            produce consistent solutions for the reference importer's OMR term (2.918). 0.01 also appears to be feasible
+            but may not be quite as reliable as the other options given other close values do not work.
         '''
         # Check to see if model has already been solved and recoded reference importer was dropped.
         if self._simulated:
@@ -1582,24 +1667,31 @@ import gegravity as ge
             if not self.quiet:
                 print("\nTrying OMR rescale factor of {}".format(rescale_factor))
             self._omr_rescale = rescale_factor
-            self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
-                                                    version='baseline')
             value_results['omr_rescale'] = rescale_factor
             value_results['omr_rescale (alt format)'] = '10^{}'.format(scale_value)
-            value_results['solved'] = self.solver_diagnostics['baseline_MRs']['success']
-            value_results['message'] = self.solver_diagnostics['baseline_MRs']['message']
-            func_vals = self.solver_diagnostics['baseline_MRs']['fun']
-            value_results['max_func_value'] = func_vals.max()
-            value_results['mean_func_value'] = func_vals.mean()
-            value_results['mean_func_value'] = median(func_vals)
-            omr_ratio = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
-            omr = omr =(1/omr_ratio)**(1/(1-self.sigma))
-            value_results['reference_importer_omr'] = omr
-            for country in countries:
-                omr_ratio = self.country_set[country]._baseline_omr_ratio
-                omr =(1/omr_ratio)**(1/(1-self.sigma))
-                value_results['{}_omr'.format(country)] = omr
-            findings.append(value_results)
+            try:
+
+                self._calculate_multilateral_resistance(trade_costs=self.baseline_trade_costs,
+                                                        version='baseline')
+                value_results['solved'] = self.solver_diagnostics['baseline_MRs']['success']
+                value_results['message'] = self.solver_diagnostics['baseline_MRs']['message']
+                func_vals = self.solver_diagnostics['baseline_MRs']['fun']
+                value_results['max_func_value'] = func_vals.max()
+                value_results['mean_func_value'] = func_vals.mean()
+                value_results['mean_func_value'] = median(func_vals)
+                omr_ratio = self.country_set[self._reference_importer_recode]._baseline_omr_ratio
+                omr = omr =(1/omr_ratio)**(1/(1-self.sigma))
+                value_results['reference_importer_omr'] = omr
+                for country in countries:
+                    omr_ratio = self.country_set[country]._baseline_omr_ratio
+                    omr =(1/omr_ratio)**(1/(1-self.sigma))
+                    value_results['{}_omr'.format(country)] = omr
+                findings.append(value_results)
+            except:
+                print("Failed to produce valid OMR/IMR values")
+                value_results['solved'] = False
+                value_results['message'] = "Failed to produce valid OMR/IMR values"
+                findings.append(value_results)
         findings_table = pd.DataFrame(findings)
 
         return findings_table
@@ -1782,7 +1874,7 @@ class Country(object):
         intranational_trade_change (float): Estimated percent change in intranational trade
             (100*[X'_{ii} - X_{ii}]/X_{ii}).
 
-        baseline_gdp (float): Baseline real GDP ($GDP_j = Y_j/P_j$).
+        baseline_gdp (float): Baseline real GDP ($GDP_j = Y_j/P_j$ from Yotov et al. (2016) replication files).
         experiment_gdp (float): Estimated counterfactual real GDP (GDP'_j = Y'_j/P'_j).
         gdp_change (float): Estimated percent chnage in real GDP (100*(GDP' - GDP)/GDP)
         phi (float): Phi parameter for expenditure-output share (φ_i = E_i / Y_i). Based on Eqn. (30) from Larch and
@@ -1990,53 +2082,60 @@ class CostCoeffs(object):
                  estimates:DataFrame,
                  identifier_col: str,
                  coeff_col:str,
-                 stderr_col:str = None):
+                 stderr_col:str = None,
+                 covar_matrix:DataFrame = None):
         '''
-                         Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
-                         source of gravity estimates.
-                         Args:
-                          estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
-                              following non-optional columns.
-                          identifier_col (str): The name of the column containing the identifiers for each estimate. These should
-                              correspond to the cost variables that you will use for trade costs in the simulation. This column is
-                              required.
-                          coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
-                              should be numeric and are required.
-                          stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
-                              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+        Object for supplying non-gme.EstimationModel estimates such as those from Stata, R, the literature, or any other
+        source of gravity estimates.
 
-                         Returns:
-                             CostCoeffs: An instance of a ParameterValues object.
+        Args:
+            estimates (pandas.DataFrame): A dataframe containing gravity model estimates, which ought to include the
+              following non-optional columns.
+            identifier_col (str): The name of the column containing the identifiers for each estimate. These should
+              correspond to the cost variables that you will use for trade costs in the simulation. This column is
+              required.
+            coeff_col (str): The name of the column containing the coefficient estimates for each variable. They
+              should be numeric and are required.
+            stderr_col (str):  The column name for the standard error estimates for each variable. This column is only
+              required for the MonteCarloGE model and may be omitted for the OneSectorGE model.
+            covar_matrix (pandas.DataFrame): A covariance matrix for the gravity coefficient estimates. Variable
+                idenitifiers should be included as the row index and columns headers (rather than as a column or row).
 
-                         Examples:
-                             Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
-                             agreements.
+        Attributes:
+            params (pandas.Series): A vector containing the coefficient (beta) estimates.
+            bse (pandas.Series): The standard errors ("beta standard errors")
+            covar (pandas.DataFrame): The varriance-covariance matrix.
 
-import gegravity as ge            >>> import pandas as pd
-                             >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
-                             ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
-                             ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
-                             >>> coeff_df = pd.DataFrame(coeff_data)
-                             >>> print(coeff_df)
-                                     var  coeff   ste
-                             0  distance   -1.0  0.05
-                             1    contig    0.8  0.10
-                             2  distance   -1.0  0.05
+        Returns:
+            CostCoeffs: An instance of a CostCoeffs object.
 
-                             Now, we can construct the CostCoeffs object from this data.
-                             >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
-                             ...                          coeff_col = 'coeff', stderr_col = 'ste')
-                             >>> print(cost_params.params)
-                             var
-                             distance   -1.0
-                             contig      0.8
-                             distance   -1.0
-                             Name: coeff, dtype: float64
+        Examples:
+            Create a DataFrame of (hypothetical) coefficient estimates for distance, contiguity, and preferential trade
+            agreements.
+            >>> import gegravity as ge
+            >>> import pandas as pd
+            >>> coeff_data = [{'var':'distance', 'coeff':-1, 'ste':0.05},
+            ...               {'var':'contig', 'coeff':0.8, 'ste':0.10},
+            ...               {'var':'distance', 'coeff':-1, 'ste':0.05}]
+            >>> coeff_df = pd.DataFrame(coeff_data)
+            >>> print(coeff_df)
+                 var  coeff   ste
+            0  distance   -1.0  0.05
+            1    contig    0.8  0.10
+            2  distance   -1.0  0.05
 
-                             And supply them to a OneSectorGE model via the argument
-                             >>> OneSectorGE(cost_coeff_values=cost_params)
-                         '''
-        estimates = estimates.set_index(identifier_col)
+            Now, we can construct the CostCoeffs object from this data.
+            >>> cost_params = CostCoeffs(estimates = coeff_df, identifier_col = 'var',
+            ...                          coeff_col = 'coeff', stderr_col = 'ste')
+            >>> print(cost_params.params)
+            var
+            distance   -1.0
+            contig      0.8
+            distance   -1.0
+            Name: coeff, dtype: float64
+        '''
+        self._identifier_col = identifier_col
+        estimates = estimates.set_index(self._identifier_col)
         self._table = estimates
         # Coefficient  Estimates
         self.params = estimates[coeff_col].copy()
@@ -2046,12 +2145,13 @@ import gegravity as ge            >>> import pandas as pd
         else:
             self.bse = None
 
-            # self.imp_fe_prefix = imp_fe_prefix
-            # self.exp_fe_prefix = exp_fe_prefix
-                 #imp_fe_prefix: str = None, # Removed until completion of GEPPML
-                 #exp_fe_prefix: str = None # Removed until completion of GEPPML
+        self.covar = covar_matrix
 
-
+        if self.covar is not None:
+            # Check dimensions of cost estimates and covariance matrix
+            if (self._table.shape[0], self._table.shape[0]) != self.covar.shape:
+                raise ValueError("Dimensions of estimates ({}) and covar_matrix ({}) do not match.".format(
+                    self._table.shape[0], self.covar.shape))
 
     def __repr__(self):
         return repr(self._table)
@@ -2073,9 +2173,9 @@ class ResultsLabels(object):
         \n**baseline observed trade**: Observed trade values. (Not necessarily equivalent to modeled values.)
         \n**experiment observed trade**: Estiamted counterfactual trade values based on predicted change and observed
         baseline values. (Not necessarily equivalent to modeled values.)
-        \n**baseline trade cost**: Baseline estimated trade costs (\tau_{ij})
-        \n**experiment trade cost**: Counterfactual experiment trade costs (\tau'_{ij})
-        \n**trade cost change (%)**: Change in trade costs 100*(\tau'_{ij} - \tau_{ij})/\tau_{ij}
+        \n**baseline trade cost**: Baseline estimated trade costs (t_{ij}^{1-sigma})
+        \n**experiment trade cost**: Counterfactual experiment trade costs (t'_{ij}^{1-sigma})
+        \n**trade cost change (%)**: Change in trade costs 100*(t'_{ij}^{1-sigma} - t_{ij}^{1-sigma})/t_{ij}^{1-sigma}
 
     # Country level Results
         \n **country**: Country identifier.

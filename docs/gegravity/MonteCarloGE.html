@@ -12,7 +12,6 @@
 <style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
 <style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
 <style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
-<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
 <script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
 </head>
@@ -39,29 +38,29 @@ import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
 from .OneSectorGE import OneSectorGE, CostCoeffs, _GEMetaData
+from .BaselineData import BaselineData
 from scipy.stats import multivariate_normal
 from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
 from typing import List
 
 class MonteCarloGE(object):
     def __init__(self,
-                 estimation_model: EstimationModel,
+                 baseline: BaselineData,
                  year:str,
                  trials: int,
-                 expend_var_name: str,
-                 output_var_name: str,
                  sigma: float,
                  reference_importer: str,
                  cost_variables: list,
+                 cost_coeff_values: CostCoeffs,
+                 expend_var_name: str = None,
+                 output_var_name: str = None,
                  mc_variables: list = None,
-                 results_key: str = &#39;all&#39;,
-                 seed: int = 0):
+                 seed: int = 0,
+                 allow_singular_covar:bool = False):
         &#39;&#39;&#39;
         Define a Monte Carlo GE model.
         Args:
-            estimation_model (gme.EstimationModel): A GME EstimationModel that must have been estimated with the option
-                full_results = True (MonteCarlo simulation requires additional info from estimation compared to
-                OneSectorGE).
+            baseline (BaselineData): Baseline data defined using the gegravity BaselineData class structure.
             year (str): The year to be used for the baseline model. Works best if estimation_model year column has been
                 cast as string.
             trials (int): The number of trial simulations to conduct.
@@ -76,16 +75,18 @@ class MonteCarloGE(object):
                 experiment. Coefficients for the variables in this list are randomly drawn based on their estimated mean
                  and variance/covariance. Those excluded use their gravity estimated values only. By default, the model
                 uses all cost variables (or those supplied to cost_variables argument) are
-            results_key (str): (optional) If using parameter estimates from estimation_model, this is the key (i.e.
-                sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
-                False in GME model), this key is &#39;all&#39;, which is the default.
+            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
+                gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             seed (int): (optional) The seed to use for the random draws of cost coefficients in order to provide
                 unchanging, consistent draws across runs. By default, the seed is randomly determined each time the
                 model is constructed.
+            allow_singular_covar (bool): If true, allow the covariance matrix to be singular when drawing coefficient
+                values from multivariate normal distribution. Default is False.
 
         Attributes:
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
-            coeff_sample (Pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
+            coeff_sample (pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
                 column corresponds to a different trial.
             main_coeffs (pandas.Series): The main coefficient estimates for the cost varaibles supplied to the model.
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
@@ -109,6 +110,8 @@ class MonteCarloGE(object):
             factory_gate_prices (Pandas.DataFrame): Factory gate prices summarized across all trials. See OneSectorGE
                 ResultsLabels for description of results.
             num_failed_trials (int): The number of trials for which the model failed to solve.
+            replacement_sample (Padas.DataFrame): If run_trials options set to True, the vectors of additional parameter
+                values are stored in this attribute.
             outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values summarized
                 across all trials. See OneSectorGE ResultsLabels for description of results.
             solver_diagnostics (dict): A dictionary containing diagnostic information for each individual trial. The
@@ -138,16 +141,52 @@ class MonteCarloGE(object):
             all_outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values for each
                 individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
                 ResultsLabels for description of results.
+            trial_models (gegravity.OneSectorGE): A list of OneSectorGE models corresponding to each trial.
+
+        Examples:
+
+            Create a MonteCarloGE model instance using BaselineData and CostCoeff instances (see respective APIs). Model
+            will solve 10 randomly drawn trials.
+            &gt;&gt;&gt; baseline = ge.BaselineData(...)
+            &gt;&gt;&gt; cost_params = ge.CostCoeffs(...)
+            &gt;&gt;&gt; mc_model = ge.MonteCarloGE(
+            ...            baseline,
+            ...            year = &#39;2006&#39;,
+            ...            trials = 10,
+            ...            reference_importer=&#39;DEU&#39;,
+            ...            sigma=7,
+            ...            cost_variables=[&#39;lndist&#39;, &#39;contiguity&#39;, &#39;common_language&#39;, &#39;pta&#39;, &#39;international&#39;, &#39;constant&#39;],
+            ...            cost_coeff_values=cost_params,
+            ...            seed = 1)
         &#39;&#39;&#39;
 
 
         # Store some inputs in model object
-        self._estimation_model = estimation_model
-        self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        self._baseline = baseline
+
+        # Determine whether to use expend_var_name and/or output_var_name from MonteCarlo inputs or Baseline meta data.
+        # If both are supplied, the values given in MonteCarlo definition are used.
+        if expend_var_name != None:
+            use_expend_var_name = expend_var_name
+        else:
+            use_expend_var_name = self._baseline.meta_data.expend_var_name
+        if output_var_name != None:
+            use_output_var_name = output_var_name
+        else:
+            use_output_var_name = self._baseline.meta_data.output_var_name
+        if use_output_var_name is None:
+            raise ValueError(&#34;Must supply a variable name for the column containing output values.&#34;)
+        if use_expend_var_name is None:
+            raise ValueError(&#34;Must supply a variable name for the column containing output values.&#34;)
+
+
+        self.meta_data = _GEMetaData(baseline.meta_data, use_expend_var_name, use_output_var_name)
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
         self._cost_variables = cost_variables
+        self._cost_coeffs = cost_coeff_values
+        self._allow_singular = allow_singular_covar
         if mc_variables is None:
             self._mc_variables = self._cost_variables
         else:
@@ -156,11 +195,11 @@ class MonteCarloGE(object):
             self._seed = np.random.randint(0,10000)
         else:
             self._seed = seed
-        self._results_key = results_key
 
         # Define Parameter values
-        self.main_coeffs = self._estimation_model.results_dict[self._results_key].params
-        self.main_stderrs = self._estimation_model.results_dict[self._results_key].bse
+        self.main_coeffs = self._cost_coeffs.params
+        self.main_stderrs = self._cost_coeffs.bse
+        self.main_covar_mat = self._cost_coeffs.covar
         self.trials = trials
 
         # Generate Sampling Distribution
@@ -170,6 +209,7 @@ class MonteCarloGE(object):
         # Define Results attributes
         ##
         self.num_failed_trials = None
+        self.replacement_sample = None
         self.all_country_results = None
         self.country_results = None
         self.all_country_mr_terms = None
@@ -185,18 +225,19 @@ class MonteCarloGE(object):
         self.all_bilateral_costs = None
         self.bilateral_costs = None
         self.solver_diagnostics = None
+        self.trial_models = None
 
 
         # prep baseline data
-        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        _baseline_data = self._baseline.baseline_data.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         if self.baseline_data.shape[0] == 0:
             raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;&#34;)
 
-        # Create summary of sample distrbution
+        # Create summary of sample distribution
         sample_stats = self.coeff_sample.copy()
-        sample_stats.set_index(&#39;index&#39;, inplace= True)
+        sample_stats.set_index(self._cost_coeffs._identifier_col, inplace= True)
         sample_stats = sample_stats.T.describe().T
 
         # sample_stats = self.coeff_sample.T.describe().T
@@ -215,19 +256,17 @@ class MonteCarloGE(object):
         Returns: A dataframe of random draws of coefficients. Rows are cost variables from self._mc_variables, columns
             are different draws with the exception of a column with corresponding cost variable names (&#39;index&#39;)
         &#39;&#39;&#39;
+        print(&#39;Deriving sample of cost parameters...&#39;)
         # Get results and check that all needed info is available (i.e. covariance matrix in estimation model)
-        est_results = self._estimation_model.results_dict[self._results_key]
-        if not isinstance(est_results,GLMResultsWrapper):
-            raise TypeError(&#39;MonteCarloGE requires that gme.EstimationModel be estimated with option full_results=True&#39;)
-        betas = est_results.params.values
-
-        cov = self._estimation_model.results_dict[self._results_key].cov_params()
-        distribution_alt = multivariate_normal(betas, cov, seed=self._seed)
+        betas = self.main_coeffs
+        cov = self.main_covar_mat
+        # Define distribution of beta parameters
+        distribution_alt = multivariate_normal(betas, cov, seed=self._seed, allow_singular=self._allow_singular)
         draws = list()
         for i in range(self.trials):
             draws.append(pd.Series(distribution_alt.rvs()))
         all_draws = pd.concat(draws, axis=1)
-        all_draws.index = est_results.params.index
+        all_draws.index = betas.index
         all_draws = all_draws.loc[self._mc_variables,:]
         return all_draws.reset_index()
 
@@ -244,7 +283,9 @@ class MonteCarloGE(object):
                    ge_max_iter: int = 1000,
                    quiet: bool = False,
                    result_stats:list = [&#39;mean&#39;, &#39;std&#39;, &#39;sem&#39;],
-                   all_results:bool = False):
+                   all_results:bool = False,
+                   redraw_failed_trials: bool = False,
+                   trial_omr_rescale: dict = None):
         &#39;&#39;&#39;
         Conduct Monte Carlo Simulation of OneSectorGE gravity model.
         Args:
@@ -253,10 +294,10 @@ class MonteCarloGE(object):
                 (MonteCarloGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
             omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
                 are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
-                different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
-                (10^0). However, users should be careful with this choice as results, even when convergent, may not be
-                fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
-                feasible values for a given model.
+                different order of magnitude can help. Values should be of the form 10^n for positive or negative
+                integer n. By default, this value is 1 (10^0). However, users should be careful with this choice as
+                results, even when convergent, may not be fully robust to any selection. The method
+                MonteCarlo.check_omr_rescale() can help identify and compare feasible values for a given model.
             imr_rescale (int): (optional) This value rescales the IMR values to potentially aid in conversion. However,
                 because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
                 because changing the default value, which is 1.
@@ -282,45 +323,138 @@ class MonteCarloGE(object):
                 pandas.DataFrame.agg() function.
             all_results (bool): If true, MonteCarloGE attributes containing individual results for all trials are
                 populated. Default is False to reduce memory use.
-
+            redraw_failed_trials (bool): If True, draw additional trials to replace failed trials. Additional trials
+                will be run until enough have succeeded to match the number that originally failed (up to a maximum of
+                the number of trials originally specified). This helps insure that the model is solved for as many
+                trials as were specified. E.g. If 10 trials are specified and 2 fail to solve, additional trials will be
+                attempted with additional random draws until 2 additional models have been solved successfully, resulting
+                in 10 successful trials, or 10 additional trails are run without 2 successes.
+            trial_omr_rescale (dict): (option) An option to provide alternative OMR rescale factors for specific trials.
+                The argument should be a dictionary keyed with the trial number (0 to N-1) and value equal to the
+                desired rescale factor (10^n) with n a positive or negative integer (e.g. {0:0.001, 3:10} Any trial not
+                specified here will be run using the value specified by the omr_rescale argument (default of 1).
         Returns:
             None: No return but populates many results attributes of the MonteCarloGE model.
 
+        Examples:
+             Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
+             &#39;counterfactual_dataframe&#39; is a counterfactual version of the baseline data to use for the experiment.
+            &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1)
+            * Simulating trial 0 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            * Simulating trial 1 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            (truncated...)
+
+            Return all info about each trial, not just summary info across trials
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1,
+            ...                        all_results=True)
+
+            Specify alternative OMR rescale factors for trials 2 and 3, while using the value of 1 for all other trials.
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1,
+            ...                        trail_rescale_factors = {2:0.001, 3:100})
+
+             Draw additional random cost values to replace trials that failed to solve
+             &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+             ...                        omr_rescale = 1,
+             ...                        redraw_failed_trials=True)
         &#39;&#39;&#39;
         models = list()
+        failed_trials = list()
         num_failed_iterations = 0
         for trial in range(self.trials):
-            print(&#34;\n* Simulating trial {} *&#34;.format(trial))
-            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=&#39;index&#39;)
+            if not quiet:
+                print(&#34;\n* Simulating trial {} *&#34;.format(trial))
+            # Define a new CostCoeff instance using one of the trial values
+            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
             try:
-                trial_model = OneSectorGE(self._estimation_model,
-                                          year=self._year,
-                                          reference_importer=self._reference_importer,
-                                          expend_var_name=self.meta_data.expend_var_name,
-                                          output_var_name=self.meta_data.output_var_name,
-                                          sigma=self.sigma,
-                                          results_key=self._results_key,
-                                          cost_variables=self._cost_variables,
-                                          cost_coeff_values=param_values,
-                                          # approach = approach,
-                                          quiet = quiet)
-                trial_model.build_baseline(omr_rescale=omr_rescale,
-                                           imr_rescale=imr_rescale,
-                                           mr_method=mr_method,
-                                           mr_max_iter=mr_max_iter,
-                                           mr_tolerance=mr_tolerance)
-                trial_model.define_experiment(experiment_data)
-                trial_model.simulate(ge_method=ge_method,
-                                     ge_tolerance=ge_tolerance,
-                                     ge_max_iter=ge_max_iter)
+                if (trial_omr_rescale is not None) and (trial in trial_omr_rescale):
+                    # Use alternative omr if supplied
+                    omr_rescale_use = trial_omr_rescale[trial]
+                else:
+                    omr_rescale_use = omr_rescale
+
+                trial_model = self._run_single_trial(param_values=param_values, experiment_data=experiment_data,
+                                                     quiet = quiet, omr_rescale = omr_rescale_use,
+                                                     imr_rescale = imr_rescale, mr_method = mr_method,
+                                                     mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                     ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                     ge_max_iter = ge_max_iter)
                 models.append(trial_model)
             except:
-                print(&#34;Failed to solve model.\n&#34;)
+                if not quiet:
+                    print(&#34;Failed to solve model.\n&#34;)
                 num_failed_iterations+=1
+                failed_trials.append(trial)
+        self.num_failed_trials = num_failed_iterations
+
+        # For failed trails, redraw new estimates and solve new models for each failed trial
+        if redraw_failed_trials:
+            # Define distribution of beta parameters to draw new values from (sets new seed to draw from)
+            new_dist = multivariate_normal(self.main_coeffs, self.main_covar_mat, seed=(1 + self._seed),
+                                           allow_singular=self._allow_singular)
+            # Create lists/variables to track successes/failures
+            new_draws = list()
+            new_successes = 0
+            new_failures = 0
+            tries = 0
+            max_retries = self.trials
+            while new_successes &lt; self.num_failed_trials and tries &lt;= max_retries:
+                # Tick up try counter and created column name for random draw
+
+                try_num = self.trials+tries
+                # Create and format coefficient draw
+                new_draw = pd.DataFrame(new_dist.rvs())
+                new_draw.index = self.main_coeffs.index
+                new_draw.rename(columns={0: str(try_num)}, inplace=True)
+                new_draws.append(new_draw.copy())
+                new_draw.reset_index(inplace = True)
+                new_params = CostCoeffs(new_draw, coeff_col=str(try_num), identifier_col=self._cost_coeffs._identifier_col)
+
+                if not quiet:
+                    print(&#34;\n* Simulating failed trial replacement {} *&#34;.format(try_num))
+                try:
+                    new_trial_model = self._run_single_trial(param_values=new_params, experiment_data=experiment_data,
+                                                             quiet = quiet, omr_rescale = omr_rescale,
+                                                             imr_rescale = imr_rescale, mr_method = mr_method,
+                                                             mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                             ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                             ge_max_iter = ge_max_iter)
+                    models.append(new_trial_model)
+                    new_successes+=1
+                except:
+                    if not quiet:
+                        print(&#34;Failed to solve redrawn replacement model.\n&#34;)
+                    new_failures += 1
+                    failed_trials.append(try_num)
+
+                tries += 1
+            if len(new_draws)&gt;0:
+                self.replacement_sample = pd.concat(new_draws, axis=1)
+            else:
+                self.replacement_sample = new_draws
+
+
 
         # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
-        self.num_failed_trials = num_failed_iterations
+        if all_results:
+            self.trial_models = models
+        self.failed_trials = failed_trials
         self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;, result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;, result_stats, all_results)
         self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, &#39;outputs_expenditures&#39;, result_stats, all_results)
@@ -330,6 +464,39 @@ class MonteCarloGE(object):
         self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, &#39;bilateral_costs&#39;, result_stats, all_results)
         self._compile_diagnostics(models)
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
+
+
+
+    def _run_single_trial(self, param_values: CostCoeffs, experiment_data, quiet, omr_rescale, imr_rescale, mr_method,
+                          mr_max_iter, mr_tolerance, ge_method, ge_tolerance, ge_max_iter):
+        &#39;&#39;&#39;
+        Create and solve a single OneSectorGE model using given inputs. Inputs the same as OneSectorGE.
+        Args:
+            See arguments for OneSectorGE.
+
+        Returns:
+            Solved OneSectorGE model instance
+        &#39;&#39;&#39;
+        trial_model = OneSectorGE(self._baseline,
+                                  year=self._year,
+                                  reference_importer=self._reference_importer,
+                                  expend_var_name=self.meta_data.expend_var_name,
+                                  output_var_name=self.meta_data.output_var_name,
+                                  sigma=self.sigma,
+                                  cost_variables=self._cost_variables,
+                                  cost_coeff_values=param_values,
+                                  quiet=quiet)
+        trial_model.build_baseline(omr_rescale=omr_rescale,
+                                           imr_rescale=imr_rescale,
+                                           mr_method=mr_method,
+                                           mr_max_iter=mr_max_iter,
+                                           mr_tolerance=mr_tolerance)
+        trial_model.define_experiment(experiment_data)
+        trial_model.simulate(ge_method=ge_method,
+                                     ge_tolerance=ge_tolerance,
+                                     ge_max_iter=ge_max_iter)
+        return trial_model
+
 
 
     def _compile_results(self, models, result_type, result_stats, all_results):
@@ -376,10 +543,10 @@ class MonteCarloGE(object):
         summary_results = combined_results.copy()
         if result_type in [&#39;bilateral_trade&#39;,&#39;bilateral_costs&#39;]:
             # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
-            summary_results = summary_results.stack(0).reset_index(level=2)
+            summary_results = summary_results.stack(0, future_stack=True).reset_index(level=2)
             summary_results.rename(columns={&#39;level_2&#39;: &#39;trial&#39;}, inplace=True)
         else:
-            summary_results = summary_results.stack(0).reset_index(level=1)
+            summary_results = summary_results.stack(0, future_stack=True).reset_index(level=1)
             summary_results.rename(columns={&#39;level_1&#39;: &#39;trial&#39;}, inplace=True)
 
         # Compute mean and std across trials
@@ -398,10 +565,10 @@ class MonteCarloGE(object):
         #     if col[1] == &#39;std&#39;:
         #         summary_results[(col[0], &#39;stderr&#39;)] = summary_results[col] / (self.trials ** 0.5)
         if result_type in [&#39;bilateral_trade&#39;,&#39;bilateral_costs&#39;]:
-            summary_results = summary_results.stack(level=1).reset_index(level=2)
+            summary_results = summary_results.stack(level=1, future_stack=True).reset_index(level=2)
             summary_results.rename(columns = {&#39;level_2&#39;:&#39;statistic&#39;},inplace = True)
         else:
-            summary_results = summary_results.stack(level=1).reset_index(level=1)
+            summary_results = summary_results.stack(level=1, future_stack=True).reset_index(level=1)
             summary_results.rename(columns = {&#39;level_1&#39;:&#39;statistic&#39;},inplace = True)
         if all_results:
             return combined_results, summary_results
@@ -418,12 +585,13 @@ class MonteCarloGE(object):
 
         &#39;&#39;&#39;
         combined_diagnostics = dict()
-        for trial in range(self.trials):
+        for trial in range(len(models)):
             combined_diagnostics[trial] = models[trial].solver_diagnostics
         self.solver_diagnostics = combined_diagnostics
 
     def export_results(self, directory:str = None, name:str = &#39;&#39;,
-                       country_names:DataFrame = None, all_results = False):
+                       country_names:DataFrame = None, country:bool = True, bilateral:bool = True,
+                       diagnostics:bool = True):
         &#39;&#39;&#39;
         Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
         and (3) solver diagnostics.
@@ -439,6 +607,12 @@ class MonteCarloGE(object):
                 results tables. The supplied DataFrame should include exactly two columns. The first column must be
                 the country identifiers used in the model. The second column must be the alternative identifiers to
                 add.
+            country (boolean): (optional) If True, export country-level results to csv. If False, skip these results.
+                Default is True.
+            bilateral (boolean): (optional) If True, export bilateral results to csv. If False, skip these results.
+                Default is True.
+            diagnostics (boolean): (optional) If True, export diagnostic information to csv. If False, skip these
+                results. Default is True.
 
         Returns:
             None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
@@ -446,7 +620,12 @@ class MonteCarloGE(object):
                 DataFrames.
 
         Examples:
+            Export all three results files with the file prefix &#34;example_monte_carlo_results&#34;
+            &gt;&gt;&gt; mc_model.export_results(directory=&#34;C:\simulation_results\&#34;, name = &#34;example_monte_carlo_results&#34;)
 
+            Export only the country level results (i.e. do not export the bilateral and diagnostic results)
+            &gt;&gt;&gt; mc_model.export_results(directory=&#34;C:\simulation_results\&#34;, name = &#34;example_monte_carlo_results&#34;,
+            ...                         bilateral = False, diagnostics = False)
 
         &#39;&#39;&#39;
 
@@ -484,8 +663,8 @@ class MonteCarloGE(object):
 
         # Create Dataframe with Diagnostic results
         column_list = list()
-        diagnostics = self.solver_diagnostics
-        for trial_num, trial in diagnostics.items():
+        diagnostic_info = self.solver_diagnostics
+        for trial_num, trial in diagnostic_info.items():
             for results_type, results in trial.items():
                 for key, value in results.items():
                     # Single Entry fields must be converted to list before creating DataFrame
@@ -500,11 +679,91 @@ class MonteCarloGE(object):
         diag_frame = diag_frame.fillna(&#39;&#39;)
 
         if directory is not None:
-            country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
-            bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
-            diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
+            if country:
+                country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
+            if bilateral:
+                bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
+            if diagnostics:
+                diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
         else:
-            return country_results, bilateral_results, diag_frame</code></pre>
+            return country_results, bilateral_results, diag_frame
+
+    def check_omr_rescale(self,
+                          omr_rescale_range: int = 10,
+                          trials: List[int] = None,
+                          mr_method: str = &#39;hybr&#39;,
+                          mr_max_iter: int = 1400,
+                          mr_tolerance: float = 1e-8,
+                          countries: List[str] = []):
+        &#39;&#39;&#39;
+        Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
+            feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
+        Args:
+            omr_rescale_range (int): This parameter allows you to set the scope of the values tested. For example,
+                if omr_rescale_range = 3, the model will check for convergence using omr_rescale values from the set
+                [10^-3, 10^-2, 10^-1, 10^0, ..., 10^3]. The default value is 10.
+            trials (List[int]): (optional) A list of trials by number (0 to (N-1)) corresponding to columns of the
+                derived coefficient sample (MonteCarloGE.coeff_sample) for which to analyze OMR terms. If no input is
+                provided, all trials are considered.
+            mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
+                experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+                value is &#39;hybr&#39;.
+            mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
+                by the solver used to solve for MR terms. The default value is 1400.
+            mr_tolerance (float): (optional) This parameter sets the convergence tolerance level for the solver used to
+                solve for MR terms. The default value is 1e-8.
+            countries (List[str]):  A list of countries for which to return the estimated OMR values for user
+                evaluation.
+        Returns:
+            pandas.DataFrame: A dataframe of diagnostic information for users to compare different omr_rescale factors.
+                The returned dataframe contains the following columns:\n
+                &#39;trial&#39;: The trial number corresponding to the sample parameters for which the test was run.
+                &#39;omr_rescale&#39;: The rescale factor used\n
+                &#39;omr_rescale (alt format)&#39;: A string representation of the rescale factor as an exponential expression.\n
+                &#39;solved&#39;: If True, the MR model solved successfully. If False, it did not solve.\n
+                &#39;message&#39;: Description of the outcome of the solver.\n
+                &#39;..._func_value&#39;: Three columns reflecting the maximum, mean, and median values from the solver
+                    objective functions. Function values closer to zero imply a better solution to system of equations.
+                &#39;reference_importer_omr&#39;: The solution value for the reference importer&#39;s OMR value.\n
+                &#39;..._omr&#39;: The solution value(s) for the user supplied countries.
+
+        Examples:
+            Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
+            &gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+
+            Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
+            &gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
+        &#39;&#39;&#39;
+
+        # Check trials argument if provided
+        if trials is None:
+            trials_list = range(self.trials)
+        else:
+            if not isinstance(trials, list):
+                raise ValueError(&#34;trials argument must be a list of integer values&#34;)
+            else:
+                trials_list = trials
+
+        all_outputs = list()
+        for trial in trials_list:
+            print(&#34;\n* Checking trial {} *&#34;.format(trial))
+            trial_params = self.coeff_sample[[self._cost_coeffs._identifier_col ,trial]]
+            trial_params_obj = CostCoeffs(trial_params, identifier_col=self._cost_coeffs._identifier_col,
+                                          coeff_col=trial)
+
+            omr_test_gemodel = OneSectorGE(self._baseline, year=self._year, reference_importer=self._reference_importer,
+                                    output_var_name=self.meta_data.output_var_name,
+                                    expend_var_name=self.meta_data.expend_var_name, sigma=self.sigma,
+                                    cost_variables=self._cost_variables,
+                                    cost_coeff_values=trial_params_obj)
+            omr_checks = omr_test_gemodel.check_omr_rescale(omr_rescale_range, mr_method = mr_method,
+                                                            mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                            countries = countries)
+            # Add column with trial number to the *beginning* of dataframe
+            omr_checks.insert(loc=0, column = &#39;trail&#39;, value = trial)
+            all_outputs.append(omr_checks)
+        omr_outcomes = pd.concat(all_outputs, axis = 0)
+        return omr_outcomes</code></pre>
 </details>
 </section>
 <section>
@@ -518,16 +777,14 @@ class MonteCarloGE(object):
 <dl>
 <dt id="gegravity.MonteCarloGE.MonteCarloGE"><code class="flex name class">
 <span>class <span class="ident">MonteCarloGE</span></span>
-<span>(</span><span>estimation_model: gme.estimate.EstimationModel.EstimationModel, year: str, trials: int, expend_var_name: str, output_var_name: str, sigma: float, reference_importer: str, cost_variables: list, mc_variables: list = None, results_key: str = 'all', seed: int = 0)</span>
+<span>(</span><span>baseline: <a title="gegravity.BaselineData.BaselineData" href="BaselineData.html#gegravity.BaselineData.BaselineData">BaselineData</a>, year: str, trials: int, sigma: float, reference_importer: str, cost_variables: list, cost_coeff_values: <a title="gegravity.OneSectorGE.CostCoeffs" href="OneSectorGE.html#gegravity.OneSectorGE.CostCoeffs">CostCoeffs</a>, expend_var_name: str = None, output_var_name: str = None, mc_variables: list = None, seed: int = 0, allow_singular_covar: bool = False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Define a Monte Carlo GE model.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>estimation_model</code></strong> :&ensp;<code>gme.EstimationModel</code></dt>
-<dd>A GME EstimationModel that must have been estimated with the option
-full_results = True (MonteCarlo simulation requires additional info from estimation compared to
-OneSectorGE).</dd>
+<dt><strong><code>baseline</code></strong> :&ensp;<code>BaselineData</code></dt>
+<dd>Baseline data defined using the gegravity BaselineData class structure.</dd>
 <dt><strong><code>year</code></strong> :&ensp;<code>str</code></dt>
 <dd>The year to be used for the baseline model. Works best if estimation_model year column has been
 cast as string.</dd>
@@ -550,20 +807,23 @@ default, all included non-fixed effect variables are used.</dd>
 experiment. Coefficients for the variables in this list are randomly drawn based on their estimated mean
 and variance/covariance. Those excluded use their gravity estimated values only. By default, the model
 uses all cost variables (or those supplied to cost_variables argument) are</dd>
-<dt><strong><code>results_key</code></strong> :&ensp;<code>str</code></dt>
-<dd>(optional) If using parameter estimates from estimation_model, this is the key (i.e.
-sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
-False in GME model), this key is 'all', which is the default.</dd>
+<dt><strong><code>cost_coeff_values</code></strong> :&ensp;<code>CostCoeffs</code></dt>
+<dd>(optional) A set of parameter values or estimates to use for constructing
+trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
+gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.</dd>
 <dt><strong><code>seed</code></strong> :&ensp;<code>int</code></dt>
 <dd>(optional) The seed to use for the random draws of cost coefficients in order to provide
 unchanging, consistent draws across runs. By default, the seed is randomly determined each time the
 model is constructed.</dd>
+<dt><strong><code>allow_singular_covar</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If true, allow the covariance matrix to be singular when drawing coefficient
+values from multivariate normal distribution. Default is False.</dd>
 </dl>
 <h2 id="attributes">Attributes</h2>
 <dl>
 <dt><strong><code>baseline_data</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>Baseline data supplied to model in gme.EstimationModel.</dd>
-<dt><strong><code>coeff_sample</code></strong> :&ensp;<code>Pandas.DataFrame</code></dt>
+<dt><strong><code>coeff_sample</code></strong> :&ensp;<code>pandas.DataFrame</code></dt>
 <dd>The randomly drawn sample of cost coefficients for each cost variable. Each
 column corresponds to a different trial.</dd>
 <dt><strong><code>main_coeffs</code></strong> :&ensp;<code>pandas.Series</code></dt>
@@ -602,6 +862,9 @@ all trials. See OneSectorGE ResultsLabels for description of results.</dd>
 ResultsLabels for description of results.</dd>
 <dt><strong><code>num_failed_trials</code></strong> :&ensp;<code>int</code></dt>
 <dd>The number of trials for which the model failed to solve.</dd>
+<dt><strong><code>replacement_sample</code></strong> :&ensp;<code>Padas.DataFrame</code></dt>
+<dd>If run_trials options set to True, the vectors of additional parameter
+values are stored in this attribute.</dd>
 <dt><strong><code>outputs_expenditures</code></strong> :&ensp;<code>Pandas.DataFrame</code></dt>
 <dd>Baseline and experiment output and expenditure values summarized
 across all trials. See OneSectorGE ResultsLabels for description of results.</dd>
@@ -642,30 +905,46 @@ results.</dd>
 <dd>Baseline and experiment output and expenditure values for each
 individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
 ResultsLabels for description of results.</dd>
-</dl></div>
+<dt><strong><code>trial_models</code></strong> :&ensp;<code><a title="gegravity.OneSectorGE" href="OneSectorGE.html">gegravity.OneSectorGE</a></code></dt>
+<dd>A list of OneSectorGE models corresponding to each trial.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<p>Create a MonteCarloGE model instance using BaselineData and CostCoeff instances (see respective APIs). Model
+will solve 10 randomly drawn trials.</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; baseline = ge.BaselineData(...)
+&gt;&gt;&gt; cost_params = ge.CostCoeffs(...)
+&gt;&gt;&gt; mc_model = ge.MonteCarloGE(
+...            baseline,
+...            year = '2006',
+...            trials = 10,
+...            reference_importer='DEU',
+...            sigma=7,
+...            cost_variables=['lndist', 'contiguity', 'common_language', 'pta', 'international', 'constant'],
+...            cost_coeff_values=cost_params,
+...            seed = 1)
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class MonteCarloGE(object):
     def __init__(self,
-                 estimation_model: EstimationModel,
+                 baseline: BaselineData,
                  year:str,
                  trials: int,
-                 expend_var_name: str,
-                 output_var_name: str,
                  sigma: float,
                  reference_importer: str,
                  cost_variables: list,
+                 cost_coeff_values: CostCoeffs,
+                 expend_var_name: str = None,
+                 output_var_name: str = None,
                  mc_variables: list = None,
-                 results_key: str = &#39;all&#39;,
-                 seed: int = 0):
+                 seed: int = 0,
+                 allow_singular_covar:bool = False):
         &#39;&#39;&#39;
         Define a Monte Carlo GE model.
         Args:
-            estimation_model (gme.EstimationModel): A GME EstimationModel that must have been estimated with the option
-                full_results = True (MonteCarlo simulation requires additional info from estimation compared to
-                OneSectorGE).
+            baseline (BaselineData): Baseline data defined using the gegravity BaselineData class structure.
             year (str): The year to be used for the baseline model. Works best if estimation_model year column has been
                 cast as string.
             trials (int): The number of trial simulations to conduct.
@@ -680,16 +959,18 @@ ResultsLabels for description of results.</dd>
                 experiment. Coefficients for the variables in this list are randomly drawn based on their estimated mean
                  and variance/covariance. Those excluded use their gravity estimated values only. By default, the model
                 uses all cost variables (or those supplied to cost_variables argument) are
-            results_key (str): (optional) If using parameter estimates from estimation_model, this is the key (i.e.
-                sector) corresponding to the estimates to be used. For single sector estimations (sector_by_sector =
-                False in GME model), this key is &#39;all&#39;, which is the default.
+            cost_coeff_values (CostCoeffs): (optional) A set of parameter values or estimates to use for constructing
+                trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
+                gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             seed (int): (optional) The seed to use for the random draws of cost coefficients in order to provide
                 unchanging, consistent draws across runs. By default, the seed is randomly determined each time the
                 model is constructed.
+            allow_singular_covar (bool): If true, allow the covariance matrix to be singular when drawing coefficient
+                values from multivariate normal distribution. Default is False.
 
         Attributes:
             baseline_data (pandas.DataFrame): Baseline data supplied to model in gme.EstimationModel.
-            coeff_sample (Pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
+            coeff_sample (pandas.DataFrame): The randomly drawn sample of cost coefficients for each cost variable. Each
                 column corresponds to a different trial.
             main_coeffs (pandas.Series): The main coefficient estimates for the cost varaibles supplied to the model.
             main_stderrs (pandas.Series): The standard errors for the main cost coefficients.
@@ -713,6 +994,8 @@ ResultsLabels for description of results.</dd>
             factory_gate_prices (Pandas.DataFrame): Factory gate prices summarized across all trials. See OneSectorGE
                 ResultsLabels for description of results.
             num_failed_trials (int): The number of trials for which the model failed to solve.
+            replacement_sample (Padas.DataFrame): If run_trials options set to True, the vectors of additional parameter
+                values are stored in this attribute.
             outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values summarized
                 across all trials. See OneSectorGE ResultsLabels for description of results.
             solver_diagnostics (dict): A dictionary containing diagnostic information for each individual trial. The
@@ -742,16 +1025,52 @@ ResultsLabels for description of results.</dd>
             all_outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values for each
                 individual trial. Columns are multi-indexed by the trial number and type of result. See OneSectorGE
                 ResultsLabels for description of results.
+            trial_models (gegravity.OneSectorGE): A list of OneSectorGE models corresponding to each trial.
+
+        Examples:
+
+            Create a MonteCarloGE model instance using BaselineData and CostCoeff instances (see respective APIs). Model
+            will solve 10 randomly drawn trials.
+            &gt;&gt;&gt; baseline = ge.BaselineData(...)
+            &gt;&gt;&gt; cost_params = ge.CostCoeffs(...)
+            &gt;&gt;&gt; mc_model = ge.MonteCarloGE(
+            ...            baseline,
+            ...            year = &#39;2006&#39;,
+            ...            trials = 10,
+            ...            reference_importer=&#39;DEU&#39;,
+            ...            sigma=7,
+            ...            cost_variables=[&#39;lndist&#39;, &#39;contiguity&#39;, &#39;common_language&#39;, &#39;pta&#39;, &#39;international&#39;, &#39;constant&#39;],
+            ...            cost_coeff_values=cost_params,
+            ...            seed = 1)
         &#39;&#39;&#39;
 
 
         # Store some inputs in model object
-        self._estimation_model = estimation_model
-        self.meta_data = _GEMetaData(estimation_model.estimation_data.meta_data, expend_var_name, output_var_name)
+        self._baseline = baseline
+
+        # Determine whether to use expend_var_name and/or output_var_name from MonteCarlo inputs or Baseline meta data.
+        # If both are supplied, the values given in MonteCarlo definition are used.
+        if expend_var_name != None:
+            use_expend_var_name = expend_var_name
+        else:
+            use_expend_var_name = self._baseline.meta_data.expend_var_name
+        if output_var_name != None:
+            use_output_var_name = output_var_name
+        else:
+            use_output_var_name = self._baseline.meta_data.output_var_name
+        if use_output_var_name is None:
+            raise ValueError(&#34;Must supply a variable name for the column containing output values.&#34;)
+        if use_expend_var_name is None:
+            raise ValueError(&#34;Must supply a variable name for the column containing output values.&#34;)
+
+
+        self.meta_data = _GEMetaData(baseline.meta_data, use_expend_var_name, use_output_var_name)
         self._year = str(year)
         self.sigma = sigma
         self._reference_importer = reference_importer
         self._cost_variables = cost_variables
+        self._cost_coeffs = cost_coeff_values
+        self._allow_singular = allow_singular_covar
         if mc_variables is None:
             self._mc_variables = self._cost_variables
         else:
@@ -760,11 +1079,11 @@ ResultsLabels for description of results.</dd>
             self._seed = np.random.randint(0,10000)
         else:
             self._seed = seed
-        self._results_key = results_key
 
         # Define Parameter values
-        self.main_coeffs = self._estimation_model.results_dict[self._results_key].params
-        self.main_stderrs = self._estimation_model.results_dict[self._results_key].bse
+        self.main_coeffs = self._cost_coeffs.params
+        self.main_stderrs = self._cost_coeffs.bse
+        self.main_covar_mat = self._cost_coeffs.covar
         self.trials = trials
 
         # Generate Sampling Distribution
@@ -774,6 +1093,7 @@ ResultsLabels for description of results.</dd>
         # Define Results attributes
         ##
         self.num_failed_trials = None
+        self.replacement_sample = None
         self.all_country_results = None
         self.country_results = None
         self.all_country_mr_terms = None
@@ -789,18 +1109,19 @@ ResultsLabels for description of results.</dd>
         self.all_bilateral_costs = None
         self.bilateral_costs = None
         self.solver_diagnostics = None
+        self.trial_models = None
 
 
         # prep baseline data
-        _baseline_data = self._estimation_model.estimation_data.data_frame.copy()
+        _baseline_data = self._baseline.baseline_data.copy()
         _baseline_data[self.meta_data.year_var_name] = _baseline_data[self.meta_data.year_var_name].astype(str)
         self.baseline_data = _baseline_data.loc[_baseline_data[self.meta_data.year_var_name] == self._year, :].copy()
         if self.baseline_data.shape[0] == 0:
             raise ValueError(&#34;There are no observations corresponding to the supplied &#39;year&#39;&#34;)
 
-        # Create summary of sample distrbution
+        # Create summary of sample distribution
         sample_stats = self.coeff_sample.copy()
-        sample_stats.set_index(&#39;index&#39;, inplace= True)
+        sample_stats.set_index(self._cost_coeffs._identifier_col, inplace= True)
         sample_stats = sample_stats.T.describe().T
 
         # sample_stats = self.coeff_sample.T.describe().T
@@ -819,19 +1140,17 @@ ResultsLabels for description of results.</dd>
         Returns: A dataframe of random draws of coefficients. Rows are cost variables from self._mc_variables, columns
             are different draws with the exception of a column with corresponding cost variable names (&#39;index&#39;)
         &#39;&#39;&#39;
+        print(&#39;Deriving sample of cost parameters...&#39;)
         # Get results and check that all needed info is available (i.e. covariance matrix in estimation model)
-        est_results = self._estimation_model.results_dict[self._results_key]
-        if not isinstance(est_results,GLMResultsWrapper):
-            raise TypeError(&#39;MonteCarloGE requires that gme.EstimationModel be estimated with option full_results=True&#39;)
-        betas = est_results.params.values
-
-        cov = self._estimation_model.results_dict[self._results_key].cov_params()
-        distribution_alt = multivariate_normal(betas, cov, seed=self._seed)
+        betas = self.main_coeffs
+        cov = self.main_covar_mat
+        # Define distribution of beta parameters
+        distribution_alt = multivariate_normal(betas, cov, seed=self._seed, allow_singular=self._allow_singular)
         draws = list()
         for i in range(self.trials):
             draws.append(pd.Series(distribution_alt.rvs()))
         all_draws = pd.concat(draws, axis=1)
-        all_draws.index = est_results.params.index
+        all_draws.index = betas.index
         all_draws = all_draws.loc[self._mc_variables,:]
         return all_draws.reset_index()
 
@@ -848,7 +1167,9 @@ ResultsLabels for description of results.</dd>
                    ge_max_iter: int = 1000,
                    quiet: bool = False,
                    result_stats:list = [&#39;mean&#39;, &#39;std&#39;, &#39;sem&#39;],
-                   all_results:bool = False):
+                   all_results:bool = False,
+                   redraw_failed_trials: bool = False,
+                   trial_omr_rescale: dict = None):
         &#39;&#39;&#39;
         Conduct Monte Carlo Simulation of OneSectorGE gravity model.
         Args:
@@ -857,10 +1178,10 @@ ResultsLabels for description of results.</dd>
                 (MonteCarloGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
             omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
                 are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
-                different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
-                (10^0). However, users should be careful with this choice as results, even when convergent, may not be
-                fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
-                feasible values for a given model.
+                different order of magnitude can help. Values should be of the form 10^n for positive or negative
+                integer n. By default, this value is 1 (10^0). However, users should be careful with this choice as
+                results, even when convergent, may not be fully robust to any selection. The method
+                MonteCarlo.check_omr_rescale() can help identify and compare feasible values for a given model.
             imr_rescale (int): (optional) This value rescales the IMR values to potentially aid in conversion. However,
                 because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
                 because changing the default value, which is 1.
@@ -886,45 +1207,138 @@ ResultsLabels for description of results.</dd>
                 pandas.DataFrame.agg() function.
             all_results (bool): If true, MonteCarloGE attributes containing individual results for all trials are
                 populated. Default is False to reduce memory use.
-
+            redraw_failed_trials (bool): If True, draw additional trials to replace failed trials. Additional trials
+                will be run until enough have succeeded to match the number that originally failed (up to a maximum of
+                the number of trials originally specified). This helps insure that the model is solved for as many
+                trials as were specified. E.g. If 10 trials are specified and 2 fail to solve, additional trials will be
+                attempted with additional random draws until 2 additional models have been solved successfully, resulting
+                in 10 successful trials, or 10 additional trails are run without 2 successes.
+            trial_omr_rescale (dict): (option) An option to provide alternative OMR rescale factors for specific trials.
+                The argument should be a dictionary keyed with the trial number (0 to N-1) and value equal to the
+                desired rescale factor (10^n) with n a positive or negative integer (e.g. {0:0.001, 3:10} Any trial not
+                specified here will be run using the value specified by the omr_rescale argument (default of 1).
         Returns:
             None: No return but populates many results attributes of the MonteCarloGE model.
 
+        Examples:
+             Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
+             &#39;counterfactual_dataframe&#39; is a counterfactual version of the baseline data to use for the experiment.
+            &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1)
+            * Simulating trial 0 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            * Simulating trial 1 *
+            Solving for baseline MRs...
+            The solution converged.
+            Solving for conditional MRs...
+            The solution converged.
+            Solving full GE model...
+            The solution converged.
+            (truncated...)
+
+            Return all info about each trial, not just summary info across trials
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1,
+            ...                        all_results=True)
+
+            Specify alternative OMR rescale factors for trials 2 and 3, while using the value of 1 for all other trials.
+            &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+            ...                        omr_rescale = 1,
+            ...                        trail_rescale_factors = {2:0.001, 3:100})
+
+             Draw additional random cost values to replace trials that failed to solve
+             &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+             ...                        omr_rescale = 1,
+             ...                        redraw_failed_trials=True)
         &#39;&#39;&#39;
         models = list()
+        failed_trials = list()
         num_failed_iterations = 0
         for trial in range(self.trials):
-            print(&#34;\n* Simulating trial {} *&#34;.format(trial))
-            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=&#39;index&#39;)
+            if not quiet:
+                print(&#34;\n* Simulating trial {} *&#34;.format(trial))
+            # Define a new CostCoeff instance using one of the trial values
+            param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
             try:
-                trial_model = OneSectorGE(self._estimation_model,
-                                          year=self._year,
-                                          reference_importer=self._reference_importer,
-                                          expend_var_name=self.meta_data.expend_var_name,
-                                          output_var_name=self.meta_data.output_var_name,
-                                          sigma=self.sigma,
-                                          results_key=self._results_key,
-                                          cost_variables=self._cost_variables,
-                                          cost_coeff_values=param_values,
-                                          # approach = approach,
-                                          quiet = quiet)
-                trial_model.build_baseline(omr_rescale=omr_rescale,
-                                           imr_rescale=imr_rescale,
-                                           mr_method=mr_method,
-                                           mr_max_iter=mr_max_iter,
-                                           mr_tolerance=mr_tolerance)
-                trial_model.define_experiment(experiment_data)
-                trial_model.simulate(ge_method=ge_method,
-                                     ge_tolerance=ge_tolerance,
-                                     ge_max_iter=ge_max_iter)
+                if (trial_omr_rescale is not None) and (trial in trial_omr_rescale):
+                    # Use alternative omr if supplied
+                    omr_rescale_use = trial_omr_rescale[trial]
+                else:
+                    omr_rescale_use = omr_rescale
+
+                trial_model = self._run_single_trial(param_values=param_values, experiment_data=experiment_data,
+                                                     quiet = quiet, omr_rescale = omr_rescale_use,
+                                                     imr_rescale = imr_rescale, mr_method = mr_method,
+                                                     mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                     ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                     ge_max_iter = ge_max_iter)
                 models.append(trial_model)
             except:
-                print(&#34;Failed to solve model.\n&#34;)
+                if not quiet:
+                    print(&#34;Failed to solve model.\n&#34;)
                 num_failed_iterations+=1
+                failed_trials.append(trial)
+        self.num_failed_trials = num_failed_iterations
+
+        # For failed trails, redraw new estimates and solve new models for each failed trial
+        if redraw_failed_trials:
+            # Define distribution of beta parameters to draw new values from (sets new seed to draw from)
+            new_dist = multivariate_normal(self.main_coeffs, self.main_covar_mat, seed=(1 + self._seed),
+                                           allow_singular=self._allow_singular)
+            # Create lists/variables to track successes/failures
+            new_draws = list()
+            new_successes = 0
+            new_failures = 0
+            tries = 0
+            max_retries = self.trials
+            while new_successes &lt; self.num_failed_trials and tries &lt;= max_retries:
+                # Tick up try counter and created column name for random draw
+
+                try_num = self.trials+tries
+                # Create and format coefficient draw
+                new_draw = pd.DataFrame(new_dist.rvs())
+                new_draw.index = self.main_coeffs.index
+                new_draw.rename(columns={0: str(try_num)}, inplace=True)
+                new_draws.append(new_draw.copy())
+                new_draw.reset_index(inplace = True)
+                new_params = CostCoeffs(new_draw, coeff_col=str(try_num), identifier_col=self._cost_coeffs._identifier_col)
+
+                if not quiet:
+                    print(&#34;\n* Simulating failed trial replacement {} *&#34;.format(try_num))
+                try:
+                    new_trial_model = self._run_single_trial(param_values=new_params, experiment_data=experiment_data,
+                                                             quiet = quiet, omr_rescale = omr_rescale,
+                                                             imr_rescale = imr_rescale, mr_method = mr_method,
+                                                             mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                             ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                             ge_max_iter = ge_max_iter)
+                    models.append(new_trial_model)
+                    new_successes+=1
+                except:
+                    if not quiet:
+                        print(&#34;Failed to solve redrawn replacement model.\n&#34;)
+                    new_failures += 1
+                    failed_trials.append(try_num)
+
+                tries += 1
+            if len(new_draws)&gt;0:
+                self.replacement_sample = pd.concat(new_draws, axis=1)
+            else:
+                self.replacement_sample = new_draws
+
+
 
         # Get results labels from one of the OneSectorGE gegravity
         self.labels = models[0].labels
-        self.num_failed_trials = num_failed_iterations
+        if all_results:
+            self.trial_models = models
+        self.failed_trials = failed_trials
         self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;, result_stats, all_results)
         self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;, result_stats, all_results)
         self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, &#39;outputs_expenditures&#39;, result_stats, all_results)
@@ -934,6 +1348,39 @@ ResultsLabels for description of results.</dd>
         self.all_bilateral_costs, self.bilateral_costs = self._compile_results(models, &#39;bilateral_costs&#39;, result_stats, all_results)
         self._compile_diagnostics(models)
         # ToDo: build some method for confidence intervals from Anderson Yotov (2016)
+
+
+
+    def _run_single_trial(self, param_values: CostCoeffs, experiment_data, quiet, omr_rescale, imr_rescale, mr_method,
+                          mr_max_iter, mr_tolerance, ge_method, ge_tolerance, ge_max_iter):
+        &#39;&#39;&#39;
+        Create and solve a single OneSectorGE model using given inputs. Inputs the same as OneSectorGE.
+        Args:
+            See arguments for OneSectorGE.
+
+        Returns:
+            Solved OneSectorGE model instance
+        &#39;&#39;&#39;
+        trial_model = OneSectorGE(self._baseline,
+                                  year=self._year,
+                                  reference_importer=self._reference_importer,
+                                  expend_var_name=self.meta_data.expend_var_name,
+                                  output_var_name=self.meta_data.output_var_name,
+                                  sigma=self.sigma,
+                                  cost_variables=self._cost_variables,
+                                  cost_coeff_values=param_values,
+                                  quiet=quiet)
+        trial_model.build_baseline(omr_rescale=omr_rescale,
+                                           imr_rescale=imr_rescale,
+                                           mr_method=mr_method,
+                                           mr_max_iter=mr_max_iter,
+                                           mr_tolerance=mr_tolerance)
+        trial_model.define_experiment(experiment_data)
+        trial_model.simulate(ge_method=ge_method,
+                                     ge_tolerance=ge_tolerance,
+                                     ge_max_iter=ge_max_iter)
+        return trial_model
+
 
 
     def _compile_results(self, models, result_type, result_stats, all_results):
@@ -980,10 +1427,10 @@ ResultsLabels for description of results.</dd>
         summary_results = combined_results.copy()
         if result_type in [&#39;bilateral_trade&#39;,&#39;bilateral_costs&#39;]:
             # Bilateral trade has a two-part index (exporter and importer) and must be treated separately.
-            summary_results = summary_results.stack(0).reset_index(level=2)
+            summary_results = summary_results.stack(0, future_stack=True).reset_index(level=2)
             summary_results.rename(columns={&#39;level_2&#39;: &#39;trial&#39;}, inplace=True)
         else:
-            summary_results = summary_results.stack(0).reset_index(level=1)
+            summary_results = summary_results.stack(0, future_stack=True).reset_index(level=1)
             summary_results.rename(columns={&#39;level_1&#39;: &#39;trial&#39;}, inplace=True)
 
         # Compute mean and std across trials
@@ -1002,10 +1449,10 @@ ResultsLabels for description of results.</dd>
         #     if col[1] == &#39;std&#39;:
         #         summary_results[(col[0], &#39;stderr&#39;)] = summary_results[col] / (self.trials ** 0.5)
         if result_type in [&#39;bilateral_trade&#39;,&#39;bilateral_costs&#39;]:
-            summary_results = summary_results.stack(level=1).reset_index(level=2)
+            summary_results = summary_results.stack(level=1, future_stack=True).reset_index(level=2)
             summary_results.rename(columns = {&#39;level_2&#39;:&#39;statistic&#39;},inplace = True)
         else:
-            summary_results = summary_results.stack(level=1).reset_index(level=1)
+            summary_results = summary_results.stack(level=1, future_stack=True).reset_index(level=1)
             summary_results.rename(columns = {&#39;level_1&#39;:&#39;statistic&#39;},inplace = True)
         if all_results:
             return combined_results, summary_results
@@ -1022,12 +1469,13 @@ ResultsLabels for description of results.</dd>
 
         &#39;&#39;&#39;
         combined_diagnostics = dict()
-        for trial in range(self.trials):
+        for trial in range(len(models)):
             combined_diagnostics[trial] = models[trial].solver_diagnostics
         self.solver_diagnostics = combined_diagnostics
 
     def export_results(self, directory:str = None, name:str = &#39;&#39;,
-                       country_names:DataFrame = None, all_results = False):
+                       country_names:DataFrame = None, country:bool = True, bilateral:bool = True,
+                       diagnostics:bool = True):
         &#39;&#39;&#39;
         Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
         and (3) solver diagnostics.
@@ -1043,6 +1491,12 @@ ResultsLabels for description of results.</dd>
                 results tables. The supplied DataFrame should include exactly two columns. The first column must be
                 the country identifiers used in the model. The second column must be the alternative identifiers to
                 add.
+            country (boolean): (optional) If True, export country-level results to csv. If False, skip these results.
+                Default is True.
+            bilateral (boolean): (optional) If True, export bilateral results to csv. If False, skip these results.
+                Default is True.
+            diagnostics (boolean): (optional) If True, export diagnostic information to csv. If False, skip these
+                results. Default is True.
 
         Returns:
             None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
@@ -1050,7 +1504,12 @@ ResultsLabels for description of results.</dd>
                 DataFrames.
 
         Examples:
+            Export all three results files with the file prefix &#34;example_monte_carlo_results&#34;
+            &gt;&gt;&gt; mc_model.export_results(directory=&#34;C:\simulation_results\&#34;, name = &#34;example_monte_carlo_results&#34;)
 
+            Export only the country level results (i.e. do not export the bilateral and diagnostic results)
+            &gt;&gt;&gt; mc_model.export_results(directory=&#34;C:\simulation_results\&#34;, name = &#34;example_monte_carlo_results&#34;,
+            ...                         bilateral = False, diagnostics = False)
 
         &#39;&#39;&#39;
 
@@ -1088,8 +1547,8 @@ ResultsLabels for description of results.</dd>
 
         # Create Dataframe with Diagnostic results
         column_list = list()
-        diagnostics = self.solver_diagnostics
-        for trial_num, trial in diagnostics.items():
+        diagnostic_info = self.solver_diagnostics
+        for trial_num, trial in diagnostic_info.items():
             for results_type, results in trial.items():
                 for key, value in results.items():
                     # Single Entry fields must be converted to list before creating DataFrame
@@ -1104,16 +1563,232 @@ ResultsLabels for description of results.</dd>
         diag_frame = diag_frame.fillna(&#39;&#39;)
 
         if directory is not None:
-            country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
-            bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
-            diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
+            if country:
+                country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
+            if bilateral:
+                bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
+            if diagnostics:
+                diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
         else:
-            return country_results, bilateral_results, diag_frame</code></pre>
+            return country_results, bilateral_results, diag_frame
+
+    def check_omr_rescale(self,
+                          omr_rescale_range: int = 10,
+                          trials: List[int] = None,
+                          mr_method: str = &#39;hybr&#39;,
+                          mr_max_iter: int = 1400,
+                          mr_tolerance: float = 1e-8,
+                          countries: List[str] = []):
+        &#39;&#39;&#39;
+        Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
+            feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
+        Args:
+            omr_rescale_range (int): This parameter allows you to set the scope of the values tested. For example,
+                if omr_rescale_range = 3, the model will check for convergence using omr_rescale values from the set
+                [10^-3, 10^-2, 10^-1, 10^0, ..., 10^3]. The default value is 10.
+            trials (List[int]): (optional) A list of trials by number (0 to (N-1)) corresponding to columns of the
+                derived coefficient sample (MonteCarloGE.coeff_sample) for which to analyze OMR terms. If no input is
+                provided, all trials are considered.
+            mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
+                experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+                value is &#39;hybr&#39;.
+            mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
+                by the solver used to solve for MR terms. The default value is 1400.
+            mr_tolerance (float): (optional) This parameter sets the convergence tolerance level for the solver used to
+                solve for MR terms. The default value is 1e-8.
+            countries (List[str]):  A list of countries for which to return the estimated OMR values for user
+                evaluation.
+        Returns:
+            pandas.DataFrame: A dataframe of diagnostic information for users to compare different omr_rescale factors.
+                The returned dataframe contains the following columns:\n
+                &#39;trial&#39;: The trial number corresponding to the sample parameters for which the test was run.
+                &#39;omr_rescale&#39;: The rescale factor used\n
+                &#39;omr_rescale (alt format)&#39;: A string representation of the rescale factor as an exponential expression.\n
+                &#39;solved&#39;: If True, the MR model solved successfully. If False, it did not solve.\n
+                &#39;message&#39;: Description of the outcome of the solver.\n
+                &#39;..._func_value&#39;: Three columns reflecting the maximum, mean, and median values from the solver
+                    objective functions. Function values closer to zero imply a better solution to system of equations.
+                &#39;reference_importer_omr&#39;: The solution value for the reference importer&#39;s OMR value.\n
+                &#39;..._omr&#39;: The solution value(s) for the user supplied countries.
+
+        Examples:
+            Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
+            &gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+
+            Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
+            &gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
+        &#39;&#39;&#39;
+
+        # Check trials argument if provided
+        if trials is None:
+            trials_list = range(self.trials)
+        else:
+            if not isinstance(trials, list):
+                raise ValueError(&#34;trials argument must be a list of integer values&#34;)
+            else:
+                trials_list = trials
+
+        all_outputs = list()
+        for trial in trials_list:
+            print(&#34;\n* Checking trial {} *&#34;.format(trial))
+            trial_params = self.coeff_sample[[self._cost_coeffs._identifier_col ,trial]]
+            trial_params_obj = CostCoeffs(trial_params, identifier_col=self._cost_coeffs._identifier_col,
+                                          coeff_col=trial)
+
+            omr_test_gemodel = OneSectorGE(self._baseline, year=self._year, reference_importer=self._reference_importer,
+                                    output_var_name=self.meta_data.output_var_name,
+                                    expend_var_name=self.meta_data.expend_var_name, sigma=self.sigma,
+                                    cost_variables=self._cost_variables,
+                                    cost_coeff_values=trial_params_obj)
+            omr_checks = omr_test_gemodel.check_omr_rescale(omr_rescale_range, mr_method = mr_method,
+                                                            mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                            countries = countries)
+            # Add column with trial number to the *beginning* of dataframe
+            omr_checks.insert(loc=0, column = &#39;trail&#39;, value = trial)
+            all_outputs.append(omr_checks)
+        omr_outcomes = pd.concat(all_outputs, axis = 0)
+        return omr_outcomes</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
+<dt id="gegravity.MonteCarloGE.MonteCarloGE.check_omr_rescale"><code class="name flex">
+<span>def <span class="ident">check_omr_rescale</span></span>(<span>self, omr_rescale_range: int = 10, trials: List[int] = None, mr_method: str = 'hybr', mr_max_iter: int = 1400, mr_tolerance: float = 1e-08, countries: List[str] = [])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
+feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>omr_rescale_range</code></strong> :&ensp;<code>int</code></dt>
+<dd>This parameter allows you to set the scope of the values tested. For example,
+if omr_rescale_range = 3, the model will check for convergence using omr_rescale values from the set
+[10^-3, 10^-2, 10^-1, 10^0, &hellip;, 10^3]. The default value is 10.</dd>
+<dt><strong><code>trials</code></strong> :&ensp;<code>List[int]</code></dt>
+<dd>(optional) A list of trials by number (0 to (N-1)) corresponding to columns of the
+derived coefficient sample (MonteCarloGE.coeff_sample) for which to analyze OMR terms. If no input is
+provided, all trials are considered.</dd>
+<dt><strong><code>mr_method</code></strong> :&ensp;<code>str</code></dt>
+<dd>This parameter determines the type of non-linear solver used for solving the baseline and
+experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+value is 'hybr'.</dd>
+<dt><strong><code>mr_max_iter</code></strong> :&ensp;<code>int</code></dt>
+<dd>(optional) This parameter sets the maximum limit on the number of iterations conducted
+by the solver used to solve for MR terms. The default value is 1400.</dd>
+<dt><strong><code>mr_tolerance</code></strong> :&ensp;<code>float</code></dt>
+<dd>(optional) This parameter sets the convergence tolerance level for the solver used to
+solve for MR terms. The default value is 1e-8.</dd>
+<dt><strong><code>countries</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>A list of countries for which to return the estimated OMR values for user
+evaluation.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>pandas.DataFrame</code></dt>
+<dd>
+<p>A dataframe of diagnostic information for users to compare different omr_rescale factors.
+The returned dataframe contains the following columns:</p>
+<p>'trial': The trial number corresponding to the sample parameters for which the test was run.
+'omr_rescale': The rescale factor used</p>
+<p>'omr_rescale (alt format)': A string representation of the rescale factor as an exponential expression.</p>
+<p>'solved': If True, the MR model solved successfully. If False, it did not solve.</p>
+<p>'message': Description of the outcome of the solver.</p>
+<p>'&hellip;_func_value': Three columns reflecting the maximum, mean, and median values from the solver
+objective functions. Function values closer to zero imply a better solution to system of equations.
+'reference_importer_omr': The solution value for the reference importer's OMR value.</p>
+<p>'&hellip;_omr': The solution value(s) for the user supplied countries.</p>
+</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<p>Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+</code></pre>
+<p>Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def check_omr_rescale(self,
+                      omr_rescale_range: int = 10,
+                      trials: List[int] = None,
+                      mr_method: str = &#39;hybr&#39;,
+                      mr_max_iter: int = 1400,
+                      mr_tolerance: float = 1e-8,
+                      countries: List[str] = []):
+    &#39;&#39;&#39;
+    Analyze different Outward Multilarteral Resistance (OMR) term rescale factors. This method can help identify
+        feasible values to use for the omr_rescale argument in OneSectorGE.build_baseline().
+    Args:
+        omr_rescale_range (int): This parameter allows you to set the scope of the values tested. For example,
+            if omr_rescale_range = 3, the model will check for convergence using omr_rescale values from the set
+            [10^-3, 10^-2, 10^-1, 10^0, ..., 10^3]. The default value is 10.
+        trials (List[int]): (optional) A list of trials by number (0 to (N-1)) corresponding to columns of the
+            derived coefficient sample (MonteCarloGE.coeff_sample) for which to analyze OMR terms. If no input is
+            provided, all trials are considered.
+        mr_method (str): This parameter determines the type of non-linear solver used for solving the baseline and
+            experiment MR terms. See the documentation for scipy.optimize.root for alternative methods. the default
+            value is &#39;hybr&#39;.
+        mr_max_iter (int): (optional) This parameter sets the maximum limit on the number of iterations conducted
+            by the solver used to solve for MR terms. The default value is 1400.
+        mr_tolerance (float): (optional) This parameter sets the convergence tolerance level for the solver used to
+            solve for MR terms. The default value is 1e-8.
+        countries (List[str]):  A list of countries for which to return the estimated OMR values for user
+            evaluation.
+    Returns:
+        pandas.DataFrame: A dataframe of diagnostic information for users to compare different omr_rescale factors.
+            The returned dataframe contains the following columns:\n
+            &#39;trial&#39;: The trial number corresponding to the sample parameters for which the test was run.
+            &#39;omr_rescale&#39;: The rescale factor used\n
+            &#39;omr_rescale (alt format)&#39;: A string representation of the rescale factor as an exponential expression.\n
+            &#39;solved&#39;: If True, the MR model solved successfully. If False, it did not solve.\n
+            &#39;message&#39;: Description of the outcome of the solver.\n
+            &#39;..._func_value&#39;: Three columns reflecting the maximum, mean, and median values from the solver
+                objective functions. Function values closer to zero imply a better solution to system of equations.
+            &#39;reference_importer_omr&#39;: The solution value for the reference importer&#39;s OMR value.\n
+            &#39;..._omr&#39;: The solution value(s) for the user supplied countries.
+
+    Examples:
+        Check for potential OMR rescale factors for all trials within a range of 10^-10 to 10^10.
+        &gt;&gt;&gt; omr_all_trials = mc_model.check_omr_rescale(omr_rescale_range=10)
+
+        Check for potential OMR rescale factors for trials 1, 2, 8, and 9 within a range of 10^-3 to 10^3.
+        &gt;&gt;&gt; omr_trial_subset = mc_model.check_omr_rescale(omr_rescale_range=3, trials = [1, 2, 8, 9])
+    &#39;&#39;&#39;
+
+    # Check trials argument if provided
+    if trials is None:
+        trials_list = range(self.trials)
+    else:
+        if not isinstance(trials, list):
+            raise ValueError(&#34;trials argument must be a list of integer values&#34;)
+        else:
+            trials_list = trials
+
+    all_outputs = list()
+    for trial in trials_list:
+        print(&#34;\n* Checking trial {} *&#34;.format(trial))
+        trial_params = self.coeff_sample[[self._cost_coeffs._identifier_col ,trial]]
+        trial_params_obj = CostCoeffs(trial_params, identifier_col=self._cost_coeffs._identifier_col,
+                                      coeff_col=trial)
+
+        omr_test_gemodel = OneSectorGE(self._baseline, year=self._year, reference_importer=self._reference_importer,
+                                output_var_name=self.meta_data.output_var_name,
+                                expend_var_name=self.meta_data.expend_var_name, sigma=self.sigma,
+                                cost_variables=self._cost_variables,
+                                cost_coeff_values=trial_params_obj)
+        omr_checks = omr_test_gemodel.check_omr_rescale(omr_rescale_range, mr_method = mr_method,
+                                                        mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                        countries = countries)
+        # Add column with trial number to the *beginning* of dataframe
+        omr_checks.insert(loc=0, column = &#39;trail&#39;, value = trial)
+        all_outputs.append(omr_checks)
+    omr_outcomes = pd.concat(all_outputs, axis = 0)
+    return omr_outcomes</code></pre>
+</details>
+</dd>
 <dt id="gegravity.MonteCarloGE.MonteCarloGE.export_results"><code class="name flex">
-<span>def <span class="ident">export_results</span></span>(<span>self, directory: str = None, name: str = '', country_names: pandas.core.frame.DataFrame = None, all_results=False)</span>
+<span>def <span class="ident">export_results</span></span>(<span>self, directory: str = None, name: str = '', country_names: pandas.core.frame.DataFrame = None, country: bool = True, bilateral: bool = True, diagnostics: bool = True)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
@@ -1135,6 +1810,15 @@ method calculate_levels.</dd>
 results tables. The supplied DataFrame should include exactly two columns. The first column must be
 the country identifiers used in the model. The second column must be the alternative identifiers to
 add.</dd>
+<dt><strong><code>country</code></strong> :&ensp;<code>boolean</code></dt>
+<dd>(optional) If True, export country-level results to csv. If False, skip these results.
+Default is True.</dd>
+<dt><strong><code>bilateral</code></strong> :&ensp;<code>boolean</code></dt>
+<dd>(optional) If True, export bilateral results to csv. If False, skip these results.
+Default is True.</dd>
+<dt><strong><code>diagnostics</code></strong> :&ensp;<code>boolean</code></dt>
+<dd>(optional) If True, export diagnostic information to csv. If False, skip these
+results. Default is True.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1143,13 +1827,21 @@ add.</dd>
 nothing and writes three .csv files instead. If no directory is supplied, it returns a tuple of
 DataFrames.</dd>
 </dl>
-<p>Examples:</p></div>
+<h2 id="examples">Examples</h2>
+<p>Export all three results files with the file prefix "example_monte_carlo_results"</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; mc_model.export_results(directory=&quot;C:\simulation_results&quot;, name = &quot;example_monte_carlo_results&quot;)
+</code></pre>
+<p>Export only the country level results (i.e. do not export the bilateral and diagnostic results)</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; mc_model.export_results(directory=&quot;C:\simulation_results&quot;, name = &quot;example_monte_carlo_results&quot;,
+...                         bilateral = False, diagnostics = False)
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def export_results(self, directory:str = None, name:str = &#39;&#39;,
-                   country_names:DataFrame = None, all_results = False):
+                   country_names:DataFrame = None, country:bool = True, bilateral:bool = True,
+                   diagnostics:bool = True):
     &#39;&#39;&#39;
     Export results to csv files. Three files are stored containing (1) country-level results, (2) bilateral results,
     and (3) solver diagnostics.
@@ -1165,6 +1857,12 @@ DataFrames.</dd>
             results tables. The supplied DataFrame should include exactly two columns. The first column must be
             the country identifiers used in the model. The second column must be the alternative identifiers to
             add.
+        country (boolean): (optional) If True, export country-level results to csv. If False, skip these results.
+            Default is True.
+        bilateral (boolean): (optional) If True, export bilateral results to csv. If False, skip these results.
+            Default is True.
+        diagnostics (boolean): (optional) If True, export diagnostic information to csv. If False, skip these
+            results. Default is True.
 
     Returns:
         None or Tuple[DataFrame, DataFrame, DataFrame]: If a directory argument is supplied, the method returns
@@ -1172,7 +1870,12 @@ DataFrames.</dd>
             DataFrames.
 
     Examples:
+        Export all three results files with the file prefix &#34;example_monte_carlo_results&#34;
+        &gt;&gt;&gt; mc_model.export_results(directory=&#34;C:\simulation_results\&#34;, name = &#34;example_monte_carlo_results&#34;)
 
+        Export only the country level results (i.e. do not export the bilateral and diagnostic results)
+        &gt;&gt;&gt; mc_model.export_results(directory=&#34;C:\simulation_results\&#34;, name = &#34;example_monte_carlo_results&#34;,
+        ...                         bilateral = False, diagnostics = False)
 
     &#39;&#39;&#39;
 
@@ -1210,8 +1913,8 @@ DataFrames.</dd>
 
     # Create Dataframe with Diagnostic results
     column_list = list()
-    diagnostics = self.solver_diagnostics
-    for trial_num, trial in diagnostics.items():
+    diagnostic_info = self.solver_diagnostics
+    for trial_num, trial in diagnostic_info.items():
         for results_type, results in trial.items():
             for key, value in results.items():
                 # Single Entry fields must be converted to list before creating DataFrame
@@ -1226,15 +1929,18 @@ DataFrames.</dd>
     diag_frame = diag_frame.fillna(&#39;&#39;)
 
     if directory is not None:
-        country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
-        bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
-        diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
+        if country:
+            country_results.to_csv(&#34;{}/{}_country_results.csv&#34;.format(directory, name))
+        if bilateral:
+            bilateral_results.to_csv(&#34;{}/{}_bilateral_results.csv&#34;.format(directory, name), index=False)
+        if diagnostics:
+            diag_frame.to_csv(&#34;{}/{}_solver_diagnostics.csv&#34;.format(directory, name), index=False)
     else:
         return country_results, bilateral_results, diag_frame</code></pre>
 </details>
 </dd>
 <dt id="gegravity.MonteCarloGE.MonteCarloGE.run_trials"><code class="name flex">
-<span>def <span class="ident">run_trials</span></span>(<span>self, experiment_data: pandas.core.frame.DataFrame, omr_rescale: float = 1, imr_rescale: float = 1, mr_method: str = 'hybr', mr_max_iter: int = 1400, mr_tolerance: float = 1e-08, ge_method: str = 'hybr', ge_tolerance: float = 1e-08, ge_max_iter: int = 1000, quiet: bool = False, result_stats: list = ['mean', 'std', 'sem'], all_results: bool = False)</span>
+<span>def <span class="ident">run_trials</span></span>(<span>self, experiment_data: pandas.core.frame.DataFrame, omr_rescale: float = 1, imr_rescale: float = 1, mr_method: str = 'hybr', mr_max_iter: int = 1400, mr_tolerance: float = 1e-08, ge_method: str = 'hybr', ge_tolerance: float = 1e-08, ge_max_iter: int = 1000, quiet: bool = False, result_stats: list = ['mean', 'std', 'sem'], all_results: bool = False, redraw_failed_trials: bool = False, trial_omr_rescale: dict = None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Conduct Monte Carlo Simulation of OneSectorGE gravity model.</p>
@@ -1247,10 +1953,10 @@ experiment. The best approach for creating this data is to copy the baseline dat
 <dt><strong><code>omr_rescale</code></strong> :&ensp;<code>int</code></dt>
 <dd>(optional) This value rescales the OMR values to assist in convergence. Often, OMR values
 are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
-different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
-(10^0). However, users should be careful with this choice as results, even when convergent, may not be
-fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
-feasible values for a given model.</dd>
+different order of magnitude can help. Values should be of the form 10^n for positive or negative
+integer n. By default, this value is 1 (10^0). However, users should be careful with this choice as
+results, even when convergent, may not be fully robust to any selection. The method
+MonteCarlo.check_omr_rescale() can help identify and compare feasible values for a given model.</dd>
 <dt><strong><code>imr_rescale</code></strong> :&ensp;<code>int</code></dt>
 <dd>(optional) This value rescales the IMR values to potentially aid in conversion. However,
 because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
@@ -1286,12 +1992,68 @@ pandas.DataFrame.agg() function.</dd>
 <dt><strong><code>all_results</code></strong> :&ensp;<code>bool</code></dt>
 <dd>If true, MonteCarloGE attributes containing individual results for all trials are
 populated. Default is False to reduce memory use.</dd>
+<dt><strong><code>redraw_failed_trials</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If True, draw additional trials to replace failed trials. Additional trials
+will be run until enough have succeeded to match the number that originally failed (up to a maximum of
+the number of trials originally specified). This helps insure that the model is solved for as many
+trials as were specified. E.g. If 10 trials are specified and 2 fail to solve, additional trials will be
+attempted with additional random draws until 2 additional models have been solved successfully, resulting
+in 10 successful trials, or 10 additional trails are run without 2 successes.</dd>
+<dt><strong><code>trial_omr_rescale</code></strong> :&ensp;<code>dict</code></dt>
+<dd>(option) An option to provide alternative OMR rescale factors for specific trials.
+The argument should be a dictionary keyed with the trial number (0 to N-1) and value equal to the
+desired rescale factor (10^n) with n a positive or negative integer (e.g. {0:0.001, 3:10} Any trial not
+specified here will be run using the value specified by the omr_rescale argument (default of 1).</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>None</code></dt>
 <dd>No return but populates many results attributes of the MonteCarloGE model.</dd>
-</dl></div>
+</dl>
+<h2 id="examples">Examples</h2>
+<p>Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
+'counterfactual_dataframe' is a counterfactual version of the baseline data to use for the experiment.</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+&gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+...                        omr_rescale = 1)
+* Simulating trial 0 *
+Solving for baseline MRs...
+The solution converged.
+Solving for conditional MRs...
+The solution converged.
+Solving full GE model...
+The solution converged.
+* Simulating trial 1 *
+Solving for baseline MRs...
+The solution converged.
+Solving for conditional MRs...
+The solution converged.
+Solving full GE model...
+The solution converged.
+(truncated...)
+</code></pre>
+<p>Return all info about each trial, not just summary info across trials</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+...                        omr_rescale = 1,
+...                        all_results=True)
+</code></pre>
+<p>Specify alternative OMR rescale factors for trials 2 and 3, while using the value of 1 for all other trials.</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+...                        omr_rescale = 1,
+...                        trail_rescale_factors = {2:0.001, 3:100})
+</code></pre>
+<p>Draw additional random cost values to replace trials that failed to solve</p>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>monte_model.run_trials(experiment_data = counterfactual_dataframe,
+&hellip;
+omr_rescale = 1,
+&hellip;
+redraw_failed_trials=True)</p>
+</blockquote>
+</blockquote>
+</blockquote></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -1308,7 +2070,9 @@ populated. Default is False to reduce memory use.</dd>
                ge_max_iter: int = 1000,
                quiet: bool = False,
                result_stats:list = [&#39;mean&#39;, &#39;std&#39;, &#39;sem&#39;],
-               all_results:bool = False):
+               all_results:bool = False,
+               redraw_failed_trials: bool = False,
+               trial_omr_rescale: dict = None):
     &#39;&#39;&#39;
     Conduct Monte Carlo Simulation of OneSectorGE gravity model.
     Args:
@@ -1317,10 +2081,10 @@ populated. Default is False to reduce memory use.</dd>
             (MonteCarloGE.baseline_data.copy()) and modify columns/rows to reflect desired counterfactual experiment.
         omr_rescale (int): (optional) This value rescales the OMR values to assist in convergence. Often, OMR values
             are orders of magnitude different than IMR values, which can make convergence difficult. Scaling by a
-            different order of magnitude can help. Values should be of the form 10^n. By default, this value is 1
-            (10^0). However, users should be careful with this choice as results, even when convergent, may not be
-            fully robust to any selection. The method OneSectorGE.check_omr_rescale() can help identify and compare
-            feasible values for a given model.
+            different order of magnitude can help. Values should be of the form 10^n for positive or negative
+            integer n. By default, this value is 1 (10^0). However, users should be careful with this choice as
+            results, even when convergent, may not be fully robust to any selection. The method
+            MonteCarlo.check_omr_rescale() can help identify and compare feasible values for a given model.
         imr_rescale (int): (optional) This value rescales the IMR values to potentially aid in conversion. However,
             because the IMR for the reference importer is normalized to one, it is unlikely that there will be because
             because changing the default value, which is 1.
@@ -1346,45 +2110,138 @@ populated. Default is False to reduce memory use.</dd>
             pandas.DataFrame.agg() function.
         all_results (bool): If true, MonteCarloGE attributes containing individual results for all trials are
             populated. Default is False to reduce memory use.
-
+        redraw_failed_trials (bool): If True, draw additional trials to replace failed trials. Additional trials
+            will be run until enough have succeeded to match the number that originally failed (up to a maximum of
+            the number of trials originally specified). This helps insure that the model is solved for as many
+            trials as were specified. E.g. If 10 trials are specified and 2 fail to solve, additional trials will be
+            attempted with additional random draws until 2 additional models have been solved successfully, resulting
+            in 10 successful trials, or 10 additional trails are run without 2 successes.
+        trial_omr_rescale (dict): (option) An option to provide alternative OMR rescale factors for specific trials.
+            The argument should be a dictionary keyed with the trial number (0 to N-1) and value equal to the
+            desired rescale factor (10^n) with n a positive or negative integer (e.g. {0:0.001, 3:10} Any trial not
+            specified here will be run using the value specified by the omr_rescale argument (default of 1).
     Returns:
         None: No return but populates many results attributes of the MonteCarloGE model.
 
+    Examples:
+         Run simulations for mc_model, which is an instance of MonteCarloGE (see respective documentation).
+         &#39;counterfactual_dataframe&#39; is a counterfactual version of the baseline data to use for the experiment.
+        &gt;&gt;&gt; monte_model = ge.MonteCarloGE(...)
+        &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+        ...                        omr_rescale = 1)
+        * Simulating trial 0 *
+        Solving for baseline MRs...
+        The solution converged.
+        Solving for conditional MRs...
+        The solution converged.
+        Solving full GE model...
+        The solution converged.
+        * Simulating trial 1 *
+        Solving for baseline MRs...
+        The solution converged.
+        Solving for conditional MRs...
+        The solution converged.
+        Solving full GE model...
+        The solution converged.
+        (truncated...)
+
+        Return all info about each trial, not just summary info across trials
+        &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+        ...                        omr_rescale = 1,
+        ...                        all_results=True)
+
+        Specify alternative OMR rescale factors for trials 2 and 3, while using the value of 1 for all other trials.
+        &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+        ...                        omr_rescale = 1,
+        ...                        trail_rescale_factors = {2:0.001, 3:100})
+
+         Draw additional random cost values to replace trials that failed to solve
+         &gt;&gt;&gt; monte_model.run_trials(experiment_data = counterfactual_dataframe,
+         ...                        omr_rescale = 1,
+         ...                        redraw_failed_trials=True)
     &#39;&#39;&#39;
     models = list()
+    failed_trials = list()
     num_failed_iterations = 0
     for trial in range(self.trials):
-        print(&#34;\n* Simulating trial {} *&#34;.format(trial))
-        param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=&#39;index&#39;)
+        if not quiet:
+            print(&#34;\n* Simulating trial {} *&#34;.format(trial))
+        # Define a new CostCoeff instance using one of the trial values
+        param_values = CostCoeffs(self.coeff_sample, coeff_col=trial, identifier_col=self._cost_coeffs._identifier_col)
         try:
-            trial_model = OneSectorGE(self._estimation_model,
-                                      year=self._year,
-                                      reference_importer=self._reference_importer,
-                                      expend_var_name=self.meta_data.expend_var_name,
-                                      output_var_name=self.meta_data.output_var_name,
-                                      sigma=self.sigma,
-                                      results_key=self._results_key,
-                                      cost_variables=self._cost_variables,
-                                      cost_coeff_values=param_values,
-                                      # approach = approach,
-                                      quiet = quiet)
-            trial_model.build_baseline(omr_rescale=omr_rescale,
-                                       imr_rescale=imr_rescale,
-                                       mr_method=mr_method,
-                                       mr_max_iter=mr_max_iter,
-                                       mr_tolerance=mr_tolerance)
-            trial_model.define_experiment(experiment_data)
-            trial_model.simulate(ge_method=ge_method,
-                                 ge_tolerance=ge_tolerance,
-                                 ge_max_iter=ge_max_iter)
+            if (trial_omr_rescale is not None) and (trial in trial_omr_rescale):
+                # Use alternative omr if supplied
+                omr_rescale_use = trial_omr_rescale[trial]
+            else:
+                omr_rescale_use = omr_rescale
+
+            trial_model = self._run_single_trial(param_values=param_values, experiment_data=experiment_data,
+                                                 quiet = quiet, omr_rescale = omr_rescale_use,
+                                                 imr_rescale = imr_rescale, mr_method = mr_method,
+                                                 mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                 ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                 ge_max_iter = ge_max_iter)
             models.append(trial_model)
         except:
-            print(&#34;Failed to solve model.\n&#34;)
+            if not quiet:
+                print(&#34;Failed to solve model.\n&#34;)
             num_failed_iterations+=1
+            failed_trials.append(trial)
+    self.num_failed_trials = num_failed_iterations
+
+    # For failed trails, redraw new estimates and solve new models for each failed trial
+    if redraw_failed_trials:
+        # Define distribution of beta parameters to draw new values from (sets new seed to draw from)
+        new_dist = multivariate_normal(self.main_coeffs, self.main_covar_mat, seed=(1 + self._seed),
+                                       allow_singular=self._allow_singular)
+        # Create lists/variables to track successes/failures
+        new_draws = list()
+        new_successes = 0
+        new_failures = 0
+        tries = 0
+        max_retries = self.trials
+        while new_successes &lt; self.num_failed_trials and tries &lt;= max_retries:
+            # Tick up try counter and created column name for random draw
+
+            try_num = self.trials+tries
+            # Create and format coefficient draw
+            new_draw = pd.DataFrame(new_dist.rvs())
+            new_draw.index = self.main_coeffs.index
+            new_draw.rename(columns={0: str(try_num)}, inplace=True)
+            new_draws.append(new_draw.copy())
+            new_draw.reset_index(inplace = True)
+            new_params = CostCoeffs(new_draw, coeff_col=str(try_num), identifier_col=self._cost_coeffs._identifier_col)
+
+            if not quiet:
+                print(&#34;\n* Simulating failed trial replacement {} *&#34;.format(try_num))
+            try:
+                new_trial_model = self._run_single_trial(param_values=new_params, experiment_data=experiment_data,
+                                                         quiet = quiet, omr_rescale = omr_rescale,
+                                                         imr_rescale = imr_rescale, mr_method = mr_method,
+                                                         mr_max_iter = mr_max_iter, mr_tolerance = mr_tolerance,
+                                                         ge_method = ge_method, ge_tolerance = ge_tolerance,
+                                                         ge_max_iter = ge_max_iter)
+                models.append(new_trial_model)
+                new_successes+=1
+            except:
+                if not quiet:
+                    print(&#34;Failed to solve redrawn replacement model.\n&#34;)
+                new_failures += 1
+                failed_trials.append(try_num)
+
+            tries += 1
+        if len(new_draws)&gt;0:
+            self.replacement_sample = pd.concat(new_draws, axis=1)
+        else:
+            self.replacement_sample = new_draws
+
+
 
     # Get results labels from one of the OneSectorGE gegravity
     self.labels = models[0].labels
-    self.num_failed_trials = num_failed_iterations
+    if all_results:
+        self.trial_models = models
+    self.failed_trials = failed_trials
     self.all_country_results, self.country_results = self._compile_results(models, &#39;country_results&#39;, result_stats, all_results)
     self.all_country_mr_terms, self.country_mr_terms = self._compile_results(models, &#39;mr_terms&#39;, result_stats, all_results)
     self.all_outputs_expenditures, self.outputs_expenditures = self._compile_results(models, &#39;outputs_expenditures&#39;, result_stats, all_results)
@@ -1417,6 +2274,7 @@ populated. Default is False to reduce memory use.</dd>
 <li>
 <h4><code><a title="gegravity.MonteCarloGE.MonteCarloGE" href="#gegravity.MonteCarloGE.MonteCarloGE">MonteCarloGE</a></code></h4>
 <ul class="">
+<li><code><a title="gegravity.MonteCarloGE.MonteCarloGE.check_omr_rescale" href="#gegravity.MonteCarloGE.MonteCarloGE.check_omr_rescale">check_omr_rescale</a></code></li>
 <li><code><a title="gegravity.MonteCarloGE.MonteCarloGE.export_results" href="#gegravity.MonteCarloGE.MonteCarloGE.export_results">export_results</a></code></li>
 <li><code><a title="gegravity.MonteCarloGE.MonteCarloGE.run_trials" href="#gegravity.MonteCarloGE.MonteCarloGE.run_trials">run_trials</a></code></li>
 </ul>
