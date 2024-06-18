@@ -26,7 +26,7 @@ python -m twine upload --repository testpypi dist/*
 ```
 The test package can be viewed at https://test.pypi.org/project/gegravity-peter-herman
 ```
-python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps gegravoty-peter-herman
+python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps gegravity-peter-herman
 ```
 
 

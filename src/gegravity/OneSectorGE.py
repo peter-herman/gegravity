@@ -154,6 +154,10 @@ class OneSectorGE(object):
             self._is_gme = True
         else:
             self._is_gme = False
+            if not isinstance(baseline, BaselineData):
+                raise TypeError("baseline argument must be gegravity BaselineData object (or gme EstimationModel with gme=True)")
+
+
 
 
         # For BaselineData input, if and expend_var_name or output_var_name are provided for OneSectorGE, use it.
