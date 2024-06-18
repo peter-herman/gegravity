@@ -8,7 +8,7 @@ available at https://vi.unctad.org/tpa/web/vol2/vol2home.html and https://yotoyo
 
 
 import pandas as pd
-import src.gegravity as ge
+import gegravity as ge
 
 # -----
 # Setup the data

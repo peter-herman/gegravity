@@ -9,7 +9,7 @@ __Description__ = """A demonstration of the OneSectorGE model and module"""
 # ---
 # Note: The import statements are set to run from the github repository. To run the example code using the packaged
 # version of gegravity, remove "src." from the gegravity import statement.
-import src.gegravity as ge
+import gegravity as ge
 import pandas as pd
 pd.set_option("display.max_columns", None)
 pd.set_option('display.width', 1000)
