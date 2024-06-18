@@ -8,7 +8,11 @@ available at https://vi.unctad.org/tpa/web/vol2/vol2home.html and https://yotoyo
 
 
 import pandas as pd
-import src.gegravity as ge
+import gegravity as ge
+# Note: To use the code from the packaged version of gegravity, use the import statement "import gegravity as ge".
+#       Alternatively, to use the source code/github version of the code, use "import src.gegravity as ge"
+
+
 
 # -----
 # Setup the data

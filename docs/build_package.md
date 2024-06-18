@@ -16,7 +16,7 @@
 5. Create/update setup.cfg, which should sit in the same directory as src. 
 
 # Create and upload package (see https://packaging.python.org/en/latest/tutorials/packaging-projects/)
-To test, use the test pypi server. In setup.cfg, replace package name with "name = gegravity-peter-herman"
+To test, use the test pypi server. In setup.cfg, replace package name with "name = gegravity-peter-herman". API access is handled by API key in config file at $HOME/.pypirc (may need to recreate if it is a new system)
 ```
 f:
 cd Research/gegravity
@@ -24,6 +24,13 @@ cd Research/gegravity
 python -m build
 python -m twine upload --repository testpypi dist/*
 ```
+The test package can be viewed at https://test.pypi.org/project/gegravity-peter-herman
+```
+python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps gegravoty-peter-herman
+```
+
+
+
 When ready to upload to pypi, return package name to just the name then:
 
 ```

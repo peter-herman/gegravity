@@ -7,9 +7,9 @@ __Description__ = """A demonstration of the OneSectorGE model and module"""
 # ---
 # Load Packages
 # ---
-# Note: The import statements are set to run from the github repository. To run the example code using the packaged
-# version of gegravity, remove "src." from the gegravity import statement.
-import src.gegravity as ge
+# Note: To use the code from the packaged version of gegravity, use the import statement "import gegravity as ge".
+#       Alternatively, to use the source code/github version of the code, use "import src.gegravity as ge"
+import gegravity as ge
 import pandas as pd
 pd.set_option("display.max_columns", None)
 pd.set_option('display.width', 1000)
@@ -18,7 +18,7 @@ pd.set_option('display.width', 1000)
 # ----
 # Load some gravity data (data available on github: https://gist.github.com/peter-herman/13b056e52105008c53faa482db67ed4a)
 # ----
-gravity_data_location = "examples/sample_data_set.dlm"
+gravity_data_location = "examples\sample_data_set.dlm"
 grav_data = pd.read_csv(gravity_data_location)
 print(grav_data.head())
 '''

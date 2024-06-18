@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from gme.estimate.EstimationModel import EstimationModel
-from src.gegravity.BaselineData import BaselineData
+from .BaselineData import BaselineData
 from scipy.optimize import root
 from numpy import multiply, median
 from warnings import warn
@@ -39,7 +39,8 @@ class OneSectorGE(object):
                  cost_variables: List[str] = None,
                  cost_coeff_values = None,
                  #approach: str = None,
-                 quiet:bool = False):
+                 quiet:bool = False,
+                 gme:bool = False):
         '''
         Define a general equilibrium (GE) gravity model.
         Args:
@@ -61,6 +62,8 @@ class OneSectorGE(object):
                 trade costs. Should be of type gegravity.CostCoeffs, statsmodels.GLMResultsWrapper, or
                 gme.SlimResults. If no values are provided, the estimates in the EstimationModel are used.
             quiet (bool): (optional) If True, suppresses all console feedback from model during simulation. Default is False.
+            gme (bool): (optional) If True, the baseline argument input is an estimated gme.EstimationModel. If False,
+                (default), then the input is treated as a BaselineData object.
 
         Attributes:
             aggregate_trade_results (pandas.DataFrame): Country-level, aggregate results. See gegravity.ResultsLabels for
@@ -147,12 +150,11 @@ class OneSectorGE(object):
         if not isinstance(year, str):
             raise TypeError('year should be a string')
 
-        if isinstance(baseline, EstimationModel):
+        if gme:
             self._is_gme = True
-        elif isinstance(baseline, BaselineData):
-            self._is_gme = False
         else:
-            raise TypeError("estimation_model argument must be a gme.EstimationModel or BaselineData class.")
+            self._is_gme = False
+
 
         # For BaselineData input, if and expend_var_name or output_var_name are provided for OneSectorGE, use it.
         # Otherwise use the one supplied to the BaselineData
