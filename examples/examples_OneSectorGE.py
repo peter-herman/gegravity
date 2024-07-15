@@ -133,7 +133,7 @@ Solving for baseline MRs...
 The solution converged.
 '''
 # Examine the solutions for the baseline multilateral resistances
-print(ge_model.baseline_mr.head(12))
+print(ge_model.baseline_mr.head())
 
 
 # ---

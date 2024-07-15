@@ -82,6 +82,7 @@ class MonteCarloGE(object):
             factory_gate_prices (Pandas.DataFrame): Factory gate prices summarized across all trials. See OneSectorGE
                 ResultsLabels for description of results.
             num_failed_trials (int): The number of trials for which the model failed to solve.
+            failed_trials (list): A list of the trials that failed to solve.
             replacement_sample (Padas.DataFrame): If run_trials options set to True, the vectors of additional parameter
                 values are stored in this attribute.
             outputs_expenditures (Pandas.DataFrame): Baseline and experiment output and expenditure values summarized

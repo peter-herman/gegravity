@@ -106,7 +106,6 @@ print(mc_model.coeff_sample)
 
 # Examine summary information about the random draws
 print(mc_model.sample_stats)
-
 # ----
 # Define the counterfactual experiment and run the model trials
 # ----
